@@ -42,7 +42,7 @@ cargo build --release --features real-overseer
 Substrate Parachain Template:
 ```
 # this command assumes the chain spec is in a directory named polkadot that is a sibling of the working directory
-./target/release/parachain-collator -d local-test --collator --alice --ws-port 9945 --parachain-id 200 -- --chain ../polkadot/rococo_local.json
+./target/release/listen_parachain-collator -d local-test --collator --alice --ws-port 9945 --parachain-id 200 -- --chain ../polkadot/rococo_local.json
 ```
 
 ## Learn More

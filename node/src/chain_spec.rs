@@ -2,14 +2,17 @@ use cumulus_primitives_core::ParaId;
 use parachain_runtime::{AccountId, Signature,
 						TokensConfig, ListenVestingConfig,};
 
-use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
+use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup, Properties};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use sc_telemetry::TelemetryEndpoints;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<parachain_runtime::GenesisConfig, Extensions>;
+
+const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -76,11 +79,13 @@ pub fn development_config(id: ParaId) -> ChainSpec {
 }
 
 pub fn local_testnet_config(id: ParaId) -> ChainSpec {
+
+	let properties = get_properties();
 	ChainSpec::from_genesis(
 		// Name
-		"Local Testnet",
+		"Listen Local Testnet",
 		// ID
-		"local_testnet",
+		"listen_local_testnet",
 		ChainType::Local,
 		move || {
 			testnet_genesis(
@@ -102,15 +107,25 @@ pub fn local_testnet_config(id: ParaId) -> ChainSpec {
 				id,
 			)
 		},
+
 		vec![],
+		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
+			.expect("Staging telemetry url is valid; qed")),
 		None,
-		None,
-		None,
+		properties,
 		Extensions {
 			relay_chain: "rococo-local".into(),
 			para_id: id.into(),
 		},
 	)
+}
+
+fn get_properties() -> Option<Properties> {
+	let mut p = Properties::new();
+	p.insert("tokenSymbol".into(), "LT".into());
+	p.insert("tokenDecimals".into(), 14.into());
+	Some(p)
+
 }
 
 fn testnet_genesis(

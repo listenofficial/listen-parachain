@@ -1,5 +1,7 @@
 use cumulus_primitives_core::ParaId;
-use parachain_runtime::{AccountId, Signature};
+use parachain_runtime::{AccountId, Signature,
+						TokensConfig, ListenVestingConfig,};
+
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
@@ -130,7 +132,11 @@ fn testnet_genesis(
 				.map(|k| (k, 1 << 60))
 				.collect(),
 		}),
+
 		pallet_sudo: Some(parachain_runtime::SudoConfig { key: root_key }),
 		parachain_info: Some(parachain_runtime::ParachainInfoConfig { parachain_id: id }),
+
+		orml_tokens: Some(Default::default()),
+		pallet_listen_vesting: Some(Default::default()),
 	}
 }

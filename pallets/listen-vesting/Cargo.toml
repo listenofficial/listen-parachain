@@ -1,0 +1,37 @@
+[package]
+name = "pallet-listen-vesting"
+version = "0.1.0"
+authors = ["transxask <orwx71@163.com>"]
+edition = "2018"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+serde = { version = "1.0.101", optional = true }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+enumflags2 = { version = "0.6.2" }
+sp-std = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-runtime = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+frame-support = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+frame-system = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+frame-benchmarking = { version = "3.0.0", default-features = false, optional = true, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+
+[dev-dependencies]
+sp-io = { git = "https://github.com/paritytech/substrate", version = "3.0.0", branch = "rococo-v1" }
+sp-core = { git = "https://github.com/paritytech/substrate", version = "3.0.0", branch = "rococo-v1" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", version = "3.0.0", branch = "rococo-v1" }
+sp-storage = { git = "https://github.com/paritytech/substrate", version = "3.0.0", branch = "rococo-v1" }
+hex-literal = "0.3.1"
+
+[features]
+default = ["std"]
+std = [
+	"serde",
+	"codec/std",
+	"sp-std/std",
+	"sp-runtime/std",
+	"frame-support/std",
+	"frame-system/std",
+]
+runtime-benchmarks = ["frame-benchmarking"]

@@ -1,0 +1,52 @@
+[package]
+name = "pallet-listen"
+version = "0.1.0"
+authors = ["transxask <orwx71@163.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+# substrate fram
+frame-support = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+frame-system = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+pallet-multisig = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+pallet-timestamp = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+pallet-treasury = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+
+#local
+node-constants = { path = '../../constants', default-features = false, version = '0.1.0' }
+node-primitives = { path = '../../primitives', default-features = false, version = '0.1.0' }
+
+# orml
+#orml
+orml-tokens = { path = '../tokens', default-features = false, version = '0.4.1-dev' }
+orml-traits = { path = '../../traits', version = "0.4.1-dev",  default-features = false }
+pallet-transfer = {path = "../transfer", default-features = false }
+
+#[dev-dependencies]
+sp-runtime = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-std = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+
+[features]
+default = ['std']
+std = [
+
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-multisig/std",
+    "pallet-timestamp/std",
+    "pallet-treasury/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "codec/std",
+    "node-constants/std",
+    "node-primitives/std",
+    "orml-tokens/std",
+    "orml-traits/std",
+    "pallet-transfer/std",
+
+]
+

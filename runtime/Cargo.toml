@@ -170,19 +170,19 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
 
-[dependencies.template]
-default-features = false
-package = 'pallet-template'
-path = '../pallets/template'
-version = '3.0.0'
+#[dependencies.template]
+#default-features = false
+#package = 'pallet-template'
+#path = '../pallets/template'
+#version = '3.0.0'
 
 
-# Cumulus dependencies
-[dependencies.parachain-info]
-default-features = false
-git = 'https://github.com/paritytech/cumulus.git'
-branch = 'rococo-v1'
-version = '0.1.0'
+## Cumulus dependencies
+#[dependencies.parachain-info]
+#default-features = false
+#git = 'https://github.com/paritytech/cumulus.git'
+#branch = 'rococo-v1'
+#version = '0.1.0'
 
 [dependencies.cumulus-pallet-parachain-system]
 git = 'https://github.com/paritytech/cumulus.git'
@@ -220,6 +220,28 @@ git = "https://github.com/paritytech/polkadot"
 branch = 'rococo-v1'
 default-features = false
 
+[dependencies]
+
+funty = { version = "=1.1.0", default-features = false } # https://github.com/bitvecto-rs/bitvec/issues/105 = { version = "=1.1.0", default-features = false } # https://github.com/bitvecto-rs/bitvec/issues/105
+winapi = { version = "=0.2.8" }
+
+# local dependencies
+node-primitives = {path = '../primitives', default-features = false, version = '0.1.0'}
+node-constants = {path = '../constants', default-features = false, version = '0.1.0'}
+pallet-listen = { path = '../pallets/listen', default-features = false, version = '0.1.0' }
+pallet-transfer = { path = '../pallets/transfer', default-features = false, version = '0.1.0' }
+pallet-listen-vesting = { path = '../pallets/listen-vesting', default-features = false, version = '0.1.0' }
+#local orml
+orml-traits = { path = '../traits', default-features = false, version = "0.4.1-dev" }
+orml-tokens = { path = '../pallets/tokens', default-features = false, version = "0.4.1-dev" }
+# local xcm
+parachain-info = {path = '../pallets/parachain-info', default-features = false, version = "0.1.0"}
+
+# substrate
+pallet-multisig = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+
+
+
 [features]
 default = ['std']
 runtime-benchmarks = [
@@ -233,6 +255,14 @@ runtime-benchmarks = [
     'pallet-timestamp/runtime-benchmarks',
 ]
 std = [
+	"funty/std",
+	"node-primitives/std",
+	"node-constants/std",
+	"pallet-listen/std",
+	"pallet-transfer/std",
+	"pallet-listen-vesting/std",
+	"orml-traits/std",
+	"orml-tokens/std",
 	"codec/std",
 	"serde",
 	"sp-api/std",
@@ -261,4 +291,5 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"cumulus-pallet-xcm-handler/std",
+	"pallet-multisig/std",
 ]

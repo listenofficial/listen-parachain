@@ -1,0 +1,39 @@
+[package]
+name = "pallet-transfer"
+version = "0.1.0"
+authors = ["transxask <orwx71@163.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+# substrate
+frame-support = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+frame-system = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+pallet-balances = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+
+sp-runtime = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-std = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+
+# local
+#pallet-listen = {path = "../listen", default-features = false, version = "0.1.0"}
+
+# orml
+orml-traits = { path = '../../traits', default-features = false, version = "0.4.1-dev" }
+orml-tokens = { path = '../tokens', default-features = false, version = "0.4.1-dev" }
+
+[features]
+default = ["std"]
+std = [
+    "frame-support/std",
+    "frame-system/std",
+    "pallet-balances/std",
+    "sp-runtime/std",
+    "sp-std/std",
+    "codec/std",
+    "orml-traits/std",
+    "orml-tokens/std",
+#    "pallet-listen/std",
+]

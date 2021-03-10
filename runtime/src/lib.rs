@@ -12,10 +12,12 @@ use sp_version::RuntimeVersion;
 use sp_std::prelude::*;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
+	ModuleId,
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
 	transaction_validity::{TransactionValidity, TransactionSource},
 };
 use sp_runtime::traits::{
+	ConvertInto,
 	BlakeTwo256, Block as BlockT, AccountIdLookup, Verify, IdentifyAccount,
 };
 use sp_api::impl_runtime_apis;
@@ -49,34 +51,27 @@ pub use frame_support::{
 	},
 };
 
-/// Import the template pallet.
-pub use template;
+/// myself use
+pub use node_primitives::{BlockNumber, Signature, AccountId, AccountIndex, Balance, Index, Hash, DigestItem};
+pub use node_constants::{time::{SLOT_DURATION, MINUTES, HOURS, DAYS, PRIMARY_PROBABILITY}, currency::{CENTS, MILLICENTS, DOLLARS, deposit}};
+use pallet_listen as listen;
+use pallet_transfer;
+use pallet_listen_vesting;
+use orml_traits::*;
+use orml_tokens;
+use pallet_multisig;
+use frame_system::EnsureRoot;
 
-/// An index to a block.
-pub type BlockNumber = u32;
+// myself imlp
+pub struct TokensMinAmount<Key, Value>(core::marker::PhantomData<(Key, Value)>);
+use sp_runtime::traits::Bounded;
 
-/// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
-pub type Signature = MultiSignature;
-
-/// Some way of identifying an account on the chain. We intentionally make it equivalent
-/// to the public key of our transaction signing scheme.
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
-/// The type for looking up accounts. We don't expect more than 4 billion of them, but you
-/// never know...
-pub type AccountIndex = u32;
-
-/// Balance of an account.
-pub type Balance = u128;
-
-/// Index of a transaction in the chain.
-pub type Index = u32;
-
-/// A hash of some data used by the chain.
-pub type Hash = sp_core::H256;
-
-/// Digest item type.
-pub type DigestItem = generic::DigestItem<Hash>;
+impl<Key: Default + Bounded, Value: Default + Bounded> GetByKey<Key, Value> for TokensMinAmount<Key
+, Value> {
+	fn get(k: &Key) -> Value {
+		Value::default()
+	}
+}
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -107,24 +102,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	transaction_version: 1,
 };
 
-/// This determines the average expected block time that we are targetting.
-/// Blocks will be produced at a minimum duration defined by `SLOT_DURATION`.
-/// `SLOT_DURATION` is picked up by `pallet_timestamp` which is in turn picked
-/// up by `pallet_aura` to implement `fn slot_duration()`.
-///
-/// Change this to adjust the block time.
-pub const MILLISECS_PER_BLOCK: u64 = 12000;
-
-pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
-
-// Time is measured by number of blocks.
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
-
 // 1 in 4 blocks (on average, not counting collisions) will be primary babe blocks.
-pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
-
 #[derive(codec::Encode, codec::Decode)]
 pub enum XCMPMessage<XAccountId, XBalance> {
 	/// Transfer tokens to the given account from the Parachain account.
@@ -176,6 +154,24 @@ parameter_types! {
 }
 
 // Configure FRAME pallets to include in runtime.
+
+parameter_types! {
+	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
+	pub const DepositBase: Balance = deposit(1, 88);
+	// Additional storage item size of 32 bytes.
+	pub const DepositFactor: Balance = deposit(0, 32);
+	pub const MaxSignatories: u16 = 100;
+}
+
+impl pallet_multisig::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type MaxSignatories = MaxSignatories;
+	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
+}
 
 impl frame_system::Config for Runtime {
 	/// The basic call filter to use in dispatchable.
@@ -238,6 +234,16 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = i128;
+	type CurrencyId = u32;
+	type WeightInfo = ();
+	type ExistentialDeposits = TokensMinAmount<u32, u128>;
+	type OnDust = ();
+}
+
 parameter_types! {
 	pub const ExistentialDeposit: u128 = 500;
 	pub const MaxLocks: u32 = 50;
@@ -269,6 +275,53 @@ impl pallet_transaction_payment::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
+}
+
+parameter_types! {
+	pub const MinVestedTransfer: Balance = 100 * DOLLARS;
+}
+
+impl pallet_listen_vesting::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type BlockNumberToBalance = ConvertInto;
+	type MinVestedTransfer = MinVestedTransfer;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	// 空投奖励 0.99个token
+	pub const AirDropAmount: Balance = 1 * DOLLARS * 99 / 100;
+	pub const RedPacketMinAmount: Balance = 1 * DOLLARS;
+	pub const VoteExpire: BlockNumber = 3 * DAYS;
+	pub const RedPackExpire: BlockNumber = 1 * DAYS;
+	pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
+}
+
+impl listen::Config for Runtime{
+	type Event = Event;
+// 	type AirDropAmount = AirDropAmount;
+// // 	type ListenFounders = pallet_collective::EnsureMember<AccountId, ListenFoundation>;
+// 	type ListenCurrency = Balances;
+	type Create = ();
+	type ProposalRejection = ();
+	type VoteExpire = VoteExpire;
+	type RedPacketMinAmount = RedPacketMinAmount;
+	type RedPackExpire = RedPackExpire;
+	type ModuleId = TreasuryModuleId;
+}
+
+parameter_types! {
+	pub const GetNativeCurrencyId: u32 = 1;
+
+}
+
+impl pallet_transfer::Config for Runtime {
+	type Event = Event;
+	type NativeCurrency = Balances;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type MultiCurrency = Tokens;
+	type AirDropAmount = AirDropAmount;
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
@@ -331,12 +384,13 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
 	type HrmpMessageSender = ParachainSystem;
+	// type SendXcmOrigin = EnsureRoot<AccountId>;
 }
 
-/// Configure the pallet template in pallets/template.
-impl template::Config for Runtime {
-	type Event = Event;
-}
+// /// Configure the pallet template in pallets/template.
+// impl template::Config for Runtime {
+// 	type Event = Event;
+// }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -354,7 +408,12 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		ParachainInfo: parachain_info::{Module, Storage, Config},
 		XcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin},
-		TemplateModule: template::{Module, Call, Storage, Event<T>},
+		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
+		Tokens: orml_tokens::{Module, Config<T>, Storage, Event<T>},
+		Transfer: pallet_transfer::{Module, Call, Event<T>},
+		ListenVesting: pallet_listen_vesting::{Module, Call, Storage, Event<T>, Config<T>},
+		Listen: listen::{Module, Storage, Call, Event<T>},
+		// TemplateModule: template::{Module, Call, Storage, Event<T>},
 	}
 );
 

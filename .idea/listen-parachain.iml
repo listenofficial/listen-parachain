@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="PYTHON_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/pallets/template/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/node/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/runtime/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/constants/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/primitives/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/traits/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/utilities/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/pallets/tokens/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/pallets/listen/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/pallets/transfer/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/pallets/listen-vesting/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/pallets/parachain-info/src" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

@@ -63,8 +63,6 @@ pub trait Config: system::Config {
 
 	type AirDropAmount: Get<NativeBalanceOf<Self>>;
 
-    // type Test: CurrencyIdOf<T>;
-
 }
 
 decl_event!(
@@ -110,14 +108,14 @@ decl_module! {
 
 				// 转金额类型
 				let amount = amount_u128.saturated_into::<NativeBalanceOf<T>>();
-				
-				// 获取账上自由金额
-				
-				
+
+				/// todo 获取账上自由金额
+
 				// 判断金额是否大于0.99个
 				if T::AirDropAmount::get() < amount {
 					T::NativeCurrency::transfer(&from, &to, amount, ExistenceRequirement::AllowDeath)?;
 				}
+
 				else {
 					return Err(Error::<T>::AmountTooLow)?;
 

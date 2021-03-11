@@ -336,9 +336,6 @@ parameter_types! {
 
 impl listen::Config for Runtime{
 	type Event = Event;
-// 	type AirDropAmount = AirDropAmount;
-// // 	type ListenFounders = pallet_collective::EnsureMember<AccountId, ListenFoundation>;
-// 	type ListenCurrency = Balances;
 	type Create = ();
 	type ProposalRejection = ();
 	type VoteExpire = VoteExpire;

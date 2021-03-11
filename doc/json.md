@@ -108,6 +108,7 @@
   "GroupInfo": {
     "group_id": "u64",
     "create_payment": "Balance",
+    "last_block_of_get_the_reward": "BlockNumber",
     "group_manager": "AccountId",
     "max_members": "GroupMaxMembers",
     "group_type": "Vec<u8>",
@@ -175,6 +176,7 @@
     "starting_block": "BlockNumber"
     },
 
+  "CurrencyId": "u32",
   "LookupSource": "MultiAddress",
   "Address": "MultiAddress"
 

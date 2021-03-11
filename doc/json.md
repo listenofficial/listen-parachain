@@ -175,7 +175,15 @@
     "block_number_of_per_duration": "BlockNumber",
     "starting_block": "BlockNumber"
     },
-
+  "Tokens": {
+     "_enum": {
+      "LT":"null",
+      "KSM":"null",
+      "DOT":"null",
+      "BTC":"null",
+      "Other":"CurrencyId"
+    }
+},
   "CurrencyId": "u32",
   "LookupSource": "MultiAddress",
   "Address": "MultiAddress"

@@ -159,11 +159,7 @@ fn testnet_genesis(
 				(get_account_id_from_seed::<sr25519::Public>("Alice"), 3, 1 << 60),
 				(get_account_id_from_seed::<sr25519::Public>("Alice"), 4, 1 << 60),
 			]
-			// endowed_accounts
-			// 	.iter()
-			// 	.cloned()
-			// 	.map(|k| (k, 3, 1 << 60))
-			// 	.collect(),
+
 		}),
 
 		pallet_listen_vesting: Some(Default::default()),

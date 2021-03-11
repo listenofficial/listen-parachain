@@ -4158,6 +4158,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-xtokens"
+version = "0.4.1-dev"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "orml-tokens",
+ "parity-scale-codec",
+ "polkadot-core-primitives",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
 name = "output_vt100"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4771,6 +4790,7 @@ dependencies = [
  "node-primitives",
  "orml-tokens",
  "orml-traits",
+ "orml-xtokens",
  "pallet-balances",
  "pallet-listen",
  "pallet-listen-vesting",

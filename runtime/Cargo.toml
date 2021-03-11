@@ -234,6 +234,7 @@ pallet-listen-vesting = { path = '../pallets/listen-vesting', default-features =
 #local orml
 orml-traits = { path = '../traits', default-features = false, version = "0.4.1-dev" }
 orml-tokens = { path = '../pallets/tokens', default-features = false, version = "0.4.1-dev" }
+orml-xtokens = { path = '../pallets/xtokens', default-features = false, version = "0.4.1-dev" }
 # local xcm
 parachain-info = {path = '../pallets/parachain-info', default-features = false, version = "0.1.0"}
 
@@ -292,4 +293,5 @@ std = [
 	"xcm-executor/std",
 	"cumulus-pallet-xcm-handler/std",
 	"pallet-multisig/std",
+	"orml-xtokens/std",
 ]

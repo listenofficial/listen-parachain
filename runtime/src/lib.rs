@@ -61,6 +61,9 @@ use orml_traits::*;
 use orml_tokens;
 use pallet_multisig;
 use frame_system::EnsureRoot;
+use orml_xtokens;
+use sp_runtime::traits::Convert;
+use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 
 // myself imlp
 pub struct TokensMinAmount<Key, Value>(core::marker::PhantomData<(Key, Value)>);
@@ -171,6 +174,39 @@ impl pallet_multisig::Config for Runtime {
 	type DepositFactor = DepositFactor;
 	type MaxSignatories = MaxSignatories;
 	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
+}
+
+pub struct NativeToRelay;
+impl Convert<Balance, RelayChainBalance> for NativeToRelay {
+	fn convert(val: u128) -> Balance {
+		// native is 18
+		// relay is 12
+		val / 1_000_000
+	}
+}
+
+pub struct AccountId32Convert;
+impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
+	fn convert(account_id: AccountId) -> [u8; 32] {
+		account_id.into()
+	}
+}
+
+parameter_types! {
+	pub const PolkadotNetworkId: NetworkId = NetworkId::Polkadot;
+}
+
+
+impl orml_xtokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type ToRelayChainBalance = NativeToRelay;
+	type AccountId32Convert = AccountId32Convert;
+	//TODO: change network id if kusama
+	type RelayChainNetworkId = PolkadotNetworkId;
+	type ParaId = ParachainInfo;
+	type AccountIdConverter = LocationConverter;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
 impl frame_system::Config for Runtime {
@@ -413,6 +449,7 @@ construct_runtime!(
 		Transfer: pallet_transfer::{Module, Call, Event<T>},
 		ListenVesting: pallet_listen_vesting::{Module, Call, Storage, Event<T>, Config<T>},
 		Listen: listen::{Module, Storage, Call, Event<T>},
+		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>},
 		// TemplateModule: template::{Module, Call, Storage, Event<T>},
 	}
 );

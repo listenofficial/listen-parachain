@@ -317,7 +317,8 @@ decl_module! {
 
 		/// 创建群
 		#[weight = 10_000]
-		fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T>) -> DispatchResult{
+		fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T>, ) -> DispatchResult{
+
 			let who = ensure_signed(origin)?;
 
 			let create_cost = Self::create_cost();

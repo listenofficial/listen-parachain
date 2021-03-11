@@ -27,6 +27,7 @@ pub enum Tokens {
 	KSM,
 	DOT,
 	BTC,
+	Other(u32),
 }
 
 impl Default for Tokens {
@@ -35,14 +36,14 @@ impl Default for Tokens {
 	}
 }
 
-impl Into<Result<u32, &'static str>> for Tokens {
-	fn into(self) -> Result<u32, &'static str> {
+impl Into<u32> for Tokens {
+	fn into(self) -> u32 {
 		match self {
-			Tokens::LT => Ok(0u32),
-			Tokens::BTC =>Ok(1u32),
-			Tokens::KSM => Ok(2u32),
-			Tokens::DOT => Ok(3u32),
-			_ => Err("输入代币错误!"),
+			Tokens::LT => 0u32,
+			Tokens::BTC =>1u32,
+			Tokens::KSM => 2u32,
+			Tokens::DOT => 3u32,
+			Tokens::Other( x) => x,
 		}
 	}
 }
@@ -90,11 +91,13 @@ decl_module! {
 		pub fn transfer(
 			origin,
 			dest: <T::Lookup as StaticLookup>::Source,
-			// token_symbol: Tokens,
-			currency_id: CurrencyIdOf<T>,
+			token: Tokens,
 			amount: BalanceOf<T>,
 		) {
-			// let id: u32 = currency_id.into();
+
+			let currency_id: u32 = token.into();
+
+			let currency_id = <CurrencyIdOf<T>>::from(currency_id);
 
 			let from = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(dest)?;
@@ -136,6 +139,8 @@ decl_error!{
 		TokenNotExist,
 		/// 金额太小
 		AmountTooLow,
+		///
+		ConvertErr,
 
 
 	 }

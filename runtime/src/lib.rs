@@ -312,7 +312,7 @@ impl listen::Config for Runtime{
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: u32 = 1;
+	pub const GetNativeCurrencyId: u32 = 0;
 
 }
 
@@ -419,6 +419,7 @@ construct_runtime!(
 
 /// The address format for describing accounts.
 pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
+// pub type Address = AccountId;
 /// Block header type as expected by this runtime.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 /// Block type as expected by this runtime.

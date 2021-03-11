@@ -173,7 +173,10 @@
     "unlock_amount_of_per_duration": "Balance",
     "block_number_of_per_duration": "BlockNumber",
     "starting_block": "BlockNumber"
-    }
+    },
+
+  "LookupSource": "MultiAddress",
+  "Address": "MultiAddress"
 
 }
 ```

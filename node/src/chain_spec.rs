@@ -140,6 +140,7 @@ fn testnet_genesis(
 				.to_vec(),
 			changes_trie_config: Default::default(),
 		}),
+
 		pallet_balances: Some(parachain_runtime::BalancesConfig {
 			balances: endowed_accounts
 				.iter()
@@ -151,7 +152,20 @@ fn testnet_genesis(
 		pallet_sudo: Some(parachain_runtime::SudoConfig { key: root_key }),
 		parachain_info: Some(parachain_runtime::ParachainInfoConfig { parachain_id: id }),
 
-		orml_tokens: Some(Default::default()),
+		orml_tokens: Some(TokensConfig {
+			endowed_accounts: vec![
+				(get_account_id_from_seed::<sr25519::Public>("Alice"), 1, 1 << 60),
+				(get_account_id_from_seed::<sr25519::Public>("Alice"), 2, 1 << 60),
+				(get_account_id_from_seed::<sr25519::Public>("Alice"), 3, 1 << 60),
+				(get_account_id_from_seed::<sr25519::Public>("Alice"), 4, 1 << 60),
+			]
+			// endowed_accounts
+			// 	.iter()
+			// 	.cloned()
+			// 	.map(|k| (k, 3, 1 << 60))
+			// 	.collect(),
+		}),
+
 		pallet_listen_vesting: Some(Default::default()),
 	}
 }

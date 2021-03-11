@@ -10,6 +10,7 @@ pub use pallet_balances;
 use sp_std::{result::Result, convert::{Into, TryInto, TryFrom}};
 use codec::{Encode, Decode};
 use sp_runtime::{traits::StaticLookup, RuntimeDebug, SaturatedConversion};
+use node_primitives::CurrencyId;
 
 
 pub(crate) type CurrencyIdOf<T> =
@@ -27,7 +28,7 @@ pub enum Tokens {
 	KSM,
 	DOT,
 	BTC,
-	Other(u32),
+	Other(CurrencyId),
 }
 
 impl Default for Tokens {
@@ -36,14 +37,14 @@ impl Default for Tokens {
 	}
 }
 
-impl Into<u32> for Tokens {
+impl Into<CurrencyId> for Tokens {
 	fn into(self) -> u32 {
 		match self {
-			Tokens::LT => 0u32,
-			Tokens::BTC =>1u32,
-			Tokens::KSM => 2u32,
-			Tokens::DOT => 3u32,
-			Tokens::Other( x) => x,
+			Tokens::LT => 0 as CurrencyId,
+			Tokens::BTC =>1 as CurrencyId,
+			Tokens::KSM => 2 as CurrencyId,
+			Tokens::DOT => 3 as CurrencyId,
+			Tokens::Other( x) => x as CurrencyId,
 		}
 	}
 }

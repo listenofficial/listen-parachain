@@ -18,7 +18,8 @@ sp-std = { default-features = false, version = '3.0.0', git = "https://github.co
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 
 # local
-#pallet-listen = {path = "../listen", default-features = false, version = "0.1.0"}
+node-primitives = { path = '../../primitives', default-features = false, version = '0.1.0' }
+
 
 # orml
 orml-traits = { path = '../../traits', default-features = false, version = "0.4.1-dev" }
@@ -35,5 +36,6 @@ std = [
     "codec/std",
     "orml-traits/std",
     "orml-tokens/std",
+    "node-primitives/std",
 #    "pallet-listen/std",
 ]

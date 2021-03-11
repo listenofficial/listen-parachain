@@ -4708,6 +4708,7 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "node-primitives",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",

@@ -181,6 +181,7 @@
       "KSM":"null",
       "DOT":"null",
       "BTC":"null",
+      "ACA":"null",
       "Other":"CurrencyId"
     }
 },

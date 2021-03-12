@@ -6,6 +6,8 @@ use frame_system::{self as system, ensure_signed};
 use orml_tokens;
 use orml_traits::{MultiCurrency};
 pub use pallet_balances;
+use sp_runtime::traits::Saturating;
+
 
 use sp_std::{result::Result, convert::{Into, TryInto, TryFrom}};
 use codec::{Encode, Decode};
@@ -28,6 +30,7 @@ pub enum Tokens {
 	KSM,
 	DOT,
 	BTC,
+	ACA,
 	Other(CurrencyId),
 }
 
@@ -37,16 +40,20 @@ impl Default for Tokens {
 	}
 }
 
-impl Into<CurrencyId> for Tokens {
-	fn into(self) -> u32 {
+impl TryInto<CurrencyId> for Tokens {
+	type Error = &'static str;
+
+	fn try_into(self) -> Result<CurrencyId, Self::Error> {
 		match self {
-			Tokens::LT => 0 as CurrencyId,
-			Tokens::BTC =>1 as CurrencyId,
-			Tokens::KSM => 2 as CurrencyId,
-			Tokens::DOT => 3 as CurrencyId,
-			Tokens::Other( x) => x as CurrencyId,
-		}
+			Tokens::LT => Ok(0 as CurrencyId),
+			Tokens::BTC => Ok(1 as CurrencyId),
+			Tokens::DOT => Ok(2 as CurrencyId),
+			Tokens::KSM => Ok(3 as CurrencyId),
+			Tokens::ACA => Ok(4 as CurrencyId),
+			Tokens::Other(x) => Ok(x as CurrencyId),
+			_ => Err("unexpect token"),
 	}
+}
 }
 
 
@@ -94,8 +101,8 @@ decl_module! {
 			amount: BalanceOf<T>,
 		) {
 
-			let currency_id: u32 = token.into();
-
+			let currency_id: Result<CurrencyId, &'static str> = token.try_into();
+			let currency_id= currency_id.map_err(|_| Error::<T>::TokenErr)?;
 			let currency_id = <CurrencyIdOf<T>>::from(currency_id);
 
 			let from = ensure_signed(origin)?;
@@ -109,11 +116,9 @@ decl_module! {
 				// 转金额类型
 				let amount = amount_u128.saturated_into::<NativeBalanceOf<T>>();
 
-				/// todo 获取账上自由金额
-
-				// 判断金额是否大于0.99个
-				if T::AirDropAmount::get() < amount {
+				if T::NativeCurrency::free_balance(&from).saturating_sub(amount) > T::AirDropAmount::get() {
 					T::NativeCurrency::transfer(&from, &to, amount, ExistenceRequirement::AllowDeath)?;
+
 				}
 
 				else {
@@ -139,8 +144,7 @@ decl_error!{
 		/// 金额太小
 		AmountTooLow,
 		///
-		ConvertErr,
-
+		TokenErr,
 
 	 }
 

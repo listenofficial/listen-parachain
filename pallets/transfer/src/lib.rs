@@ -8,12 +8,10 @@ use orml_traits::{MultiCurrency};
 pub use pallet_balances;
 use sp_runtime::traits::Saturating;
 
-
 use sp_std::{result::Result, convert::{Into, TryInto, TryFrom}};
 use codec::{Encode, Decode};
 use sp_runtime::{traits::StaticLookup, RuntimeDebug, SaturatedConversion};
 use node_primitives::{CurrencyId, Tokens};
-
 
 pub(crate) type CurrencyIdOf<T> =
 		<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
@@ -59,6 +57,7 @@ decl_module! {
 		type Error = Error<T>;
 		fn deposit_event() = default;
 
+
 		#[weight = 10_000]
 		pub fn transfer(
 			origin,
@@ -74,24 +73,20 @@ decl_module! {
 			let from = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(dest)?;
 			let amount_u128 = amount.saturated_into::<u128>();
+
 			if currency_id != T::GetNativeCurrencyId::get() {
 				T::MultiCurrency::transfer(currency_id, &from, &to, amount)?;
 			}
 			else {
-
 				// 转金额类型
 				let amount = amount_u128.saturated_into::<NativeBalanceOf<T>>();
 
 				if T::NativeCurrency::free_balance(&from).saturating_sub(amount) > T::AirDropAmount::get() {
 					T::NativeCurrency::transfer(&from, &to, amount, ExistenceRequirement::AllowDeath)?;
-
 				}
-
 				else {
 					return Err(Error::<T>::AmountTooLow)?;
-
 				}
-
 
 			}
 
@@ -111,7 +106,6 @@ decl_error!{
 		AmountTooLow,
 		///
 		TokenErr,
-
 	 }
 
 }

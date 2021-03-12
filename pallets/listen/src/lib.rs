@@ -47,29 +47,22 @@ pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config +
 
 	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
-	// 铸币平衡处理
 	type Create: OnUnbalanced<PositiveImbalanceOf<Self>>;
 
 	type ProposalRejection: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
 	type VoteExpire: Get<Self::BlockNumber>;
 
-	// 红包最小金额
 	type RedPacketMinAmount: Get<BalanceOf<Self>>;
 
-	// 红包过期时间
 	type RedPackExpire: Get<Self::BlockNumber>;
 
-	// 奖励群主的周期(多久奖励群主一次)
 	type RewardDuration: Get<Self::BlockNumber>;
 
-	// 群主抵押的利率
 	type PledgeRate: Get<Percent>;
 
-	// 群主领取的群资产的比例（按照周期领取)
 	type ManagerProportion: Get<Percent>;
 
-	// 给群生成新资产的比例（按照周期)
 	type RoomProportion: Get<Percent>;
 
 	type ModuleId: Get<ModuleId>;
@@ -278,15 +271,12 @@ decl_module! {
 		/// 设置用于空投的多签
 		#[weight = 10_000]
 		fn set_multisig(origin, who: Vec<T::AccountId>, threshould: u16){
-
 			ensure_root(origin)?;
-
 			let who = Self::sort_account_id(who)?;
 
 			ensure!(threshould > 0u16 && threshould <= who.clone().len() as u16, Error::<T>::ThreshouldErr);
 
 			let multisig_id = <pallet_multisig::Module<T>>::multi_account_id(&who, threshould.clone());
-
 			<Multisig<T>>::put((who, threshould, multisig_id));
 
 			Self::deposit_event(RawEvent::SetMultisig);
@@ -296,13 +286,11 @@ decl_module! {
 		/// 设置服务器id(用来代领红包)
 		#[weight = 10_000]
 		fn set_server_id(origin, account_id: T::AccountId) {
-
 			let who = ensure_signed(origin)?;
-
-			// 获取多签账号id
+			//// 获取多签账号id
 			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
 
-			// 是多签账号才给执行
+			/// 是多签账号才给执行
 			ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
 
 			<ServerId<T>>::put(account_id.clone());
@@ -315,27 +303,26 @@ decl_module! {
 		/// 空投
 		#[weight = 10_000]
 		fn air_drop(origin, des: T::AccountId) -> DispatchResult {
-
-			// 执行空投的账号
+			/// 执行空投的账号
 			let who = ensure_signed(origin)?;
 
 			/// 获取多签账号id
 			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
 
-			// 是多签账号才给执行
+			/// 是多签账号才给执行
 			ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
 
-			// 已经空投过的不能再操作
+			/// 已经空投过的不能再操作
 			ensure!(!<AlreadyAirDropList<T>>::get().contains(&des), Error::<T>::AlreadyAirDrop);
 
-			// 国库向空投的目标账号转账 0.99
+			/// fixme 国库向空投的目标账号转账 0.99(前提是国库必须先有资金)
 			let from = Self::treasury_id();
 			T::NativeCurrency::transfer(&from, &des, T::AirDropAmount::get(), KeepAlive)?;
 
 			// 添加空投记录
 			<AlreadyAirDropList<T>>::mutate(|h| h.insert(des.clone()));
-
 			<system::Module<T>>::inc_ref(&des);
+
 			Self::deposit_event(RawEvent::AirDroped(who, des));
 			Ok(())
 
@@ -345,7 +332,6 @@ decl_module! {
 		/// 创建群
 		#[weight = 10_000]
 		fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T>, pledge: Option<BalanceOf<T>>) -> DispatchResult{
-
 			let who = ensure_signed(origin)?;
 
 			let pledge = match pledge {
@@ -363,7 +349,6 @@ decl_module! {
 				GroupMaxMembers::NoLimit => create_cost.NoLimit,
 				_ => return Err(Error::<T>::UnknownRoomType)?,
 			};
-
 			let create_payment = < BalanceOf<T> as TryFrom::<Balance>>::try_from(create_payment)
 			.map_err(|_| Error::<T>::CreatePaymentErr)?;
 
@@ -376,11 +361,11 @@ decl_module! {
 			// 群主把创建群的费用直接打到国库
 			let to = Self::treasury_id();
 			T::NativeCurrency::transfer(&who, &to, create_payment.clone(), KeepAlive)?;
+
 			//群主把抵押的费用转到自己的抵押账户中
 			T::NativeCurrency::repatriate_reserved(&who, &who, pledge, Status::Reserved)?;
 
 			let group_id = <GroupId>::get();
-
 			let group_info = GroupInfo{
 				group_id: group_id,
 				create_payment: create_payment,
@@ -393,7 +378,6 @@ decl_module! {
 				props: AllProps::default(),
 				audio: Audio::default(),
 				total_balances: <BalanceOf<T>>::from(0u32),
-
 				group_manager_balances: <BalanceOf<T>>::from(0u32),
 				now_members_number: 1u32,
 				last_remove_height: T::BlockNumber::default(),
@@ -402,16 +386,13 @@ decl_module! {
 				this_disband_start_time: T::BlockNumber::default(),
 				is_voting: false,
 				create_time: <timestamp::Module<T>>::get(),
-
 			};
 
 			<AllRoom<T>>::insert(group_id, group_info);
-
 			<AllListeners<T>>::mutate(who.clone(), |h| h.rooms.push((group_id, RewardStatus::default())));
-
 			<ListenersOfRoom<T>>::mutate(group_id, |h| h.insert(who.clone()));
-
 			<GroupId>::mutate(|h| *h += 1);
+
 			Self::deposit_event(RawEvent::CreatedRoom(who, group_id));
 
 			Ok(())
@@ -423,19 +404,20 @@ decl_module! {
 		fn manager_get_reward(origin, group_id: u64) {
 			let who = ensure_signed(origin)?;
 			let room_info = <AllRoom<T>>::get(group_id);
-			// 群存在
+			/// 群存在
 			ensure!(room_info.is_some(), Error::<T>::RoomNotExists);
 			let mut room_info = room_info.unwrap();
-			// 是群主
+			/// 是群主
 			ensure!(who.clone() == room_info.group_manager.clone(), Error::<T>::NotManager);
 
 			/// 获取群主上一次领取奖励的高度
 			let last_block = room_info.last_block_of_get_the_reward.clone();
-			/// 获取现在的高度
 			let now = Self::now();
-
 			let time = now.saturating_sub(last_block);
 			let duration_num = time.checked_div(&T::RewardDuration::get()).ok_or(Error::<T>::DivZero)?;
+			/// 计算真实的领取奖励的区块
+			let real_this_block = last_block.saturating_add(duration_num * T::RewardDuration::get());
+
 			if duration_num.is_zero() {
 				return Err(Error::<T>::AlreadyReward)?;
 			}
@@ -453,8 +435,6 @@ decl_module! {
 				// 群资产按照比例增加
 				let room_add = T::RoomProportion::get() * room_total_amount;
 
-				// 计算真实的领取奖励的区块
-				let real_this_block = last_block.saturating_add(duration_num * T::RewardDuration::get());
 				// 更新群信息
 				room_info.last_block_of_get_the_reward = real_this_block;
 				room_info.total_balances = room_info.total_balances.clone().saturating_add(room_add);
@@ -491,7 +471,6 @@ decl_module! {
 
 			/// 获取多签账号id
 			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
-
 			/// 是多签账号才给执行
 			ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
 
@@ -522,33 +501,29 @@ decl_module! {
 		fn buy_props_in_room(origin, group_id: u64, props: AllProps) -> DispatchResult{
 			let who = ensure_signed(origin)?;
 
-			let props_cost = <PropsPayment<T>>::get();
-
-			// 自己在群里
+			/// 自己在群里
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
 
-			// 计算道具总费用
+			/// 计算道具总费用
 			let mut dollars = <BalanceOf<T>>::from(0u32);
+
+			let props_cost = <PropsPayment<T>>::get();
 			if props.picture > 0u32{
 				dollars = props_cost.picture * <BalanceOf<T>>::from(props.picture);
-				// debug::info!("图片费用为： {:?}", props_cost.picture * <BalanceOf<T>>::from(props.picture));
 			}
-
 			if props.text > 0u32{
 				dollars += props_cost.text * <BalanceOf<T>>::from(props.text);
-				// debug::info!("文本费用为： {:?}", props_cost.text * <BalanceOf<T>>::from(props.text));
 			}
 			if props.video > 0u32{
 				dollars += props_cost.video * <BalanceOf<T>>::from(props.video);
-				// debug::info!("视频费用为： {:?}", props_cost.video * <BalanceOf<T>>::from(props.video));
 			}
 
-			// 把U128转换成balance
+			/// 把U128转换成balance
 			let cost = dollars;
-			// debug::info!("道具总费用为： {:?}", cost);
-			// ********以上数据不需要额外处理 不可能出现panic*************
 
-			// 扣除费用
+			/// ********以上数据不需要额外处理 不可能出现panic*************
+
+			/// 扣除费用
 			T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&who, cost.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
 
 			// 修改群信息
@@ -559,19 +534,14 @@ decl_module! {
 
 			room.total_balances += cost.clone();
 
-			// debug::info!("更新后的房间信息是：{:?}", room.clone());
-
 			<AllRoom<T>>::insert(group_id, room);
 
 			// 修改个人信息
 			let mut person = <AllListeners<T>>::get(who.clone());
-			// debug::info!("更新前的个人信息是: {:?}", person.clone());
 			person.props.picture = person.props.picture.checked_add(props.picture).ok_or(Error::<T>::Overflow)?;
 			person.props.text = person.props.text.checked_add(props.text).ok_or(Error::<T>::Overflow)?;
 			person.props.video = person.props.video.checked_add(props.video).ok_or(Error::<T>::Overflow)?;
 			person.cost += cost.clone();
-
-			// debug::info!("更新后的个人信息是: {:?}", person.clone());
 
 			<AllListeners<T>>::insert(who.clone(), person);
 
@@ -589,16 +559,16 @@ decl_module! {
 			// 自己在群里
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
 
-			let audio_cost = <AudioPayment<T>>::get();
 			// 计算道具总费用
 			let mut dollars = <BalanceOf<T>>::from(0u32);
+
+			let audio_cost = <AudioPayment<T>>::get();
 			if audio.ten_seconds > 0u32{
 				dollars = audio_cost.ten_seconds * <BalanceOf<T>>::from(audio.ten_seconds);
 			}
 			if audio.thirty_seconds > 0u32{
 				dollars += audio_cost.thirty_seconds * <BalanceOf<T>>::from(audio.thirty_seconds);
 			}
-
 			if audio.minutes > 0u32{
 				dollars += audio_cost.minutes * <BalanceOf<T>>::from(audio.minutes);
 			}
@@ -617,7 +587,6 @@ decl_module! {
 			room.audio.minutes = room.audio.minutes.checked_add(audio.minutes).ok_or(Error::<T>::Overflow)?;
 
 			room.total_balances += cost.clone();
-
 			<AllRoom<T>>::insert(group_id, room);
 
 			// 修改个人信息
@@ -672,49 +641,46 @@ decl_module! {
 				let until = now - room.last_remove_height;
 
 				match room.max_members	{
-				GroupMaxMembers::Ten => {
-					if until <= T::BlockNumber::from(remove::Ten){
-						return Err(Error::<T>::NotRemoveTime)?;
+
+					GroupMaxMembers::Ten => {
+						if until <= T::BlockNumber::from(remove::Ten){
+							return Err(Error::<T>::NotRemoveTime)?;
+						}
+					},
+
+					GroupMaxMembers::Hundred => {
+						if until <= T::BlockNumber::from(remove::Hundred){
+							return Err(Error::<T>::NotRemoveTime)?;
+						}
+					},
+
+					GroupMaxMembers::FiveHundred => {
+						if until <= T::BlockNumber::from(remove::FiveHundred){
+							return Err(Error::<T>::NotRemoveTime)?;
+						}
+					},
+
+					GroupMaxMembers::TenThousand => {
+						if until <= T::BlockNumber::from(remove::TenThousand){
+							return Err(Error::<T>::NotRemoveTime)?;
+						}
+					},
+
+					GroupMaxMembers::NoLimit => {
+						if until <= T::BlockNumber::from(remove::NoLimit){
+							return Err(Error::<T>::NotRemoveTime)?;
+						}
 					}
 
-				},
-				GroupMaxMembers::Hundred => {
-					if until <= T::BlockNumber::from(remove::Hundred){
-						return Err(Error::<T>::NotRemoveTime)?;
-					}
-
-				},
-				GroupMaxMembers::FiveHundred => {
-					if until <= T::BlockNumber::from(remove::FiveHundred){
-						return Err(Error::<T>::NotRemoveTime)?;
-					}
-
-				},
-				GroupMaxMembers::TenThousand => {
-					if until <= T::BlockNumber::from(remove::TenThousand){
-						return Err(Error::<T>::NotRemoveTime)?;
-					}
-
-				},
-				GroupMaxMembers::NoLimit => {
-					if until <= T::BlockNumber::from(remove::NoLimit){
-						return Err(Error::<T>::NotRemoveTime)?;
-					}
 				}
-
-			}
 
 			}
 
 			// 修改数据
 			<AllListeners<T>>::mutate(who.clone(), |h| h.rooms.retain(|x| x.0 != group_id.clone()));
-
 			<ListenersOfRoom<T>>::mutate(group_id, |h| h.remove(&who));
-
 			room.now_members_number = room.now_members_number.checked_sub(1u32).ok_or(Error::<T>::Overflow)?;
-
 			room.last_remove_height = now;
-
 			<AllRoom<T>>::insert(group_id, room);
 
 			Self::deposit_event(RawEvent::Kicked(who.clone(), group_id));
@@ -740,46 +706,44 @@ decl_module! {
 				let until = now.clone() - room.last_disband_end_hight;
 
 				match room.max_members	{
-				GroupMaxMembers::Ten => {
-					if until <= T::BlockNumber::from(disband::Ten){
-						return Err(Error::<T>::NotUntilDisbandTime)?;
+					GroupMaxMembers::Ten => {
+						if until <= T::BlockNumber::from(disband::Ten){
+							return Err(Error::<T>::NotUntilDisbandTime)?;
+						}
+					},
+
+					GroupMaxMembers::Hundred => {
+						if until <= T::BlockNumber::from(disband::Hundred){
+							return Err(Error::<T>::NotUntilDisbandTime)?;
+						}
+					},
+
+					GroupMaxMembers::FiveHundred => {
+						if until <= T::BlockNumber::from(disband::FiveHundred){
+							return Err(Error::<T>::NotUntilDisbandTime)?;
+						}
+					},
+
+					GroupMaxMembers::TenThousand => {
+						if until <= T::BlockNumber::from(disband::TenThousand){
+							return Err(Error::<T>::NotUntilDisbandTime)?;
+						}
+					},
+
+					GroupMaxMembers::NoLimit => {
+						if until <= T::BlockNumber::from(disband::NoLimit){
+							return Err(Error::<T>::NotUntilDisbandTime)?;
+						}
 					}
 
-				},
-				GroupMaxMembers::Hundred => {
-					if until <= T::BlockNumber::from(disband::Hundred){
-						return Err(Error::<T>::NotUntilDisbandTime)?;
-					}
-
-				},
-				GroupMaxMembers::FiveHundred => {
-					if until <= T::BlockNumber::from(disband::FiveHundred){
-						return Err(Error::<T>::NotUntilDisbandTime)?;
-					}
-
-				},
-				GroupMaxMembers::TenThousand => {
-					if until <= T::BlockNumber::from(disband::TenThousand){
-						return Err(Error::<T>::NotUntilDisbandTime)?;
-					}
-
-				},
-				GroupMaxMembers::NoLimit => {
-					if until <= T::BlockNumber::from(disband::NoLimit){
-						return Err(Error::<T>::NotUntilDisbandTime)?;
-					}
 				}
-
-			}
-
 			}
 
 			// 该群还未处于投票状态
 			ensure!(!room.is_voting.clone(), Error::<T>::IsVoting);
 
-			// 转创建群时费用的1/10转到国库
+			/// 转创建群时费用的1/10转到国库(这个费用好像已经全部转到国库了)
 			let disband_payment = Percent::from_percent(10) * room.create_payment.clone();
-
 			let to = Self::treasury_id();
 			T::NativeCurrency::transfer(&who, &to, disband_payment, KeepAlive)?;
 
@@ -788,7 +752,6 @@ decl_module! {
 
 			// 自己申请的 算自己赞成一票
 			room.disband_vote.approve_man.insert(who.clone());
-
 			<AllRoom<T>>::insert(group_id, room);
 
 			Self::deposit_event(RawEvent::AskForDisband(who.clone(), group_id));
@@ -1042,22 +1005,18 @@ decl_module! {
 				end_time: Self::now() + T::RedPackExpire::get(),
 			};
 
-
-			let now_id = redpacket_id.checked_add(1).ok_or(Error::<T>::Overflow)?;
 			let amount_u128 = amount.saturated_into::<u128>();
+
 			if currency_id == T::GetNativeCurrencyId::get() {
 				T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&who, amount.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
 			}
 			else {
-
 				let amount = amount_u128.saturated_into::<MultiBalanceOf<T>>();
-
 				T::MultiCurrency::withdraw(currency_id, &who, amount)?;
-
 			}
 
+			let now_id = redpacket_id.checked_add(1).ok_or(Error::<T>::Overflow)?;
 			<RedPacketId>::put(now_id);
-
 			<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket);
 
 			// 顺便处理过期红包
@@ -1142,7 +1101,6 @@ decl_module! {
 				Self::remove_redpacket_by_room_id(group_id, true);
 
 				}
-
 
 			Self::deposit_event(RawEvent::Exit(user, group_id));
 
@@ -1264,14 +1222,15 @@ impl <T: Config> Module <T> {
 			if join_cost > <BalanceOf<T>>::from(0u32){
 				T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&you, join_cost.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
 				Self::pay_for(group_id, join_cost);
-
 			}
+
 			Self::add_info(you.clone(), group_id)
 
 			}
 
 		Ok(())
 	}
+
 
 	///  tokens转变成改currency_id
 	fn tokens_convert_to_currency_id(token: Tokens) -> Result<CurrencyIdOf<T>, DispatchError> {
@@ -1289,12 +1248,10 @@ impl <T: Config> Module <T> {
 		let payment_treasury = Percent::from_percent(40) * join_cost;
 		let mut room_info = <AllRoom<T>>::get(group_id).unwrap();
 
-		// 这些数据u128远远足够 不用特殊处理 要是panic  可以回家卖红薯
+		// 这些数据u128远远足够 不用特殊处理
 		room_info.total_balances += payment_room_later;
 		room_info.total_balances += payment_manager_later;
-
 		room_info.group_manager_balances += payment_manager_later;
-
 		room_info.now_members_number += 1u32;
 		let group_manager = room_info.group_manager.clone();
 		<AllRoom<T>>::insert(group_id, room_info);
@@ -1309,18 +1266,17 @@ impl <T: Config> Module <T> {
 	}
 
 
-	// 进群的最后一步 添加数据
+	/// 进群的最后一步 添加数据
 	fn add_info(yourself: T::AccountId, group_id: u64){
 
 		// 添加信息
 		<ListenersOfRoom<T>>::mutate(group_id, |h| h.insert(yourself.clone()));
-
 		<AllListeners<T>>::mutate(yourself.clone(), |h| h.rooms.push((group_id, RewardStatus::default())));
 
-		}
+	}
 
 
-	// 获取现在的区块时间
+	/// 获取现在的区块时间
 	fn now() -> T::BlockNumber{
 		<system::Module<T>>::block_number()
 	}
@@ -1332,7 +1288,7 @@ impl <T: Config> Module <T> {
 	}
 
 
-	// 根据房间号 对过期的红包进行处理
+	/// 根据房间号 对过期的红包进行处理
 	fn remove_redpacket_by_room_id(room_id: u64, all: bool){
 		let redpackets = <RedPacketOfRoom<T>>::iter_prefix(room_id).collect::<Vec<_>>();
 		let now = Self::now();
@@ -1340,11 +1296,8 @@ impl <T: Config> Module <T> {
 		// 处理所有
 		if all{
 			for redpacket in redpackets.iter(){
-
 				Self::remove_redpacket(room_id, redpacket.1.clone());
-
-		}
-
+			}
 		}
 
 			// 处理过期的红包
@@ -1353,10 +1306,8 @@ impl <T: Config> Module <T> {
 				// 如果过期
 				if redpacket.1.end_time < now{
 					Self::remove_redpacket(room_id, redpacket.1.clone());
-
 				}
 		}
-
 		}
 
 	}
@@ -1369,7 +1320,6 @@ impl <T: Config> Module <T> {
 		if vote_info.approve_man.clone().len() >= half || vote_info.reject_man.clone().len() >= half{
 			if vote_info.approve_man.clone().len() >= half {
 				 (End, Pass)
-
 			}
 			else{
 				 (End, NotPass)
@@ -1401,8 +1351,6 @@ impl <T: Config> Module <T> {
 
 			}
 		}
-
-		// 第一个是是否结束 第二个是是否通过
 	}
 
 	pub fn treasury_id() -> T::AccountId {
@@ -1559,7 +1507,6 @@ decl_event!(
 		 SetServerId(AccountId),
 		 Exit(AccountId, u64),
 		 ManagerGetReward(AccountId, Amount, Amount),
-
 	}
 );
 

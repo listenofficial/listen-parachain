@@ -859,8 +859,11 @@ decl_module! {
 
 					let total_reward = room.total_balances.clone();
 					let manager_reward = room.group_manager_balances.clone();
+					let pledge_amount = room.pledge_amount.clone();
 					// 把属于群主的那部分给群主
 					T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&room.group_manager, manager_reward));
+					// 把群主的抵押币转到自由余额
+					T::NativeCurrency::unreserve(&room.group_manager, pledge_amount);
 
 					let listener_reward = total_reward.clone() - manager_reward.clone();
 					let session_index = Self::get_session_index();

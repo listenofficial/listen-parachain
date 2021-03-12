@@ -212,6 +212,8 @@ pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, GroupMaxM
 
 	pub last_block_of_get_the_reward: BlockNumber, // 群主上一次领取奖励的区块
 
+	pub pledge_amount: Balance, // 群主抵押的费用
+
 	pub group_manager: AccountId,  // 群主
 	pub max_members: GroupMaxMembers, // 最大群人数
 

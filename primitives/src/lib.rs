@@ -25,6 +25,10 @@ use sp_runtime::{
 	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
 };
 
+use sp_std::convert::TryInto;
+use sp_runtime::RuntimeDebug;
+use codec::{Encode, Decode};
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -100,4 +104,36 @@ pub mod report {
 		type GenericSignature = sp_core::sr25519::Signature;
 		type GenericPublic = sp_core::sr25519::Public;
 	}
+}
+
+#[derive(PartialEq, Encode, Decode, RuntimeDebug, Clone)]
+pub enum Tokens {
+	LT,
+	KSM,
+	DOT,
+	BTC,
+	ACA,
+	Other(CurrencyId),
+}
+
+impl Default for Tokens {
+	fn default() -> Self {
+		Self::LT
+	}
+}
+
+impl TryInto<CurrencyId> for Tokens {
+	type Error = &'static str;
+
+	fn try_into(self) -> Result<CurrencyId, Self::Error> {
+		match self {
+			Tokens::LT => Ok(0 as CurrencyId),
+			Tokens::BTC => Ok(1 as CurrencyId),
+			Tokens::DOT => Ok(2 as CurrencyId),
+			Tokens::KSM => Ok(3 as CurrencyId),
+			Tokens::ACA => Ok(4 as CurrencyId),
+			Tokens::Other(x) => Ok(x as CurrencyId),
+			_ => Err("unexpect token"),
+	}
+}
 }

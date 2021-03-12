@@ -15,6 +15,8 @@ frame-system = { version = "3.0.0", default-features = false, git = "https://git
 sp-application-crypto = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 sp-core = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 sp-runtime = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-std = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+
 
 [dev-dependencies]
 sp-serializer = { version = "3.0.0"}
@@ -28,6 +30,7 @@ std = [
 	"sp-application-crypto/std",
 	"sp-core/std",
 	"sp-runtime/std",
+	"sp-std/std",
 ]
 
 #cargo-features = ["resolver"]

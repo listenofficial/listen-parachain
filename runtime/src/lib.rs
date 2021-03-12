@@ -13,6 +13,7 @@ use sp_std::prelude::*;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
 	ModuleId,
+	Percent,
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
 	transaction_validity::{TransactionValidity, TransactionSource},
 };
@@ -331,7 +332,12 @@ parameter_types! {
 	pub const RedPacketMinAmount: Balance = 1 * DOLLARS;
 	pub const VoteExpire: BlockNumber = 3 * DAYS;
 	pub const RedPackExpire: BlockNumber = 1 * DAYS;
+	pub const RewardDuration: BlockNumber = 7 * DAYS;
+	pub const PledgeRate: Percent = Percent::from_percent(5);
+	pub const ManagerProportion: Percent = Percent::from_percent(1);
+	pub const RoomProportion: Percent = Percent::from_percent(1);
 	pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
+
 }
 
 impl listen::Config for Runtime{
@@ -341,6 +347,10 @@ impl listen::Config for Runtime{
 	type VoteExpire = VoteExpire;
 	type RedPacketMinAmount = RedPacketMinAmount;
 	type RedPackExpire = RedPackExpire;
+	type RewardDuration = RewardDuration;
+	type PledgeRate = PledgeRate;
+	type ManagerProportion = ManagerProportion;
+	type RoomProportion = RoomProportion;
 	type ModuleId = TreasuryModuleId;
 }
 

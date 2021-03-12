@@ -5,16 +5,16 @@
 
 pub mod raw;
 
-pub use frame_support::{traits::{Get, Currency, ReservableCurrency, EnsureOrigin, ExistenceRequirement::KeepAlive, WithdrawReasons, OnUnbalanced},
+pub use frame_support::{traits::{Get, Currency, ReservableCurrency, EnsureOrigin, ExistenceRequirement::KeepAlive, WithdrawReasons, OnUnbalanced, BalanceStatus as Status},
 					debug, ensure, decl_module, decl_storage, decl_error, decl_event, weights::{Weight}, StorageValue, StorageMap, StorageDoubleMap, IterableStorageDoubleMap, Blake2_256};
 
 use sp_std::{result, prelude::*, collections::btree_set::BTreeSet, collections::btree_map::BTreeMap, convert::TryFrom, cmp};
 
 use frame_system::{self as system, ensure_signed, ensure_root};
 use pallet_multisig;
-use sp_runtime::{traits::AccountIdConversion, DispatchResult, Percent, RuntimeDebug, ModuleId, traits::CheckedMul, DispatchError, SaturatedConversion};
+use sp_runtime::{traits::{AccountIdConversion, Saturating, CheckedDiv, Zero}, DispatchResult, Percent, RuntimeDebug, ModuleId, traits::CheckedMul, DispatchError, SaturatedConversion};
 use pallet_timestamp as timestamp;
-use node_primitives::{Balance, AccountId};
+use node_primitives::{Balance, AccountId, Tokens, CurrencyId};
 
 use node_constants::{currency::*, time::*};
 
@@ -27,6 +27,7 @@ use listen_time::*;
 use crate::raw::{RemoveTime, DisbandTime, listen_time, PropsPrice, AudioPrice, AllProps, RoomRewardInfo,
 Audio, DisbandVote, RedPacket, GroupMaxMembers, VoteType, RewardStatus, InvitePaymentType, GroupInfo,
 PersonInfo, vote, ListenerType, SessionIndex, RoomId, CreateCost};
+use sp_std::convert::TryInto;
 
 use orml_tokens;
 use orml_traits::MultiCurrency;
@@ -58,6 +59,18 @@ pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config +
 
 	// 红包过期时间
 	type RedPackExpire: Get<Self::BlockNumber>;
+
+	// 奖励群主的周期(多久奖励群主一次)
+	type RewardDuration: Get<Self::BlockNumber>;
+
+	// 群主抵押的利率
+	type PledgeRate: Get<Percent>;
+
+	// 群主领取的群资产的比例（按照周期领取)
+	type ManagerProportion: Get<Percent>;
+
+	// 给群生成新资产的比例（按照周期)
+	type RoomProportion: Get<Percent>;
 
 	type ModuleId: Get<ModuleId>;
 
@@ -223,6 +236,12 @@ decl_error! {
 		ServerIdNotExists,
 		/// 不是服务器的id
 		NotServerId,
+		/// 没有 这个代币
+		TokenErr,
+		/// 除数是0
+		DivZero,
+		/// 群主已经领取奖励
+		AlreadyReward,
 }}
 
 
@@ -240,9 +259,17 @@ decl_module! {
 		const RedPacketMinAmount: BalanceOf<T> = T::RedPacketMinAmount::get();
 		/// 红包存在多长时间
 		const RedPackExpire: T::BlockNumber = T::RedPackExpire::get();
-
+		/// 奖励群主的周期(多久奖励群主一次)
+		const RewardDuration: T::BlockNumber = T::RewardDuration::get();
+		/// 群主抵押的利率
+		const PledgeRate: Percent = T::PledgeRate::get();
+		/// 群主领取的群资产的比例（按照周期领取)
+		const ManagerProportion: Percent = T::ManagerProportion::get();
+		/// 给群生成新资产的比例（按照周期)
+		const RoomProportion: Percent = T::RoomProportion::get();
 		/// The treasury's module id, used for deriving its sovereign account ID.
 		const ModuleId: ModuleId = T::ModuleId::get();
+
 
 		type Error = Error<T>;
 		fn deposit_event() = default;
@@ -317,9 +344,14 @@ decl_module! {
 
 		/// 创建群
 		#[weight = 10_000]
-		fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T>, ) -> DispatchResult{
+		fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T>, pledge: Option<BalanceOf<T>>) -> DispatchResult{
 
 			let who = ensure_signed(origin)?;
+
+			let pledge = match pledge {
+				Some(x) => x,
+				None => <BalanceOf<T>>::from(0u32),
+			};
 
 			let create_cost = Self::create_cost();
 
@@ -335,15 +367,25 @@ decl_module! {
 			let create_payment = < BalanceOf<T> as TryFrom::<Balance>>::try_from(create_payment)
 			.map_err(|_| Error::<T>::CreatePaymentErr)?;
 
+			/// 查看群主的余额是否足够
+			let reasons = WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE;
+			let free_balance = T::NativeCurrency::free_balance(&who);
+			let new_balance = free_balance.saturating_sub(create_payment + pledge);
+			T::NativeCurrency::ensure_can_withdraw(&who, <BalanceOf<T>>::from(10u32), reasons, new_balance)?;
+
 			// 群主把创建群的费用直接打到国库
 			let to = Self::treasury_id();
 			T::NativeCurrency::transfer(&who, &to, create_payment.clone(), KeepAlive)?;
+			//群主把抵押的费用转到自己的抵押账户中
+			T::NativeCurrency::repatriate_reserved(&who, &who, pledge, Status::Reserved)?;
+
 			let group_id = <GroupId>::get();
 
 			let group_info = GroupInfo{
 				group_id: group_id,
 				create_payment: create_payment,
 				last_block_of_get_the_reward: Self::now(),
+				pledge_amount: pledge,
 				group_manager: who.clone(),
 				max_members: max_members,
 				group_type: group_type,
@@ -373,6 +415,53 @@ decl_module! {
 			Self::deposit_event(RawEvent::CreatedRoom(who, group_id));
 
 			Ok(())
+		}
+
+
+		/// 群主领取自己的奖励(一部分是抵押的奖励， 一部分是群资产产生的利息)
+		#[weight = 10_000]
+		fn manager_get_reward(origin, group_id: u64) {
+			let who = ensure_signed(origin)?;
+			let room_info = <AllRoom<T>>::get(group_id);
+			// 群存在
+			ensure!(room_info.is_some(), Error::<T>::RoomNotExists);
+			let mut room_info = room_info.unwrap();
+			// 是群主
+			ensure!(who.clone() == room_info.group_manager.clone(), Error::<T>::NotManager);
+
+			/// 获取群主上一次领取奖励的高度
+			let last_block = room_info.last_block_of_get_the_reward.clone();
+			/// 获取现在的高度
+			let now = Self::now();
+
+			let time = now.saturating_sub(last_block);
+			let duration_num = time.checked_div(&T::RewardDuration::get()).ok_or(Error::<T>::DivZero)?;
+			if duration_num.is_zero() {
+				return Err(Error::<T>::AlreadyReward)?;
+			}
+			else {
+				// 领取抵押币的奖励
+				let pledge = room_info.pledge_amount.clone();
+				let reward = T::PledgeRate::get() * pledge;
+				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, reward));
+
+				// 领取群资产产生的利息
+				let room_total_amount = room_info.total_balances.clone();
+				let manager_proportion_amount = T::ManagerProportion::get() * room_total_amount;
+				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, manager_proportion_amount));
+
+				// 群资产按照比例增加
+				let room_add = T::RoomProportion::get() * room_total_amount;
+
+				// 计算真实的领取奖励的区块
+				let real_this_block = last_block.saturating_add(duration_num * T::RewardDuration::get());
+				// 更新群信息
+				room_info.last_block_of_get_the_reward = real_this_block;
+				room_info.total_balances = room_info.total_balances.clone().saturating_add(room_add);
+				<AllRoom<T>>::insert(group_id, room_info);
+				Self::deposit_event(RawEvent::ManagerGetReward(who,  reward + manager_proportion_amount, room_add));
+
+			}
 		}
 
 
@@ -805,7 +894,6 @@ decl_module! {
 					}
 					<AllSessionIndex>::put(session_indexs);
 
-
 					let total_reward = room.total_balances.clone();
 					let manager_reward = room.group_manager_balances.clone();
 					// 把属于群主的那部分给群主
@@ -929,8 +1017,10 @@ decl_module! {
 
 		/// 在群里发红包
 		#[weight = 10_000]
-		pub fn send_redpacket_in_room(origin, group_id: u64, currency_id: CurrencyIdOf<T>, lucky_man_number: u32, amount: BalanceOf<T>) -> DispatchResult{
+		pub fn send_redpacket_in_room(origin, group_id: u64, token: Tokens, lucky_man_number: u32, amount: BalanceOf<T>) -> DispatchResult{
 			let who = ensure_signed(origin)?;
+
+			let currency_id = Self::tokens_convert_to_currency_id(token)?;
 
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
 
@@ -1181,6 +1271,13 @@ impl <T: Config> Module <T> {
 			}
 
 		Ok(())
+	}
+
+	///  tokens转变成改currency_id
+	fn tokens_convert_to_currency_id(token: Tokens) -> Result<CurrencyIdOf<T>, DispatchError> {
+		let currency_id: Result<CurrencyId, &'static str> = token.try_into();
+		let currency_id= currency_id.map_err(|_| Error::<T>::TokenErr)?;
+		Ok(<CurrencyIdOf<T>>::from(currency_id))
 	}
 
 
@@ -1461,6 +1558,7 @@ decl_event!(
 		 SetCreateCost,
 		 SetServerId(AccountId),
 		 Exit(AccountId, u64),
+		 ManagerGetReward(AccountId, Amount, Amount),
 
 	}
 );

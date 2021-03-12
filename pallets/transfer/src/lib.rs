@@ -1,7 +1,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{decl_module, decl_error, decl_event, weights::{Weight}, traits::{Get, Currency, ExistenceRequirement}, ensure};
+use frame_support::{decl_module, decl_error, decl_event, weights::{Weight}, traits::{Get, Currency, ExistenceRequirement, ReservableCurrency}, ensure};
 use frame_system::{self as system, ensure_signed};
 use orml_tokens;
 use orml_traits::{MultiCurrency};
@@ -12,7 +12,7 @@ use sp_runtime::traits::Saturating;
 use sp_std::{result::Result, convert::{Into, TryInto, TryFrom}};
 use codec::{Encode, Decode};
 use sp_runtime::{traits::StaticLookup, RuntimeDebug, SaturatedConversion};
-use node_primitives::CurrencyId;
+use node_primitives::{CurrencyId, Tokens};
 
 
 pub(crate) type CurrencyIdOf<T> =
@@ -24,45 +24,11 @@ pub(crate) type BalanceOf<T> =
 type NativeBalanceOf<T> = <<T as Config>::NativeCurrency as Currency<<T as system::Config>::AccountId>>::Balance;
 
 
-#[derive(PartialEq, Encode, Decode, RuntimeDebug, Clone)]
-pub enum Tokens {
-	LT,
-	KSM,
-	DOT,
-	BTC,
-	ACA,
-	Other(CurrencyId),
-}
-
-impl Default for Tokens {
-	fn default() -> Self {
-		Self::LT
-	}
-}
-
-impl TryInto<CurrencyId> for Tokens {
-	type Error = &'static str;
-
-	fn try_into(self) -> Result<CurrencyId, Self::Error> {
-		match self {
-			Tokens::LT => Ok(0 as CurrencyId),
-			Tokens::BTC => Ok(1 as CurrencyId),
-			Tokens::DOT => Ok(2 as CurrencyId),
-			Tokens::KSM => Ok(3 as CurrencyId),
-			Tokens::ACA => Ok(4 as CurrencyId),
-			Tokens::Other(x) => Ok(x as CurrencyId),
-			_ => Err("unexpect token"),
-	}
-}
-}
-
-
-
 pub trait Config: system::Config {
 
 	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
-	type NativeCurrency: Currency<Self::AccountId>;
+	type NativeCurrency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 
 	type GetNativeCurrencyId: Get<CurrencyIdOf<Self>>;
 

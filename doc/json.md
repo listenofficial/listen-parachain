@@ -178,14 +178,27 @@
     },
   "Tokens": {
      "_enum": {
-      "LT":"null",
-      "KSM":"null",
-      "DOT":"null",
-      "BTC":"null",
-      "ACA":"null",
+      "LT":null,
+      "KSM":null,
+      "DOT":null,
+      "BTC":null,
+      "ACA":null,
       "Other":"CurrencyId"
     }
-},
+    },
+
+  "XCurrencyId": {
+    "chain_id":"ChainId",
+    "currency_id": "Vec<u8>"
+    },
+
+    "ChainId": {
+      "_enum": {
+        "RelayChain": null,
+        "ParaChain": "ParaId",
+        }
+    },
+
   "CurrencyId": "u32",
   "LookupSource": "MultiAddress",
   "Address": "MultiAddress"

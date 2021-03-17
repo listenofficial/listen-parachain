@@ -235,6 +235,8 @@ decl_error! {
 		DivZero,
 		/// 群主已经领取奖励
 		AlreadyReward,
+		/// 账户金额不是0
+		AmountNotZero,
 }}
 
 
@@ -314,6 +316,9 @@ decl_module! {
 
 			/// 已经空投过的不能再操作
 			ensure!(!<AlreadyAirDropList<T>>::get().contains(&des), Error::<T>::AlreadyAirDrop);
+
+			/// 账户里面的余额必须是0
+			ensure!(T::NativeCurrency::total_balance(&who) == Zero::zero(), Error::<T>::AmountNotZero);
 
 			/// fixme 国库向空投的目标账号转账 0.99(前提是国库必须先有资金)
 			let from = Self::treasury_id();
@@ -1112,7 +1117,7 @@ decl_module! {
 
 		/// 在群里收红包(需要基金会权限 比如基金会指定某个人可以领取多少)
 		#[weight = 10_000]
-		pub fn get_redpacket_in_room(origin, lucky_man: T::AccountId, group_id: u64, redpacket_id: u128, amount: BalanceOf<T>) {
+		pub fn get_redpacket_in_room(origin, amount_vec: Vec<(T::AccountId, BalanceOf<T>)>, group_id: u64, redpacket_id: u128) {
 
 			let server_id = ensure_signed(origin)?;
 
@@ -1120,27 +1125,11 @@ decl_module! {
 
 			ensure!(server_id.clone() == real_server_id, Error::<T>::NotServerId);
 
-			let who = lucky_man;
-
-			// 自己要在群里
-			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
-
-			// 红包存在
+			/// 红包存在
 			ensure!(<RedPacketOfRoom<T>>::contains_key(group_id, redpacket_id), Error::<T>::RedPacketNotExists);
 
-			// 领取的金额足够大
-//			ensure!(amount >= T::RedPacketMinAmount::get(), Error::<T>::AmountTooLow);
-
+			/// 获取红包信息
 			let mut redpacket = <RedPacketOfRoom<T>>::get(group_id, redpacket_id).unwrap();
-
-			ensure!(amount >= redpacket.min_amount_of_per_man.clone(), Error::<T>::AmountTooLow);
-			// 红包有足够余额
-			ensure!(redpacket.total.clone() - redpacket.already_get_amount.clone() >= amount, Error::<T>::AmountNotEnough);
-			// 红包领取人数不能超过最大
-			ensure!(redpacket.lucky_man_number.clone() > (redpacket.already_get_man.clone().len() as u32), Error::<T>::ToMaxNumber);
-
-			// 一个人只能领取一次
-			ensure!(!redpacket.already_get_man.clone().contains(&who), Error::<T>::CountErr);
 
 			// 过期删除数据 把剩余金额给本人
 			if redpacket.end_time.clone() < Self::now(){
@@ -1150,29 +1139,63 @@ decl_module! {
 				return Err(Error::<T>::Expire)?;
 			}
 
-			T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, amount.clone()));
+			let mut total_amount = <BalanceOf<T>>::from(0u32);
 
-			redpacket.already_get_man.insert(who.clone());
-			redpacket.already_get_amount += amount.clone();
+			for (who, amount) in amount_vec.iter() {
 
-			// 如果领取红包的人数已经达到上线 那么就把剩余的金额给本人 并删除记录
-			if redpacket.already_get_man.clone().len() == (redpacket.lucky_man_number.clone() as usize){
-				Self::remove_redpacket(group_id, redpacket.clone());
+				/// 自己要在群里
+				if Self::is_in_room(group_id, who.clone())? == false{
+					continue;
+				}
 
-			}
+				// 领取的金额足够大
+	//			ensure!(amount >= T::RedPacketMinAmount::get(), Error::<T>::AmountTooLow);
 
-			if redpacket.already_get_amount.clone() == redpacket.total{
-				<RedPacketOfRoom<T>>::remove(group_id, redpacket_id);
-			}
+				/// 领取的金额大于最小要求
+				if *amount < redpacket.min_amount_of_per_man.clone() {
+					continue;
+				}
 
-			else{
-				<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket);
+				// 红包有足够余额
+				if redpacket.total.clone() - redpacket.already_get_amount.clone() < *amount {
+					continue;
+				}
+
+				// 红包领取人数不能超过最大
+				if redpacket.lucky_man_number.clone() <= redpacket.already_get_man.clone().len() as u32 {
+					break;
+				}
+
+				// 一个人只能领取一次
+				if redpacket.already_get_man.clone().contains(&who) == true {
+					continue;
+				}
+
+				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, amount.clone()));
+
+				redpacket.already_get_man.insert(who.clone());
+				redpacket.already_get_amount += amount.clone();
+
+				// 如果领取红包的人数已经达到上线 那么就把剩余的金额给本人 并删除记录
+				if redpacket.already_get_man.clone().len() == (redpacket.lucky_man_number.clone() as usize){
+					Self::remove_redpacket(group_id, redpacket.clone());
+				}
+				else {
+					<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket.clone());
+				}
+
+				if redpacket.already_get_amount.clone() == redpacket.total{
+					<RedPacketOfRoom<T>>::remove(group_id, redpacket_id);
+				}
+
+				total_amount += *amount;
+
 			}
 
 			// 顺便处理过期红包
 			Self::remove_redpacket_by_room_id(group_id, false);
 
-			Self::deposit_event(RawEvent::GetRedPocket(group_id, redpacket_id, amount.clone()));
+			Self::deposit_event(RawEvent::GetRedPocket(group_id, redpacket_id, total_amount));
 
 		}
 

@@ -195,7 +195,7 @@
     "ChainId": {
       "_enum": {
         "RelayChain": null,
-        "ParaChain": "ParaId",
+        "ParaChain": "ParaId"
         }
     },
 

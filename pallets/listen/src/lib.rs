@@ -320,9 +320,7 @@ decl_module! {
 			/// 账户里面的余额必须是0
 			ensure!(T::NativeCurrency::total_balance(&who) == Zero::zero(), Error::<T>::AmountNotZero);
 
-			/// fixme 国库向空投的目标账号转账 0.99(前提是国库必须先有资金)
-			let from = Self::treasury_id();
-			T::NativeCurrency::transfer(&from, &des, T::AirDropAmount::get(), KeepAlive)?;
+			T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, T::AirDropAmount::get()));
 
 			// 添加空投记录
 			<AlreadyAirDropList<T>>::mutate(|h| h.insert(des.clone()));

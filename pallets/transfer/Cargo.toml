@@ -22,8 +22,8 @@ node-primitives = { path = '../../primitives', default-features = false, version
 
 
 # orml
-orml-traits = { path = '../../traits', default-features = false, version = "0.4.1-dev" }
-orml-tokens = { path = '../tokens', default-features = false, version = "0.4.1-dev" }
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
+orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
 
 [features]
 default = ["std"]

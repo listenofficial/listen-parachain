@@ -14,7 +14,7 @@ use frame_system::{self as system, ensure_signed, ensure_root};
 use pallet_multisig;
 use sp_runtime::{traits::{AccountIdConversion, Saturating, CheckedDiv, Zero}, DispatchResult, Percent, RuntimeDebug, ModuleId, traits::CheckedMul, DispatchError, SaturatedConversion};
 use pallet_timestamp as timestamp;
-use node_primitives::{Balance, AccountId, Tokens, CurrencyId};
+use node_primitives::*;
 
 use node_constants::{currency::*, time::*};
 
@@ -984,55 +984,55 @@ decl_module! {
 		}
 
 
-		/// 在群里发红包
-		#[weight = 10_000]
-		pub fn send_redpacket_in_room(origin, group_id: u64, token: Tokens, lucky_man_number: u32, amount: BalanceOf<T>) -> DispatchResult{
-			let who = ensure_signed(origin)?;
-
-			let currency_id = Self::tokens_convert_to_currency_id(token)?;
-
-			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
-
-			// 金额太小不能发红包
-			ensure!(amount >= <BalanceOf<T>>::from(lucky_man_number).checked_mul(&T::RedPacketMinAmount::get()).ok_or(Error::<T>::Overflow)?, Error::<T>::AmountTooLow);
-
-			// 获取红包id
-			let redpacket_id = <RedPacketId>::get();
-
-			let redpacket = RedPacket{
-				id: redpacket_id,
-				currency_id: currency_id,
-				boss: who.clone(),
-				total: amount.clone(),
-				lucky_man_number: lucky_man_number,
-				already_get_man: BTreeSet::<T::AccountId>::default(),
-				min_amount_of_per_man: T::RedPacketMinAmount::get(),
-				already_get_amount: <BalanceOf<T>>::from(0u32),
-				end_time: Self::now() + T::RedPackExpire::get(),
-			};
-
-			let amount_u128 = amount.saturated_into::<u128>();
-
-			if currency_id == T::GetNativeCurrencyId::get() {
-				T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&who, amount.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
-			}
-			else {
-				let amount = amount_u128.saturated_into::<MultiBalanceOf<T>>();
-				T::MultiCurrency::withdraw(currency_id, &who, amount)?;
-			}
-
-			let now_id = redpacket_id.checked_add(1).ok_or(Error::<T>::Overflow)?;
-			<RedPacketId>::put(now_id);
-			<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket);
-
-			// 顺便处理过期红包
-			Self::remove_redpacket_by_room_id(group_id, false);
-
-			Self::deposit_event(RawEvent::SendRedPocket(group_id, redpacket_id, amount_u128));
-
-			Ok(())
-
-		}
+		// /// 在群里发红包
+		// #[weight = 10_000]
+		// pub fn send_redpacket_in_room(origin, group_id: u64, token: Tokens, lucky_man_number: u32, amount: BalanceOf<T>) -> DispatchResult{
+		// 	let who = ensure_signed(origin)?;
+		//
+		// 	let currency_id = Self::tokens_convert_to_currency_id(token)?;
+		//
+		// 	ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
+		//
+		// 	// 金额太小不能发红包
+		// 	ensure!(amount >= <BalanceOf<T>>::from(lucky_man_number).checked_mul(&T::RedPacketMinAmount::get()).ok_or(Error::<T>::Overflow)?, Error::<T>::AmountTooLow);
+		//
+		// 	// 获取红包id
+		// 	let redpacket_id = <RedPacketId>::get();
+		//
+		// 	let redpacket = RedPacket{
+		// 		id: redpacket_id,
+		// 		currency_id: currency_id,
+		// 		boss: who.clone(),
+		// 		total: amount.clone(),
+		// 		lucky_man_number: lucky_man_number,
+		// 		already_get_man: BTreeSet::<T::AccountId>::default(),
+		// 		min_amount_of_per_man: T::RedPacketMinAmount::get(),
+		// 		already_get_amount: <BalanceOf<T>>::from(0u32),
+		// 		end_time: Self::now() + T::RedPackExpire::get(),
+		// 	};
+		//
+		// 	let amount_u128 = amount.saturated_into::<u128>();
+		//
+		// 	if currency_id == T::GetNativeCurrencyId::get() {
+		// 		T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&who, amount.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
+		// 	}
+		// 	else {
+		// 		let amount = amount_u128.saturated_into::<MultiBalanceOf<T>>();
+		// 		T::MultiCurrency::withdraw(currency_id, &who, amount)?;
+		// 	}
+		//
+		// 	let now_id = redpacket_id.checked_add(1).ok_or(Error::<T>::Overflow)?;
+		// 	<RedPacketId>::put(now_id);
+		// 	<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket);
+		//
+		// 	// 顺便处理过期红包
+		// 	Self::remove_redpacket_by_room_id(group_id, false);
+		//
+		// 	Self::deposit_event(RawEvent::SendRedPocket(group_id, redpacket_id, amount_u128));
+		//
+		// 	Ok(())
+		//
+		// }
 
 
 		/// 退群
@@ -1256,12 +1256,12 @@ impl <T: Config> Module <T> {
 	}
 
 
-	///  tokens转变成改currency_id
-	fn tokens_convert_to_currency_id(token: Tokens) -> Result<CurrencyIdOf<T>, DispatchError> {
-		let currency_id: Result<CurrencyId, &'static str> = token.try_into();
-		let currency_id= currency_id.map_err(|_| Error::<T>::TokenErr)?;
-		Ok(<CurrencyIdOf<T>>::from(currency_id))
-	}
+	// ///  tokens转变成改currency_id
+	// fn tokens_convert_to_currency_id(token: Tokens) -> Result<CurrencyIdOf<T>, DispatchError> {
+	// 	let currency_id: Result<CurrencyId, &'static str> = token.try_into();
+	// 	let currency_id= currency_id.map_err(|_| Error::<T>::TokenErr)?;
+	// 	Ok(<CurrencyIdOf<T>>::from(currency_id))
+	// }
 
 
 	// 支付给其他人

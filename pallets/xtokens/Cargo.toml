@@ -25,7 +25,8 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "rococ
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1" }
-orml-tokens = { path = "../tokens", version = "0.4.1-dev" }
+# orml
+orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
 
 [features]
 default = ["std"]

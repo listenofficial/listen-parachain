@@ -19,10 +19,10 @@ pallet-treasury = { default-features = false, version = '3.0.0', git = "https://
 node-constants = { path = '../../constants', default-features = false, version = '0.1.0' }
 node-primitives = { path = '../../primitives', default-features = false, version = '0.1.0' }
 
-# orml
 #orml
-orml-tokens = { path = '../tokens', default-features = false, version = '0.4.1-dev' }
-orml-traits = { path = '../../traits', version = "0.4.1-dev",  default-features = false }
+orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
+
 pallet-transfer = {path = "../transfer", default-features = false }
 
 #[dev-dependencies]

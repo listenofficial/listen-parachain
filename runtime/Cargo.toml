@@ -231,16 +231,16 @@ node-constants = {path = '../constants', default-features = false, version = '0.
 pallet-listen = { path = '../pallets/listen', default-features = false, version = '0.1.0' }
 pallet-transfer = { path = '../pallets/transfer', default-features = false, version = '0.1.0' }
 pallet-listen-vesting = { path = '../pallets/listen-vesting', default-features = false, version = '0.1.0' }
-#local orml
-orml-traits = { path = '../traits', default-features = false, version = "0.4.1-dev" }
-orml-tokens = { path = '../pallets/tokens', default-features = false, version = "0.4.1-dev" }
-orml-xtokens = { path = '../pallets/xtokens', default-features = false, version = "0.4.1-dev" }
+
 # local xcm
 parachain-info = {path = '../pallets/parachain-info', default-features = false, version = "0.1.0"}
 
 # orml
 orml-currencies = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
 orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
+orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
+orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
 
 # substrate
 pallet-multisig = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }

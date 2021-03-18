@@ -12,20 +12,22 @@ use sp_version::RuntimeVersion;
 use sp_std::prelude::*;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
+	DispatchResult,
 	ModuleId,
 	Percent,
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
 	transaction_validity::{TransactionValidity, TransactionSource},
 };
-use sp_runtime::traits::{
+pub use sp_runtime::traits::{
 	ConvertInto,
 	BlakeTwo256, Block as BlockT, AccountIdLookup, Verify, IdentifyAccount,
+
 };
 use sp_api::impl_runtime_apis;
 
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{Junction, MultiLocation, NetworkId};
+use xcm::v0::{Junction, MultiLocation, NetworkId, Xcm};
 use xcm_builder::{
 	AccountId32Aliases, CurrencyAdapter, LocationInverter, ParentIsDefault, RelayChainAsNative,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
@@ -65,6 +67,11 @@ use frame_system::EnsureRoot;
 use orml_xtokens;
 use sp_runtime::traits::Convert;
 use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
+use cumulus_pallet_xcm_handler;
+use orml_xcm_support::{
+	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, XcmHandler as XcmHandlerT,
+};
+use orml_currencies::{self, BasicCurrencyAdapter};
 
 // myself imlp
 pub struct TokensMinAmount<Key, Value>(core::marker::PhantomData<(Key, Value)>);
@@ -197,6 +204,12 @@ parameter_types! {
 	pub const PolkadotNetworkId: NetworkId = NetworkId::Polkadot;
 }
 
+pub struct HandleXcm;
+impl XcmHandlerT<AccountId> for HandleXcm {
+	fn execute_xcm(origin: AccountId, xcm: Xcm) -> DispatchResult {
+		XcmHandler::execute_xcm(origin, xcm)
+	}
+}
 
 impl orml_xtokens::Config for Runtime {
 	type Event = Event;
@@ -206,8 +219,9 @@ impl orml_xtokens::Config for Runtime {
 	//TODO: change network id if kusama
 	type RelayChainNetworkId = PolkadotNetworkId;
 	type ParaId = ParachainInfo;
-	type AccountIdConverter = LocationConverter;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
+	// type AccountIdConverter = LocationConverter;
+	// type XcmExecutor = XcmExecutor<XcmConfig>;
+	 type XcmHandler = HandleXcm;
 }
 
 impl frame_system::Config for Runtime {

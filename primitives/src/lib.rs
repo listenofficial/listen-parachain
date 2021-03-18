@@ -106,34 +106,34 @@ pub mod report {
 	}
 }
 
-#[derive(PartialEq, Encode, Decode, RuntimeDebug, Clone)]
-pub enum Tokens {
-	LT,
-	KSM,
-	DOT,
-	BTC,
-	ACA,
-	Other(CurrencyId),
-}
-
-impl Default for Tokens {
-	fn default() -> Self {
-		Self::LT
-	}
-}
-
-impl TryInto<CurrencyId> for Tokens {
-	type Error = &'static str;
-
-	fn try_into(self) -> Result<CurrencyId, Self::Error> {
-		match self {
-			Tokens::LT => Ok(0 as CurrencyId),
-			Tokens::BTC => Ok(1 as CurrencyId),
-			Tokens::DOT => Ok(2 as CurrencyId),
-			Tokens::KSM => Ok(3 as CurrencyId),
-			Tokens::ACA => Ok(4 as CurrencyId),
-			Tokens::Other(x) => Ok(x as CurrencyId),
-			_ => Err("unexpect token"),
-	}
-}
-}
+// #[derive(PartialEq, Encode, Decode, RuntimeDebug, Clone)]
+// pub enum Tokens {
+// 	LT,
+// 	KSM,
+// 	DOT,
+// 	BTC,
+// 	ACA,
+// 	Other(CurrencyId),
+// }
+//
+// impl Default for Tokens {
+// 	fn default() -> Self {
+// 		Self::LT
+// 	}
+// }
+//
+// impl TryInto<CurrencyId> for Tokens {
+// 	type Error = &'static str;
+//
+// 	fn try_into(self) -> Result<CurrencyId, Self::Error> {
+// 		match self {
+// 			Tokens::LT => Ok(0 as CurrencyId),
+// 			Tokens::BTC => Ok(1 as CurrencyId),
+// 			Tokens::DOT => Ok(2 as CurrencyId),
+// 			Tokens::KSM => Ok(3 as CurrencyId),
+// 			Tokens::ACA => Ok(4 as CurrencyId),
+// 			Tokens::Other(x) => Ok(x as CurrencyId),
+// 			_ => Err("unexpect token"),
+// 	}
+// }
+// }

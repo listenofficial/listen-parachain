@@ -55,7 +55,7 @@ pub use frame_support::{
 };
 
 /// myself use
-pub use node_primitives::{BlockNumber, Signature, AccountId, AccountIndex, Balance, Index, Hash, DigestItem};
+pub use node_primitives::{currency::AUSD, BlockNumber, Signature, AccountId, AccountIndex, Balance, Index, Hash, DigestItem, CurrencyId};
 pub use node_constants::{time::{SLOT_DURATION, MINUTES, HOURS, DAYS, PRIMARY_PROBABILITY}, currency::{CENTS, MILLICENTS, DOLLARS, deposit}};
 use pallet_listen as listen;
 use pallet_transfer;

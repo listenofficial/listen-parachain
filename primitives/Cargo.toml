@@ -1,10 +1,9 @@
-cargo-features = ["resolver"]
+
 [package]
 name = "node-primitives"
 version = "0.1.0"
 authors = ["transxask <orwx71@163.com>"]
 edition = "2018"
-resolver = "2"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -16,6 +15,10 @@ sp-application-crypto = { version = "3.0.0", default-features = false, git = "ht
 sp-core = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 sp-runtime = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 sp-std = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+
+bstringify = "0.1.2"
+serde = { version = "1.0.101" }
+evm = { version = "0.24.0", default-features = false, features = ["with-codec"] }
 
 
 [dev-dependencies]
@@ -31,8 +34,7 @@ std = [
 	"sp-core/std",
 	"sp-runtime/std",
 	"sp-std/std",
+	"evm/std",
+	"evm/with-serde",
 ]
 
-#cargo-features = ["resolver"]
-#
-#resolver = "2"

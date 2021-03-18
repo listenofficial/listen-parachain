@@ -21,6 +21,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+// #![cfg_attr(not(feature = "std"), no_std)]
+// #![allow(clippy::unnecessary_cast)]
+// #![allow(clippy::upper_case_acronyms)]
+
 use sp_runtime::{
 	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
 };
@@ -28,6 +32,10 @@ use sp_runtime::{
 use sp_std::convert::TryInto;
 use sp_runtime::RuntimeDebug;
 use codec::{Encode, Decode};
+
+pub mod currency;
+pub mod evm;
+pub use currency::{CurrencyId, TokenSymbol};
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -42,8 +50,8 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 /// The type for looking up accounts. We don't expect more than 4 billion of them.
 pub type AccountIndex = u32;
 
-/// currency_id
-pub type CurrencyId = u32;
+// /// currency_id
+// pub type CurrencyId = u32;
 
 /// Balance of an account.
 pub type Balance = u128;

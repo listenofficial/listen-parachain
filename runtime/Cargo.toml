@@ -221,7 +221,6 @@ branch = 'rococo-v1'
 default-features = false
 
 [dependencies]
-
 funty = { version = "=1.1.0", default-features = false } # https://github.com/bitvecto-rs/bitvec/issues/105 = { version = "=1.1.0", default-features = false } # https://github.com/bitvecto-rs/bitvec/issues/105
 winapi = { version = "=0.2.8" }
 
@@ -244,8 +243,6 @@ orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-l
 
 # substrate
 pallet-multisig = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-
-
 
 [features]
 default = ['std']
@@ -300,4 +297,5 @@ std = [
 	"orml-xtokens/std",
 	"orml-currencies/std",
 	"orml-xcm-support/std",
+#	"acala-primitives/std",
 ]

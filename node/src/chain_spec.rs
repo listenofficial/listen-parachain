@@ -134,25 +134,25 @@ fn testnet_genesis(
 	id: ParaId,
 ) -> parachain_runtime::GenesisConfig {
 	parachain_runtime::GenesisConfig {
-		frame_system: Some(parachain_runtime::SystemConfig {
+		frame_system: parachain_runtime::SystemConfig {
 			code: parachain_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
 			changes_trie_config: Default::default(),
-		}),
+		},
 
-		pallet_balances: Some(parachain_runtime::BalancesConfig {
+		pallet_balances: parachain_runtime::BalancesConfig {
 			balances: endowed_accounts
 				.iter()
 				.cloned()
 				.map(|k| (k, 1 << 60))
 				.collect(),
-		}),
+		},
 
-		pallet_sudo: Some(parachain_runtime::SudoConfig { key: root_key }),
-		parachain_info: Some(parachain_runtime::ParachainInfoConfig { parachain_id: id }),
+		pallet_sudo: parachain_runtime::SudoConfig { key: root_key },
+		parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: id },
 
-		orml_tokens: Some(TokensConfig {
+		orml_tokens: TokensConfig {
 			endowed_accounts: vec![
 				(get_account_id_from_seed::<sr25519::Public>("Alice"), 1, 1 << 60),
 				(get_account_id_from_seed::<sr25519::Public>("Alice"), 2, 1 << 60),
@@ -160,8 +160,8 @@ fn testnet_genesis(
 				(get_account_id_from_seed::<sr25519::Public>("Alice"), 4, 1 << 60),
 			]
 
-		}),
+		},
 
-		pallet_listen_vesting: Some(Default::default()),
+		pallet_listen_vesting: Default::default(),
 	}
 }

@@ -238,6 +238,10 @@ orml-xtokens = { path = '../pallets/xtokens', default-features = false, version 
 # local xcm
 parachain-info = {path = '../pallets/parachain-info', default-features = false, version = "0.1.0"}
 
+# orml
+orml-currencies = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
+orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
+
 # substrate
 pallet-multisig = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 
@@ -294,4 +298,6 @@ std = [
 	"cumulus-pallet-xcm-handler/std",
 	"pallet-multisig/std",
 	"orml-xtokens/std",
+	"orml-currencies/std",
+	"orml-xcm-support/std",
 ]

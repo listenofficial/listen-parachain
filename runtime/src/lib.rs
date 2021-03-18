@@ -55,7 +55,7 @@ pub use frame_support::{
 };
 
 /// myself use
-pub use node_primitives::{currency::AUSD, BlockNumber, Signature, AccountId, AccountIndex, Balance, Index, Hash, DigestItem, CurrencyId};
+pub use node_primitives::{currency::{LT, DOT}, BlockNumber, Signature, AccountId, AccountIndex, Balance, Index, Hash, Amount, DigestItem, CurrencyId};
 pub use node_constants::{time::{SLOT_DURATION, MINUTES, HOURS, DAYS, PRIMARY_PROBABILITY}, currency::{CENTS, MILLICENTS, DOLLARS, deposit}};
 use pallet_listen as listen;
 use pallet_transfer;
@@ -65,13 +65,16 @@ use orml_tokens;
 use pallet_multisig;
 use frame_system::EnsureRoot;
 use orml_xtokens;
-use sp_runtime::traits::Convert;
+use sp_runtime::traits::{Convert, Zero};
 use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 use cumulus_pallet_xcm_handler;
 use orml_xcm_support::{
 	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, XcmHandler as XcmHandlerT,
+	NativePalletAssetOr,
 };
+
 use orml_currencies::{self, BasicCurrencyAdapter};
+use sp_std::collections::btree_set::BTreeSet;
 
 // myself imlp
 pub struct TokensMinAmount<Key, Value>(core::marker::PhantomData<(Key, Value)>);
@@ -274,6 +277,23 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = LT;
+}
+
+impl orml_currencies::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Tokens;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+
+	type WeightInfo = ();
+
+	// type AddressMapping = EvmAddressMapping<Runtime>;
+	// type EVMBridge = EVMBridge;
+}
+
+parameter_types! {
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
 }
 
@@ -285,13 +305,19 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_type_with_key! {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		Zero::zero()
+	};
+}
+
 impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = i128;
-	type CurrencyId = u32;
+	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
-	type ExistentialDeposits = TokensMinAmount<u32, u128>;
+	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
 }
 
@@ -368,11 +394,6 @@ impl listen::Config for Runtime{
 	type ModuleId = TreasuryModuleId;
 }
 
-parameter_types! {
-	pub const GetNativeCurrencyId: u32 = 0;
-
-}
-
 impl pallet_transfer::Config for Runtime {
 	type Event = Event;
 	type NativeCurrency = Balances;
@@ -398,6 +419,8 @@ parameter_types! {
 	pub Ancestry: MultiLocation = Junction::Parachain {
 		id: ParachainInfo::parachain_id().into()
 	}.into();
+
+	pub const RelayChainCurrencyId: CurrencyId = DOT;
 }
 
 type LocationConverter = (
@@ -406,16 +429,36 @@ type LocationConverter = (
 	AccountId32Aliases<RococoNetwork, AccountId>,
 );
 
-type LocalAssetTransactor = CurrencyAdapter<
-	// Use this currency:
-	Balances,
-	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<RococoLocation>,
-	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
+// type LocalAssetTransactor = CurrencyAdapter<
+// 	// Use this currency:
+// 	Balances,
+// 	// Use this currency when it is a fungible asset matching the given location or name:
+// 	IsConcrete<RococoLocation>,
+// 	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
+// 	LocationConverter,
+// 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+// 	AccountId,
+// >;
+
+pub struct RelayToNative;
+impl Convert<RelayChainBalance, Balance> for RelayToNative {
+	fn convert(val: u128) -> Balance {
+		// native is 18
+		// relay is 12
+		val * 1_000_000
+	}
+}
+
+pub type LocalAssetTransactor = MultiCurrencyAdapter<
+	Currencies,
+	IsConcreteWithGeneralKey<CurrencyId, RelayToNative>,
 	LocationConverter,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly):
 	AccountId,
+	CurrencyIdConverter<CurrencyId, RelayChainCurrencyId>,
+	CurrencyId,
 >;
+
+
 
 type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
@@ -424,6 +467,24 @@ type LocalOriginConverter = (
 	SignedAccountId32AsNative<RococoNetwork, Origin>,
 );
 
+parameter_types! {
+	pub NativeOrmlTokens: BTreeSet<(Vec<u8>, MultiLocation)> = {
+		let mut t = BTreeSet::new();
+		//TODO: might need to add other assets based on orml-tokens
+
+		// Plasm
+		t.insert(("SDN".into(), (Junction::Parent, Junction::Parachain { id: 5000 }).into()));
+		// Plasm
+		t.insert(("PLM".into(), (Junction::Parent, Junction::Parachain { id: 5000 }).into()));
+
+		// Hydrate
+		t.insert(("HDT".into(), (Junction::Parent, Junction::Parachain { id: 82406 }).into()));
+
+		t
+	};
+}
+
+
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type Call = Call;
@@ -431,7 +492,7 @@ impl Config for XcmConfig {
 	// How to withdraw and deposit an asset.
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = LocalOriginConverter;
-	type IsReserve = NativeAsset;
+	type IsReserve = NativePalletAssetOr<NativeOrmlTokens>;
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 }
@@ -445,10 +506,6 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type AccountIdConverter = LocationConverter;
 }
 
-// /// Configure the pallet template in pallets/template.
-// impl template::Config for Runtime {
-// 	type Event = Event;
-// }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -472,6 +529,7 @@ construct_runtime!(
 		ListenVesting: pallet_listen_vesting::{Module, Call, Storage, Event<T>, Config<T>},
 		Listen: listen::{Module, Storage, Call, Event<T>},
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>},
+		Currencies: orml_currencies::{Module, Call, Event<T>},
 		// TemplateModule: template::{Module, Call, Storage, Event<T>},
 	}
 );

@@ -154,10 +154,10 @@ fn testnet_genesis(
 
 		orml_tokens: TokensConfig {
 			endowed_accounts: vec![
-				(get_account_id_from_seed::<sr25519::Public>("Alice"), 1, 1 << 60),
-				(get_account_id_from_seed::<sr25519::Public>("Alice"), 2, 1 << 60),
-				(get_account_id_from_seed::<sr25519::Public>("Alice"), 3, 1 << 60),
-				(get_account_id_from_seed::<sr25519::Public>("Alice"), 4, 1 << 60),
+				// (get_account_id_from_seed::<sr25519::Public>("Alice"), 1, 1 << 60),
+				// (get_account_id_from_seed::<sr25519::Public>("Alice"), 2, 1 << 60),
+				// (get_account_id_from_seed::<sr25519::Public>("Alice"), 3, 1 << 60),
+				// (get_account_id_from_seed::<sr25519::Public>("Alice"), 4, 1 << 60),
 			]
 
 		},

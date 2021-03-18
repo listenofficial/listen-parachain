@@ -8,8 +8,8 @@ members = [
     'runtime',
     'primitives',
     'constants',
-    'traits',
-    'utilities',
+#    'traits',
+#    'utilities',
 
 ]
 

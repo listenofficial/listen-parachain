@@ -312,7 +312,7 @@ decl_module! {
 
 		/// 空投
 		#[weight = 10_000]
-		fn air_drop(origin, des: T::AccountId) -> DispatchResult {
+		fn air_drop(origin, des: Vec<T::AccountId>) -> DispatchResult {
 			/// 执行空投的账号
 			let who = ensure_signed(origin)?;
 
@@ -322,20 +322,28 @@ decl_module! {
 			//
 			// /// 是多签账号才给执行
 			// ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
+			for user in des.iter() {
 
-			/// 已经空投过的不能再操作
-			ensure!(!<AlreadyAirDropList<T>>::get().contains(&des), Error::<T>::AlreadyAirDrop);
 
-			/// 账户里面的余额必须是0
-			ensure!(T::NativeCurrency::total_balance(&who) == Zero::zero(), Error::<T>::AmountNotZero);
+				if <AlreadyAirDropList<T>>::get().contains(&user) {
+					continue;
+				}
 
-			T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, T::AirDropAmount::get()));
+				/// 账户里面的余额必须是0
+				if T::NativeCurrency::total_balance(&user) != Zero::zero() {
+					continue;
+				}
 
-			// 添加空投记录
-			<AlreadyAirDropList<T>>::mutate(|h| h.insert(des.clone()));
-			<system::Module<T>>::inc_ref(&des);
+				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&user, T::AirDropAmount::get()));
 
-			Self::deposit_event(RawEvent::AirDroped(who, des));
+				// 添加空投记录
+				<AlreadyAirDropList<T>>::mutate(|h| h.insert(user.clone()));
+				<system::Module<T>>::inc_ref(&user);
+
+			}
+			Self::deposit_event(RawEvent::AirDroped(who));
+
+
 			Ok(())
 
 		}
@@ -1614,7 +1622,7 @@ decl_event!(
 	 Amount = <<T as Config>::NativeCurrency as Currency<<T as system::Config>::AccountId>>::Balance,
 	 {
 		 SetMultisig,
-		 AirDroped(AccountId, AccountId),
+		 AirDroped(AccountId),
 		 CreatedRoom(AccountId, u64),
 		 Invited(AccountId, AccountId),
 		 IntoRoom(AccountId, Option<AccountId>, u64),

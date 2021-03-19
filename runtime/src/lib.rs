@@ -76,16 +76,6 @@ use orml_xcm_support::{
 use orml_currencies::{self, BasicCurrencyAdapter};
 use sp_std::collections::btree_set::BTreeSet;
 
-// myself imlp
-pub struct TokensMinAmount<Key, Value>(core::marker::PhantomData<(Key, Value)>);
-use sp_runtime::traits::Bounded;
-
-impl<Key: Default + Bounded, Value: Default + Bounded> GetByKey<Key, Value> for TokensMinAmount<Key
-, Value> {
-	fn get(k: &Key) -> Value {
-		Value::default()
-	}
-}
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -107,8 +97,8 @@ pub mod opaque {
 }
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("cumulus-test-parachain"),
-	impl_name: create_runtime_str!("cumulus-test-parachain"),
+	spec_name: create_runtime_str!("listen-parachain"),
+	impl_name: create_runtime_str!("listen-parachain"),
 	authoring_version: 1,
 	spec_version: 100,
 	impl_version: 1,
@@ -190,9 +180,9 @@ impl pallet_multisig::Config for Runtime {
 pub struct NativeToRelay;
 impl Convert<Balance, RelayChainBalance> for NativeToRelay {
 	fn convert(val: u128) -> Balance {
-		// native is 18
+		// native is 14
 		// relay is 12
-		val / 1_000_000
+		val / 100
 	}
 }
 
@@ -219,11 +209,10 @@ impl orml_xtokens::Config for Runtime {
 	type Balance = Balance;
 	type ToRelayChainBalance = NativeToRelay;
 	type AccountId32Convert = AccountId32Convert;
+
 	//TODO: change network id if kusama
 	type RelayChainNetworkId = PolkadotNetworkId;
 	type ParaId = ParachainInfo;
-	// type AccountIdConverter = LocationConverter;
-	// type XcmExecutor = XcmExecutor<XcmConfig>;
 	 type XcmHandler = HandleXcm;
 }
 
@@ -289,8 +278,6 @@ impl orml_currencies::Config for Runtime {
 
 	type WeightInfo = ();
 
-	// type AddressMapping = EvmAddressMapping<Runtime>;
-	// type EVMBridge = EVMBridge;
 }
 
 parameter_types! {
@@ -429,23 +416,13 @@ type LocationConverter = (
 	AccountId32Aliases<RococoNetwork, AccountId>,
 );
 
-// type LocalAssetTransactor = CurrencyAdapter<
-// 	// Use this currency:
-// 	Balances,
-// 	// Use this currency when it is a fungible asset matching the given location or name:
-// 	IsConcrete<RococoLocation>,
-// 	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
-// 	LocationConverter,
-// 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
-// 	AccountId,
-// >;
 
 pub struct RelayToNative;
 impl Convert<RelayChainBalance, Balance> for RelayToNative {
 	fn convert(val: u128) -> Balance {
-		// native is 18
+		// native is 14
 		// relay is 12
-		val * 1_000_000
+		val * 100
 	}
 }
 
@@ -470,16 +447,11 @@ type LocalOriginConverter = (
 parameter_types! {
 	pub NativeOrmlTokens: BTreeSet<(Vec<u8>, MultiLocation)> = {
 		let mut t = BTreeSet::new();
-		//TODO: might need to add other assets based on orml-tokens
-
-		// Plasm
-		t.insert(("SDN".into(), (Junction::Parent, Junction::Parachain { id: 5000 }).into()));
-		// Plasm
-		t.insert(("PLM".into(), (Junction::Parent, Junction::Parachain { id: 5000 }).into()));
-
-		// Hydrate
-		t.insert(("HDT".into(), (Junction::Parent, Junction::Parachain { id: 82406 }).into()));
-
+		// TODO 可能还需要其他资产跨链过来 在这里添加就好
+		// Acala
+		t.insert(("ACA".into(), (Junction::Parent, Junction::Parachain { id: 5000 }).into()));
+		// phala
+		t.insert(("PHA".into(), (Junction::Parent, Junction::Parachain { id: 5000 }).into()));
 		t
 	};
 }
@@ -530,7 +502,7 @@ construct_runtime!(
 		Listen: listen::{Module, Storage, Call, Event<T>},
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>},
 		Currencies: orml_currencies::{Module, Call, Event<T>},
-		// TemplateModule: template::{Module, Call, Storage, Event<T>},
+
 	}
 );
 

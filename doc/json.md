@@ -1,6 +1,17 @@
 ```
 {
-  "CurrencyIdOf":"u32",
+  "CurrencyIdOf":"CurrencyId",
+  "TokenSymbol":{
+       "_enum":["LT", "DOT", "ACA", "BTC", "KSM", "PHA", "PLM"]
+   },
+  "EvmAddress":"Hash",
+  "CurrencyId": {
+    "_enum": {
+        "Token":"TokenSymbol",
+        "DEXShare":"(TokenSymbol, TokenSymbol)",
+        "ERC20":"EvmAddress"
+    }
+  },
   "NativeBalanceOf":"Balance",
   "MultiBalanceOf":"Balance",
   "CurrencyId":"u32",
@@ -198,8 +209,9 @@
         "ParaChain": "ParaId"
         }
     },
+    
+    "ParaId":"u32",
 
-  "CurrencyId": "u32",
   "LookupSource": "MultiAddress",
   "Address": "MultiAddress"
 

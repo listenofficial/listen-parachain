@@ -3701,6 +3701,7 @@ dependencies = [
  "hex-literal 0.2.1",
  "jsonrpc-core",
  "log",
+ "node-primitives",
  "pallet-transaction-payment-rpc",
  "parachain-runtime",
  "parity-scale-codec",

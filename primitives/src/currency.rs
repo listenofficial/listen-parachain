@@ -98,29 +98,13 @@ create_currency_id! {
 	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 	#[repr(u8)]
 	pub enum TokenSymbol {
-		// Polkadot Ecosystem
-		// ACA(13) = 0,
 		LT(14) = 0,
-
-		// AUSD(12) = 1,
 		DOT(10) = 1,
-		// LDOT(10) = 3,
-		// XBTC(8) = 4,
-		// RENBTC(8) = 5,
-		// POLKABTC(8) = 6,
-		// PLM(18) = 7,
-		// PHA(18) = 8,
-		//
-		// // Kusama Ecosystem
-		// KAR(12) = 128,
-		// KUSD(12) = 129,
-		// KSM(12) = 130,
-		// LKSM(12) = 131,
-		// // Reserve for XBTC = 132
-		// // Reserve for RENBTC = 133
-		// // Reserve for POLKABTC = 134
-		// SDN(18) = 135,
-		// // Reserve for PHA = 136
+		ACA(13)= 2,
+		BTC(8) = 3,
+		KSM(12) = 4,
+		PHA(18) = 5,
+		PLM(18) = 6,
 	}
 }
 

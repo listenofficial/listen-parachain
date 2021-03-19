@@ -9,6 +9,9 @@ use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use sc_telemetry::TelemetryEndpoints;
 
+use node_primitives::currency::*;
+use hex_literal::hex;
+
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<parachain_runtime::GenesisConfig, Extensions>;
 
@@ -57,12 +60,9 @@ pub fn development_config(id: ParaId) -> ChainSpec {
 		ChainType::Local,
 		move || {
 			testnet_genesis(
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
 				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
 				],
 				id,
 			)
@@ -89,20 +89,9 @@ pub fn local_testnet_config(id: ParaId) -> ChainSpec {
 		ChainType::Local,
 		move || {
 			testnet_genesis(
-				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
 				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+					hex!["a0921eeb61d94111a26536f0218a53055e5c19d970e4f9cf51167437adf86860"].into(),
 				],
 				id,
 			)
@@ -149,15 +138,15 @@ fn testnet_genesis(
 				.collect(),
 		},
 
-		pallet_sudo: parachain_runtime::SudoConfig { key: root_key },
+		pallet_sudo: parachain_runtime::SudoConfig { key: root_key.clone() },
 		parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: id },
 
 		orml_tokens: TokensConfig {
 			endowed_accounts: vec![
-				// (get_account_id_from_seed::<sr25519::Public>("Alice"), 1, 1 << 60),
-				// (get_account_id_from_seed::<sr25519::Public>("Alice"), 2, 1 << 60),
-				// (get_account_id_from_seed::<sr25519::Public>("Alice"), 3, 1 << 60),
-				// (get_account_id_from_seed::<sr25519::Public>("Alice"), 4, 1 << 60),
+				(root_key.clone(), DOT, 1 << 60),
+				(root_key.clone(), KSM, 1 << 60),
+				(root_key.clone(), BTC, 1 << 60),
+				(root_key.clone(), ACA, 1 << 60),
 			]
 
 		},

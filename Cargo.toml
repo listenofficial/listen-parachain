@@ -8,9 +8,6 @@ members = [
     'runtime',
     'primitives',
     'constants',
-#    'traits',
-#    'utilities',
-
 ]
 
 [patch.crates-io]

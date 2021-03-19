@@ -65,7 +65,7 @@ decl_module! {
 
 			if T::GetNativeCurrencyId::get() == currency_id {
 
-				ensure!(T::MultiCurrency::total_balance(currency_id, &from) > T::AirDropAmount::get(), Error::<T>::AmountTooLow);
+				ensure!(T::NativeCurrency::total_balance(&from) > T::AirDropAmount::get(), Error::<T>::AmountTooLow);
 			}
 
 			T::MultiCurrency::transfer(currency_id, &from, &to, amount)?;
@@ -82,7 +82,8 @@ decl_module! {
 			let from = ensure_signed(origin)?;
 			let to = T::Lookup::lookup(dest)?;
 
-			ensure!(T::MultiCurrency::total_balance(T::GetNativeCurrencyId::get(), &from) > T::AirDropAmount::get(), Error::<T>::AmountTooLow);
+			ensure!(T::NativeCurrency::total_balance(&from) > T::AirDropAmount::get(), Error::<T>::AmountTooLow);
+
 			T::NativeCurrency::transfer(&from, &to, amount)?;
 
 			Self::deposit_event(RawEvent::Transferred(T::GetNativeCurrencyId::get(), from, to, amount));

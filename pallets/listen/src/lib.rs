@@ -94,7 +94,7 @@ decl_storage! {
 
 		/// 全网创建的所有群 (group_id => group_info)
 		pub AllRoom get(fn all_room): map hasher(blake2_128_concat) u64 => Option<GroupInfo<T::AccountId, BalanceOf<T>,
-		AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>>, T::Moment>>;
+		AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>>;
 
 		/// 群里的所有人
 		pub ListenersOfRoom get(fn listeners_of_room): map hasher(blake2_128_concat) u64 => BTreeSet<T::AccountId>;
@@ -395,6 +395,7 @@ decl_module! {
 				this_disband_start_time: T::BlockNumber::default(),
 				is_voting: false,
 				create_time: <timestamp::Module<T>>::get(),
+				consume: BTreeMap::new(),
 			};
 
 			<AllRoom<T>>::insert(group_id, group_info);
@@ -543,6 +544,8 @@ decl_module! {
 
 			room.total_balances += cost.clone();
 
+			let room = Self::update_user_consume(who.clone(), room, cost);
+
 			<AllRoom<T>>::insert(group_id, room);
 
 			// 修改个人信息
@@ -596,6 +599,10 @@ decl_module! {
 			room.audio.minutes = room.audio.minutes.checked_add(audio.minutes).ok_or(Error::<T>::Overflow)?;
 
 			room.total_balances += cost.clone();
+
+			// 更新个人消费信息
+			let room = Self::update_user_consume(who.clone(), room, cost);
+
 			<AllRoom<T>>::insert(group_id, room);
 
 			// 修改个人信息
@@ -1269,6 +1276,26 @@ impl <T: Config> Module <T> {
 	// 	Ok(<CurrencyIdOf<T>>::from(currency_id))
 	// }
 
+	/// 个人消费数据更新
+	fn update_user_consume(who: T::AccountId, room_info: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>,
+						   amount: BalanceOf<T>) -> GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>{
+		let mut room = room_info;
+		let user_consume_opt = room.consume.get(&who);
+		match user_consume_opt {
+			Some(x) => {
+				room.consume.insert(who, *x + amount);
+			},
+			None => {
+				room.consume.insert(who, amount);
+			},
+		};
+
+		room
+
+
+
+	}
+
 
 	// 支付给其他人
 	fn pay_for(group_id: u64, join_cost: BalanceOf<T>){
@@ -1343,7 +1370,7 @@ impl <T: Config> Module <T> {
 	}
 
 	// 判断投票是否结束 (结束 , 通过)
-	fn is_vote_end(total_count: u32, vote_info: DisbandVote<BTreeSet<T::AccountId>>, start_time: T::BlockNumber) -> (bool, bool){
+	fn is_vote_end(total_count: u32, vote_info: DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, start_time: T::BlockNumber) -> (bool, bool){
 		let half = ((total_count + 1) / 2) as usize;
 		let total_count = total_count as usize;
 		// 如果有票数超过一半

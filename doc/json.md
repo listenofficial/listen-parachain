@@ -14,7 +14,6 @@
   },
   "NativeBalanceOf":"Balance",
   "MultiBalanceOf":"Balance",
-  "CurrencyId":"u32",
   "Amount": "Balance",
   "AllProps": {
     "picture": "u32",
@@ -92,7 +91,9 @@
   },
   "DisbandVote": {
     "approve_man": "BTreeSet<AccountId>",
-    "reject_man": "BTreeSet<AccountId>"
+    "reject_man": "BTreeSet<AccountId>",
+    "approve_total_amount":"Balance",
+    "reject_total_amount":"Balance"
   },
   "GroupMaxMembers": {
     "_enum": [
@@ -135,7 +136,8 @@
     "disband_vote": "DisbandVote",
     "this_disband_start_time": "BlockNumber",
     "is_voting": "bool",
-    "create_time": "Moment"
+    "create_time": "Moment",
+    "consume": "BTreeMap<AccountId, Balance>"
   },
   "InvitePaymentType": {
     "_enum": [
@@ -186,16 +188,6 @@
     "unlock_amount_of_per_duration": "Balance",
     "block_number_of_per_duration": "BlockNumber",
     "starting_block": "BlockNumber"
-    },
-  "Tokens": {
-     "_enum": {
-      "LT":null,
-      "KSM":null,
-      "DOT":null,
-      "BTC":null,
-      "ACA":null,
-      "Other":"CurrencyId"
-    }
     },
 
   "XCurrencyId": {

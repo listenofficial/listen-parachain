@@ -6,7 +6,7 @@
 pub mod raw;
 
 pub use frame_support::{traits::{Get, Currency, ReservableCurrency, EnsureOrigin, ExistenceRequirement::KeepAlive, WithdrawReasons, OnUnbalanced, BalanceStatus as Status},
-					debug, ensure, decl_module, decl_storage, decl_error, decl_event, weights::{Weight}, StorageValue, StorageMap, StorageDoubleMap, IterableStorageDoubleMap, Blake2_256};
+					debug, ensure, decl_module, decl_storage, decl_error, decl_event, weights::{Weight}, StorageValue, StorageMap, StorageDoubleMap, IterableStorageDoubleMap, IterableStorageMap, Blake2_256};
 
 use sp_std::{result, prelude::*, collections::btree_set::BTreeSet, collections::btree_map::BTreeMap, convert::TryFrom, cmp};
 
@@ -243,6 +243,8 @@ decl_error! {
 		AlreadyReward,
 		/// 账户金额不是0
 		AmountNotZero,
+		/// 消费金额是0
+		ConsumeAmountIsZero,
 }}
 
 
@@ -314,11 +316,12 @@ decl_module! {
 			/// 执行空投的账号
 			let who = ensure_signed(origin)?;
 
-			/// 获取多签账号id
-			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
-
-			/// 是多签账号才给执行
-			ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
+			/// fixme 暂时去掉多签账号权限
+			// /// 获取多签账号id
+			// let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
+			//
+			// /// 是多签账号才给执行
+			// ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
 
 			/// 已经空投过的不能再操作
 			ensure!(!<AlreadyAirDropList<T>>::get().contains(&des), Error::<T>::AlreadyAirDrop);
@@ -437,13 +440,14 @@ decl_module! {
 				let reward = T::PledgeRate::get() * pledge;
 				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, reward));
 
-				// 领取群资产产生的利息
-				let room_total_amount = room_info.total_balances.clone();
-				let manager_proportion_amount = T::ManagerProportion::get() * room_total_amount;
+				// 领取群消费资产产生的利息
+				let consume_total_amount = Self::get_room_consume_amount(room_info.clone());
+
+				let manager_proportion_amount = T::ManagerProportion::get() * consume_total_amount;
 				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, manager_proportion_amount));
 
 				// 群资产按照比例增加
-				let room_add = T::RoomProportion::get() * room_total_amount;
+				let room_add = T::RoomProportion::get() * consume_total_amount;
 
 				// 更新群信息
 				room_info.last_block_of_get_the_reward = real_this_block;
@@ -479,10 +483,11 @@ decl_module! {
 		fn into_room(origin, group_id: u64, invite: T::AccountId, inviter: Option<T::AccountId>, payment_type: Option<InvitePaymentType>) -> DispatchResult{
 			let who = ensure_signed(origin)?;
 
-			/// 获取多签账号id
-			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
-			/// 是多签账号才给执行
-			ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
+			/// fixme 暂时去掉多签账号权限
+			// /// 获取多签账号id
+			// let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
+			// /// 是多签账号才给执行
+			// ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
 
 			if inviter.is_some() {
 				// 被邀请人与邀请人不能相同
@@ -544,9 +549,7 @@ decl_module! {
 
 			room.total_balances += cost.clone();
 
-			let room = Self::update_user_consume(who.clone(), room, cost);
-
-			<AllRoom<T>>::insert(group_id, room);
+			Self::update_user_consume(who.clone(), room, cost);
 
 			// 修改个人信息
 			let mut person = <AllListeners<T>>::get(who.clone());
@@ -601,9 +604,9 @@ decl_module! {
 			room.total_balances += cost.clone();
 
 			// 更新个人消费信息
-			let room = Self::update_user_consume(who.clone(), room, cost);
+			Self::update_user_consume(who.clone(), room, cost);
 
-			<AllRoom<T>>::insert(group_id, room);
+			// <AllRoom<T>>::insert(group_id, room);
 
 			// 修改个人信息
 			let mut person = <AllListeners<T>>::get(who.clone());
@@ -818,7 +821,15 @@ decl_module! {
 
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
 
+
 			let mut room = <AllRoom<T>>::get(group_id).unwrap();
+
+			/// 在群里的消费金额不能是0
+		    let user_consume_amount_opt = room.consume.get(&who);
+		    if user_consume_amount_opt.is_none() {
+		    	return Err(Error::<T>::ConsumeAmountIsZero)?;
+		    }
+		    let user_consume_amount = user_consume_amount_opt.unwrap();
 
 			// 正在投票
 			ensure!(room.is_voting, Error::<T>::NotVoting);
@@ -833,7 +844,14 @@ decl_module! {
 						return Err(Error::<T>::RepeatVote)?;
 					}
 					room.disband_vote.approve_man.insert(who.clone());
-					room.disband_vote.reject_man.remove(&who);
+					room.disband_vote.approve_total_amount += *user_consume_amount;
+
+					if room.disband_vote.reject_man.get(&who).is_some() {
+						room.disband_vote.reject_man.remove(&who);
+						room.disband_vote.reject_total_amount -= *user_consume_amount;
+					}
+
+
 
 				},
 				VoteType::Reject => {
@@ -841,77 +859,20 @@ decl_module! {
 						return Err(Error::<T>::RepeatVote)?;
 					}
 					room.disband_vote.reject_man.insert(who.clone());
-					room.disband_vote.approve_man.remove(&who);
+					room.disband_vote.reject_total_amount += *user_consume_amount;
+					if room.disband_vote.approve_man.get(&who).is_some() {
+						room.disband_vote.approve_man.remove(&who);
+						room.disband_vote.approve_total_amount -= *user_consume_amount;
+					}
+
 
 				},
 				}
 
 			<AllRoom<T>>::insert(group_id, room.clone());
 
-			// 如果结束  就进行下一步
-			let vote_result = Self::is_vote_end(room.now_members_number.clone(), room.disband_vote.clone(), room.this_disband_start_time);
-			if vote_result.0 == End{
-				// 如果是通过 那么就删除房间信息跟投票信息 添加投票结果信息
-				if vote_result.1 == Pass{
+			Self::judge(room.clone());
 
-					// 先解决红包(剩余红包归还给发红包的人)
-					Self::remove_redpacket_by_room_id(group_id, true);
-
-					let cur_session = Self::get_session_index();
-					let mut session_indexs = <AllSessionIndex>::get();
-					if session_indexs.is_empty(){
-						session_indexs.push(cur_session)
-					}
-					else{
-						let len = session_indexs.clone().len();
-						// 获取最后一个数据
-						let last = session_indexs.swap_remove(len - 1);
-						if last != cur_session{
-							session_indexs.push(last);
-						}
-						session_indexs.push(cur_session);
-					}
-					<AllSessionIndex>::put(session_indexs);
-
-					let total_reward = room.total_balances.clone();
-					let manager_reward = room.group_manager_balances.clone();
-					let pledge_amount = room.pledge_amount.clone();
-					// 把属于群主的那部分给群主
-					T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&room.group_manager, manager_reward));
-					// 把群主的抵押币转到自由余额
-					T::NativeCurrency::unreserve(&room.group_manager, pledge_amount);
-
-					let listener_reward = total_reward.clone() - manager_reward.clone();
-					let session_index = Self::get_session_index();
-					let per_man_reward = listener_reward.clone() / <BalanceOf<T>>::from(room.now_members_number);
-					let room_rewad_info = RoomRewardInfo{
-						total_person: room.now_members_number.clone(),
-						already_get_count: 0u32,
-						total_reward: listener_reward.clone(),
-						already_get_reward: <BalanceOf<T>>::from(0u32),
-						per_man_reward: per_man_reward.clone(),
-					};
-
-					<InfoOfDisbandRoom<T>>::insert(session_index, group_id, room_rewad_info);
-
-					<AllRoom<T>>::remove(group_id);
-
-				}
-
-				// 如果是不通过 那么就删除投票信息 回到投票之前的状态
-				else{
-					// 删除有关投票信息
-					let last_disband_end_hight = now.clone();
-					room.last_disband_end_hight = last_disband_end_hight;
-					room.is_voting = false;
-					room.this_disband_start_time = <T::BlockNumber>::from(0u32);
-					room.disband_vote.approve_man = BTreeSet::<T::AccountId>::new();
-					room.disband_vote.reject_man = BTreeSet::<T::AccountId>::new();
-
-					<AllRoom<T>>::insert(group_id, room);
-				}
-
-			}
 			Self::deposit_event(RawEvent::DisbandVote(who.clone(), group_id));
 			Ok(())
 
@@ -997,55 +958,53 @@ decl_module! {
 		}
 
 
-		// /// 在群里发红包
-		// #[weight = 10_000]
-		// pub fn send_redpacket_in_room(origin, group_id: u64, token: Tokens, lucky_man_number: u32, amount: BalanceOf<T>) -> DispatchResult{
-		// 	let who = ensure_signed(origin)?;
-		//
-		// 	let currency_id = Self::tokens_convert_to_currency_id(token)?;
-		//
-		// 	ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
-		//
-		// 	// 金额太小不能发红包
-		// 	ensure!(amount >= <BalanceOf<T>>::from(lucky_man_number).checked_mul(&T::RedPacketMinAmount::get()).ok_or(Error::<T>::Overflow)?, Error::<T>::AmountTooLow);
-		//
-		// 	// 获取红包id
-		// 	let redpacket_id = <RedPacketId>::get();
-		//
-		// 	let redpacket = RedPacket{
-		// 		id: redpacket_id,
-		// 		currency_id: currency_id,
-		// 		boss: who.clone(),
-		// 		total: amount.clone(),
-		// 		lucky_man_number: lucky_man_number,
-		// 		already_get_man: BTreeSet::<T::AccountId>::default(),
-		// 		min_amount_of_per_man: T::RedPacketMinAmount::get(),
-		// 		already_get_amount: <BalanceOf<T>>::from(0u32),
-		// 		end_time: Self::now() + T::RedPackExpire::get(),
-		// 	};
-		//
-		// 	let amount_u128 = amount.saturated_into::<u128>();
-		//
-		// 	if currency_id == T::GetNativeCurrencyId::get() {
-		// 		T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&who, amount.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
-		// 	}
-		// 	else {
-		// 		let amount = amount_u128.saturated_into::<MultiBalanceOf<T>>();
-		// 		T::MultiCurrency::withdraw(currency_id, &who, amount)?;
-		// 	}
-		//
-		// 	let now_id = redpacket_id.checked_add(1).ok_or(Error::<T>::Overflow)?;
-		// 	<RedPacketId>::put(now_id);
-		// 	<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket);
-		//
-		// 	// 顺便处理过期红包
-		// 	Self::remove_redpacket_by_room_id(group_id, false);
-		//
-		// 	Self::deposit_event(RawEvent::SendRedPocket(group_id, redpacket_id, amount_u128));
-		//
-		// 	Ok(())
-		//
-		// }
+		/// 在群里发红包
+		#[weight = 10_000]
+		pub fn send_redpacket_in_room(origin, group_id: u64, currency_id: CurrencyIdOf<T>, lucky_man_number: u32, amount: BalanceOf<T>) -> DispatchResult{
+			let who = ensure_signed(origin)?;
+
+			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
+
+			// 金额太小不能发红包
+			ensure!(amount >= <BalanceOf<T>>::from(lucky_man_number).checked_mul(&T::RedPacketMinAmount::get()).ok_or(Error::<T>::Overflow)?, Error::<T>::AmountTooLow);
+
+			// 获取红包id
+			let redpacket_id = <RedPacketId>::get();
+
+			let redpacket = RedPacket{
+				id: redpacket_id,
+				currency_id: currency_id,
+				boss: who.clone(),
+				total: amount.clone(),
+				lucky_man_number: lucky_man_number,
+				already_get_man: BTreeSet::<T::AccountId>::default(),
+				min_amount_of_per_man: T::RedPacketMinAmount::get(),
+				already_get_amount: <BalanceOf<T>>::from(0u32),
+				end_time: Self::now() + T::RedPackExpire::get(),
+			};
+
+			let amount_u128 = amount.saturated_into::<u128>();
+
+			if currency_id == T::GetNativeCurrencyId::get() {
+				T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&who, amount.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
+			}
+			else {
+				let amount = amount_u128.saturated_into::<MultiBalanceOf<T>>();
+				T::MultiCurrency::withdraw(currency_id, &who, amount)?;
+			}
+
+			let now_id = redpacket_id.checked_add(1).ok_or(Error::<T>::Overflow)?;
+			<RedPacketId>::put(now_id);
+			<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket);
+
+			// 顺便处理过期红包
+			Self::remove_redpacket_by_room_id(group_id, false);
+
+			Self::deposit_event(RawEvent::SendRedPocket(group_id, redpacket_id, amount_u128));
+
+			Ok(())
+
+		}
 
 
 		/// 退群
@@ -1268,6 +1227,17 @@ impl <T: Config> Module <T> {
 		Ok(())
 	}
 
+	/// 获取群消费的总资产
+	fn get_room_consume_amount(room: GroupInfo<T::AccountId, BalanceOf<T>,
+			AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>) -> BalanceOf<T>{
+		let mut consume_total_amount = <BalanceOf<T>>::from(0u32);
+		for (account_id, amount) in room.consume.clone() {
+			consume_total_amount += amount;
+		}
+
+		consume_total_amount
+	}
+
 
 	// ///  tokens转变成改currency_id
 	// fn tokens_convert_to_currency_id(token: Tokens) -> Result<CurrencyIdOf<T>, DispatchError> {
@@ -1276,24 +1246,42 @@ impl <T: Config> Module <T> {
 	// 	Ok(<CurrencyIdOf<T>>::from(currency_id))
 	// }
 
-	/// 个人消费数据更新
+	/// 个人消费数据更新  如果在投票期间 那么判断自己是否投过票 投票的话更新
 	fn update_user_consume(who: T::AccountId, room_info: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>,
-						   amount: BalanceOf<T>) -> GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>{
+						   amount: BalanceOf<T>) {
 		let mut room = room_info;
+		let group_id = room.group_id;
 		let user_consume_opt = room.consume.get(&who);
 		match user_consume_opt {
 			Some(x) => {
-				room.consume.insert(who, *x + amount);
+				room.consume.insert(who.clone(), *x + amount);
 			},
 			None => {
-				room.consume.insert(who, amount);
+				room.consume.insert(who.clone(), amount);
 			},
 		};
 
-		room
+		// 如果本群正在投票 那么更新投票信息
+		if room.is_voting.clone() {
+			let mut is_in_vote = false;
+			let disband_vote_info = room.disband_vote.clone();
+			if disband_vote_info.approve_man.get(&who).is_some() {
+				room.disband_vote.approve_total_amount += amount;
+				is_in_vote = true;
+			}
 
+			if disband_vote_info.reject_man.get(&who).is_some() {
+				room.disband_vote.reject_total_amount += amount;
+				is_in_vote = true;
+			}
 
+			if is_in_vote {
+				Self::judge(room.clone());
+				return
+			}
+		}
 
+		<AllRoom<T>>::insert(group_id, room);
 	}
 
 
@@ -1369,13 +1357,24 @@ impl <T: Config> Module <T> {
 
 	}
 
-	// 判断投票是否结束 (结束 , 通过)
-	fn is_vote_end(total_count: u32, vote_info: DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, start_time: T::BlockNumber) -> (bool, bool){
-		let half = ((total_count + 1) / 2) as usize;
-		let total_count = total_count as usize;
-		// 如果有票数超过一半
-		if vote_info.approve_man.clone().len() >= half || vote_info.reject_man.clone().len() >= half{
-			if vote_info.approve_man.clone().len() >= half {
+	/// 判断投票是否结束 (结束 , 通过)
+	fn is_vote_end(room_info: GroupInfo<T::AccountId, BalanceOf<T>,
+		AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>)
+		-> (bool, bool){
+
+		let start_time = room_info.this_disband_start_time.clone();
+
+		let approve_total_amount = room_info.disband_vote.approve_total_amount.clone();
+		let reject_total_amount = room_info.disband_vote.reject_total_amount.clone();
+
+		let consume_total_amount = Self::get_room_consume_amount(room_info.clone());
+
+		let half = consume_total_amount / <BalanceOf<T>>::from(2u32);
+
+		// 如果有票总金额超过一半
+		if approve_total_amount >= half || reject_total_amount >= half{
+
+			if approve_total_amount >= half {
 				 (End, Pass)
 			}
 			else{
@@ -1384,23 +1383,21 @@ impl <T: Config> Module <T> {
 		}
 
 		else{
-			let max = cmp::max(vote_info.approve_man.clone().len(), vote_info.reject_man.clone().len());
-			let min = cmp::min(vote_info.approve_man.clone().len(), vote_info.reject_man.clone().len());
-			if Percent::from_percent(20) * total_count < max - min{
-				if vote_info.approve_man.clone().len() >= vote_info.reject_man.clone().len(){
+			let max = cmp::max(approve_total_amount, reject_total_amount);
+			let min = cmp::min(approve_total_amount, reject_total_amount);
+			if Percent::from_percent(20) * consume_total_amount < max - min{
+				if approve_total_amount >= reject_total_amount{
 					 (End, Pass)
 				}
 				else{
 					 (End, NotPass)
 				}
-
 			}
 
 			else{
 				if start_time + T::VoteExpire::get() >= Self::now(){
 					(NotEnd, NotPass)
 				}
-
 				// 时间到 结束
 				else{
 					(End, NotPass)
@@ -1451,6 +1448,82 @@ impl <T: Config> Module <T> {
 		}
 
 		<RedPacketOfRoom<T>>::remove(room_id, redpacket_id);
+
+	}
+
+
+	/// 投票后进行的判断
+	fn judge(room: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>,
+			) {
+
+		let mut room = room.clone();
+		let group_id = room.group_id;
+		let now = Self::now();
+
+		// 如果结束  就进行下一步
+		let vote_result = Self::is_vote_end(room.clone());
+		if vote_result.0 == End{
+			// 如果是通过 那么就删除房间信息跟投票信息 添加投票结果信息
+			if vote_result.1 == Pass{
+
+				// 先解决红包(剩余红包归还给发红包的人)
+				Self::remove_redpacket_by_room_id(group_id, true);
+
+				let cur_session = Self::get_session_index();
+				let mut session_indexs = <AllSessionIndex>::get();
+				if session_indexs.is_empty(){
+					session_indexs.push(cur_session)
+				}
+				else{
+					let len = session_indexs.clone().len();
+					// 获取最后一个数据
+					let last = session_indexs.swap_remove(len - 1);
+					if last != cur_session{
+						session_indexs.push(last);
+					}
+					session_indexs.push(cur_session);
+				}
+				<AllSessionIndex>::put(session_indexs);
+
+				let total_reward = room.total_balances.clone();
+				let manager_reward = room.group_manager_balances.clone();
+				let pledge_amount = room.pledge_amount.clone();
+				// 把属于群主的那部分给群主
+				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&room.group_manager, manager_reward));
+				// 把群主的抵押币转到自由余额
+				T::NativeCurrency::unreserve(&room.group_manager, pledge_amount);
+
+				let listener_reward = total_reward.clone() - manager_reward.clone();
+				let session_index = Self::get_session_index();
+				let per_man_reward = listener_reward.clone() / <BalanceOf<T>>::from(room.now_members_number);
+				let room_rewad_info = RoomRewardInfo{
+					total_person: room.now_members_number.clone(),
+					already_get_count: 0u32,
+					total_reward: listener_reward.clone(),
+					already_get_reward: <BalanceOf<T>>::from(0u32),
+					per_man_reward: per_man_reward.clone(),
+				};
+
+				<InfoOfDisbandRoom<T>>::insert(session_index, group_id, room_rewad_info);
+
+				<AllRoom<T>>::remove(group_id);
+
+			}
+
+			// 如果是不通过 那么就删除投票信息 回到投票之前的状态
+			else{
+				// 删除有关投票信息
+				let last_disband_end_hight = now.clone();
+				room.last_disband_end_hight = last_disband_end_hight;
+				room.is_voting = false;
+				room.this_disband_start_time = <T::BlockNumber>::from(0u32);
+
+				room.disband_vote = <DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>>::default();
+
+				<AllRoom<T>>::insert(group_id, room);
+			}
+
+		}
 
 	}
 

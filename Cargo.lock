@@ -4346,24 +4346,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "orml-tokens"
-version = "0.4.1-dev"
-dependencies = [
- "frame-support",
- "frame-system",
- "funty",
- "orml-traits",
- "pallet-elections-phragmen",
- "pallet-treasury",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git#ce683b02d901faed03deec099cc2e5d9326c7c67"
@@ -4423,25 +4405,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
-]
-
-[[package]]
-name = "orml-xtokens"
-version = "0.4.1-dev"
-dependencies = [
- "cumulus-primitives-core",
- "frame-support",
- "frame-system",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git)",
- "parity-scale-codec",
- "polkadot-core-primitives",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "xcm",
- "xcm-executor",
 ]
 
 [[package]]
@@ -4693,11 +4656,10 @@ dependencies = [
  "frame-system",
  "node-constants",
  "node-primitives",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git)",
+ "orml-tokens",
  "orml-traits",
  "pallet-multisig",
  "pallet-timestamp",
- "pallet-transfer",
  "pallet-treasury",
  "parity-scale-codec",
  "sp-runtime",
@@ -5006,7 +4968,8 @@ dependencies = [
  "frame-support",
  "frame-system",
  "node-primitives",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git)",
+ "orml-currencies",
+ "orml-tokens",
  "orml-traits",
  "pallet-balances",
  "parity-scale-codec",
@@ -5087,10 +5050,10 @@ dependencies = [
  "node-constants",
  "node-primitives",
  "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git)",
+ "orml-tokens",
  "orml-traits",
  "orml-xcm-support",
- "orml-xtokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library.git)",
+ "orml-xtokens",
  "pallet-balances",
  "pallet-listen",
  "pallet-listen-vesting",

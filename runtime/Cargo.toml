@@ -170,20 +170,6 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
 
-#[dependencies.template]
-#default-features = false
-#package = 'pallet-template'
-#path = '../pallets/template'
-#version = '3.0.0'
-
-
-## Cumulus dependencies
-#[dependencies.parachain-info]
-#default-features = false
-#git = 'https://github.com/paritytech/cumulus.git'
-#branch = 'rococo-v1'
-#version = '0.1.0'
-
 [dependencies.cumulus-pallet-parachain-system]
 git = 'https://github.com/paritytech/cumulus.git'
 branch = 'rococo-v1'
@@ -228,8 +214,8 @@ winapi = { version = "=0.2.8" }
 node-primitives = {path = '../primitives', default-features = false, version = '0.1.0'}
 node-constants = {path = '../constants', default-features = false, version = '0.1.0'}
 pallet-listen = { path = '../pallets/listen', default-features = false, version = '0.1.0' }
-pallet-transfer = { path = '../pallets/transfer', default-features = false, version = '0.1.0' }
 pallet-listen-vesting = { path = '../pallets/listen-vesting', default-features = false, version = '0.1.0' }
+pallet-transfer = {path = '../pallets/transfer', default-features = false, version = '0.1.0'}
 
 # local xcm
 parachain-info = {path = '../pallets/parachain-info', default-features = false, version = "0.1.0"}
@@ -261,7 +247,6 @@ std = [
 	"node-primitives/std",
 	"node-constants/std",
 	"pallet-listen/std",
-	"pallet-transfer/std",
 	"pallet-listen-vesting/std",
 	"orml-traits/std",
 	"orml-tokens/std",
@@ -297,5 +282,6 @@ std = [
 	"orml-xtokens/std",
 	"orml-currencies/std",
 	"orml-xcm-support/std",
+	"pallet-transfer/std",
 #	"acala-primitives/std",
 ]

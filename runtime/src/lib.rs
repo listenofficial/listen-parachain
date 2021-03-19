@@ -58,7 +58,6 @@ pub use frame_support::{
 pub use node_primitives::{currency::{LT, DOT}, BlockNumber, Signature, AccountId, AccountIndex, Balance, Index, Hash, Amount, DigestItem, CurrencyId};
 pub use node_constants::{time::{SLOT_DURATION, MINUTES, HOURS, DAYS, PRIMARY_PROBABILITY}, currency::{CENTS, MILLICENTS, DOLLARS, deposit}};
 use pallet_listen as listen;
-use pallet_transfer;
 use pallet_listen_vesting;
 use orml_traits::*;
 use orml_tokens;
@@ -72,6 +71,7 @@ use orml_xcm_support::{
 	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, XcmHandler as XcmHandlerT,
 	NativePalletAssetOr,
 };
+use pallet_transfer;
 
 use orml_currencies::{self, BasicCurrencyAdapter};
 use sp_std::collections::btree_set::BTreeSet;
@@ -280,6 +280,11 @@ impl orml_currencies::Config for Runtime {
 
 }
 
+impl pallet_transfer::Config for Runtime {
+	type Event = Event;
+	type AirDropAmount = AirDropAmount;
+}
+
 parameter_types! {
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
 }
@@ -370,6 +375,9 @@ parameter_types! {
 impl listen::Config for Runtime{
 	type Event = Event;
 	type Create = ();
+	type NativeCurrency = Balances;
+
+	type MultiCurrency = Tokens;
 	type ProposalRejection = ();
 	type VoteExpire = VoteExpire;
 	type RedPacketMinAmount = RedPacketMinAmount;
@@ -379,15 +387,10 @@ impl listen::Config for Runtime{
 	type ManagerProportion = ManagerProportion;
 	type RoomProportion = RoomProportion;
 	type ModuleId = TreasuryModuleId;
+	type AirDropAmount = AirDropAmount;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
 }
 
-impl pallet_transfer::Config for Runtime {
-	type Event = Event;
-	type NativeCurrency = Balances;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-	type MultiCurrency = Tokens;
-	type AirDropAmount = AirDropAmount;
-}
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
@@ -497,11 +500,11 @@ construct_runtime!(
 		XcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		Tokens: orml_tokens::{Module, Config<T>, Storage, Event<T>},
-		Transfer: pallet_transfer::{Module, Call, Event<T>},
 		ListenVesting: pallet_listen_vesting::{Module, Call, Storage, Event<T>, Config<T>},
 		Listen: listen::{Module, Storage, Call, Event<T>},
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>},
-		Currencies: orml_currencies::{Module, Call, Event<T>},
+		Currencies: orml_currencies::{Module, Event<T>},
+		Transfer: pallet_transfer::{Module, Call, Event<T>},
 
 	}
 );

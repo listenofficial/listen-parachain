@@ -31,23 +31,26 @@ use sp_std::convert::TryInto;
 
 use orml_tokens;
 use orml_traits::MultiCurrency;
-use pallet_transfer;
 
 pub(crate) type MultiBalanceOf<T> =
-		<<T as pallet_transfer::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+		<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 
 pub(crate) type CurrencyIdOf<T> =
-		<<T as pallet_transfer::Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+		<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 
-type BalanceOf<T> = <<T as pallet_transfer::Config>::NativeCurrency as Currency<<T as system::Config>::AccountId>>::Balance;
-type PositiveImbalanceOf<T> = <<T as pallet_transfer::Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::PositiveImbalance;
-type NegativeImbalanceOf<T> = <<T as pallet_transfer::Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
+type BalanceOf<T> = <<T as Config>::NativeCurrency as Currency<<T as system::Config>::AccountId>>::Balance;
+type PositiveImbalanceOf<T> = <<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::PositiveImbalance;
+type NegativeImbalanceOf<T> = <<T as Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
-pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config + pallet_transfer::Config {
+pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config {
 
 	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	type Create: OnUnbalanced<PositiveImbalanceOf<Self>>;
+
+	type NativeCurrency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+
+	type MultiCurrency: MultiCurrency<Self::AccountId>;
 
 	type ProposalRejection: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
@@ -67,6 +70,9 @@ pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config +
 
 	type ModuleId: Get<ModuleId>;
 
+	type AirDropAmount: Get<BalanceOf<Self>>;
+
+	type GetNativeCurrencyId: Get<CurrencyIdOf<Self>>;
 
 }
 
@@ -1505,7 +1511,7 @@ impl <T: Config> Module <T> {
 decl_event!(
 	pub enum Event<T> where
 	 <T as system::Config>::AccountId,
-	 Amount = <<T as pallet_transfer::Config>::NativeCurrency as Currency<<T as system::Config>::AccountId>>::Balance,
+	 Amount = <<T as Config>::NativeCurrency as Currency<<T as system::Config>::AccountId>>::Balance,
 	 {
 		 SetMultisig,
 		 AirDroped(AccountId, AccountId),

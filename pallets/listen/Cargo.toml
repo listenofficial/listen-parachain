@@ -23,8 +23,6 @@ node-primitives = { path = '../../primitives', default-features = false, version
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
 
-pallet-transfer = {path = "../transfer", default-features = false }
-
 #[dev-dependencies]
 sp-runtime = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 sp-std = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
@@ -46,7 +44,6 @@ std = [
     "node-primitives/std",
     "orml-tokens/std",
     "orml-traits/std",
-    "pallet-transfer/std",
 
 ]
 

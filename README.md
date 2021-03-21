@@ -1,6 +1,6 @@
-# Substrate Cumulus Parachain Template
+# Listen Parachain 
 
-A new Cumulus-based Substrate node, ready for hacking :cloud:
+A new listen parachain node, ready for hacking :cloud:
 
 ## Upstream
 

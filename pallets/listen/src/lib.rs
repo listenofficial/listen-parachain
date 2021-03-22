@@ -316,12 +316,11 @@ decl_module! {
 			/// 执行空投的账号
 			let who = ensure_signed(origin)?;
 
-			/// fixme 暂时去掉多签账号权限
-			// /// 获取多签账号id
-			// let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
-			//
-			// /// 是多签账号才给执行
-			// ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
+			/// 获取多签账号id
+			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
+
+			/// 是多签账号才给执行
+			ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
 			for user in des.iter() {
 
 

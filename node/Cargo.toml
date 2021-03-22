@@ -8,6 +8,8 @@ hex-literal = "0.2.1"
 # RPC related dependencies
 jsonrpc-core = "15.1.0"
 node-primitives = {path = '../primitives', version = '0.1.0'}
+#parachain-runtime = {path = '../runtime', version = '2.0.0'}
+
 
 [dependencies.frame-benchmarking]
 git = 'https://github.com/paritytech/substrate.git'

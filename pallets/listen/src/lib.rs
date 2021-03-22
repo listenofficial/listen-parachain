@@ -1301,7 +1301,7 @@ impl <T: Config> Module <T> {
 				}
 			}
 
-			if index <= 14 {
+			if index <= 3 {
 				old_council.insert(index, (who.clone(), *new_user_consume));
 			}
 		}

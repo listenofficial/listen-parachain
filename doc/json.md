@@ -159,12 +159,12 @@
     "cost": "Balance",
     "rooms": "Vec<(u64, RewardStatus)>"
   },
-  "AudioCost": {
+  "AudioPrice": {
     "ten_seconds": "Balance",
     "thirty_seconds": "Balance",
     "minutes": "Balance"
   },
-  "PropsCost": {
+  "PropsPrice": {
     "picture": "Balance",
     "text": "Balance",
     "video": "Balance"

@@ -1294,7 +1294,7 @@ impl <T: Config> Module <T> {
 			let old_council_cp = old_council.clone();
 			for info in old_council_cp.iter() {
 				if info.1 >= *new_user_consume {
-					index += 1
+					index += 1;
 				}
 				else {
 					break;

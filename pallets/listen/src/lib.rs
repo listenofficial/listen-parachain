@@ -406,6 +406,7 @@ decl_module! {
 				is_voting: false,
 				create_time: <timestamp::Module<T>>::get(),
 				consume: BTreeMap::new(),
+				council: vec![],
 			};
 
 			<AllRoom<T>>::insert(group_id, group_info);
@@ -506,7 +507,7 @@ decl_module! {
 			let room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 
  			// 如果进群人数已经达到上限， 不能进群
-			ensure!(room_info.max_members.clone().into_u32()? >= room_info.now_members_number.clone(), Error::<T>::MembersNumberToMax);
+			ensure!(room_info.max_members.clone().into_u32()? > room_info.now_members_number.clone(), Error::<T>::MembersNumberToMax);
 
 			// 如果自己已经在群里 不需要重新进
 			ensure!(!(Self::is_in_room(group_id, invite.clone())?), Error::<T>::InRoom);

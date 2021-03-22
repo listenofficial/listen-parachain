@@ -569,6 +569,7 @@ decl_module! {
 			<AllListeners<T>>::insert(who.clone(), person);
 
 			Self::deposit_event(RawEvent::BuyProps(who));
+
 			Ok(())
 
 		}
@@ -1063,6 +1064,13 @@ decl_module! {
 					}
 				}
 
+				// 如果是群议会成员 则从议中删除
+				let mut council = room.council;
+				if let Some(pos) = council.iter().position(|h| h.0 == user.clone()) {
+					council.remove(pos);
+				}
+				room.council = council;
+
 				<AllRoom<T>>::insert(group_id, room);
 
 				<ListenersOfRoom<T>>::insert(group_id, listeners);
@@ -1268,6 +1276,38 @@ impl <T: Config> Module <T> {
 				room.consume.insert(who.clone(), amount);
 			},
 		};
+
+		/// 获取新的用户消费信息
+		let new_user_consume = room.consume.get(&who).unwrap();
+		let mut old_council = room.council.clone();
+		// let remain_council = vec![];
+		if let Some(pos) = old_council.iter().position(|h| h.0 == who.clone()) {
+			old_council.remove(pos);
+
+		};
+
+		if old_council.len() == 0 {
+			old_council.insert(0, (who.clone(), *new_user_consume));
+		}
+		else {
+			let mut index = 0;
+			let old_council_cp = old_council.clone();
+			for info in old_council_cp.iter() {
+				if info.1 >= *new_user_consume {
+					index += 1
+				}
+				else {
+					break;
+				}
+			}
+
+			if index <= 14 {
+				old_council.insert(index, (who.clone(), *new_user_consume));
+			}
+		}
+
+		// 更新群议员
+		room.council = old_council;
 
 		// 如果本群正在投票 那么更新投票信息
 		if room.is_voting.clone() {

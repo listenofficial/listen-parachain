@@ -241,7 +241,7 @@ pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, GroupMaxM
 
 	pub consume: BTreeMap,  // 群里个人购买道具的具体金额
 
-	pub council: Vec<AccountId>,
+	pub council: Vec<(AccountId, Balance)>,
 
 }
 

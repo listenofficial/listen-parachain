@@ -137,7 +137,8 @@
     "this_disband_start_time": "BlockNumber",
     "is_voting": "bool",
     "create_time": "Moment",
-    "consume": "BTreeMap<AccountId, Balance>"
+    "consume": "BTreeMap<AccountId, Balance>",
+    "council": "Vec<(AccountId, Balance)>"
   },
   "InvitePaymentType": {
     "_enum": [

@@ -738,31 +738,31 @@ decl_module! {
 				match room.max_members	{
 
 					GroupMaxMembers::Ten => {
-						if until <= <DisbandInterval<T>>::get().Ten {
+						if until <= <RemoveInterval<T>>::get().Ten {
 							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					},
 
 					GroupMaxMembers::Hundred => {
-						if until <= <DisbandInterval<T>>::get().Hundred {
+						if until <= <RemoveInterval<T>>::get().Hundred {
 							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					},
 
 					GroupMaxMembers::FiveHundred => {
-						if until <= <DisbandInterval<T>>::get().FiveHundred {
+						if until <= <RemoveInterval<T>>::get().FiveHundred {
 							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					},
 
 					GroupMaxMembers::TenThousand => {
-						if until <= <DisbandInterval<T>>::get().TenThousand {
+						if until <= <RemoveInterval<T>>::get().TenThousand {
 							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					},
 
 					GroupMaxMembers::NoLimit => {
-						if until <= <DisbandInterval<T>>::get().NoLimit{
+						if until <= <RemoveInterval<T>>::get().NoLimit{
 							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					}
@@ -805,36 +805,36 @@ decl_module! {
 
 				match room.max_members	{
 					GroupMaxMembers::Ten => {
-						if until <= T::BlockNumber::from(disband::Ten){
-							return Err(Error::<T>::NotUntilDisbandTime)?;
+						if until <= <DisbandInterval<T>>::get().Ten {
+							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					},
 
 					GroupMaxMembers::Hundred => {
-						if until <= T::BlockNumber::from(disband::Hundred){
-							return Err(Error::<T>::NotUntilDisbandTime)?;
+						if until <= <DisbandInterval<T>>::get().Hundred {
+							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					},
 
 					GroupMaxMembers::FiveHundred => {
-						if until <= T::BlockNumber::from(disband::FiveHundred){
-							return Err(Error::<T>::NotUntilDisbandTime)?;
+						if until <= <DisbandInterval<T>>::get().FiveHundred {
+							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					},
 
 					GroupMaxMembers::TenThousand => {
-						if until <= T::BlockNumber::from(disband::TenThousand){
-							return Err(Error::<T>::NotUntilDisbandTime)?;
+						if until <= <DisbandInterval<T>>::get().TenThousand {
+							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					},
 
 					GroupMaxMembers::NoLimit => {
-						if until <= T::BlockNumber::from(disband::NoLimit){
-							return Err(Error::<T>::NotUntilDisbandTime)?;
+						if until <= <DisbandInterval<T>>::get().NoLimit{
+							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					}
 
-				}
+			}
 			}
 
 			// 该群还未处于投票状态

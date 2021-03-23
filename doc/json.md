@@ -142,8 +142,8 @@
   },
   "InvitePaymentType": {
     "_enum": [
-      "inviter",
-      "invitee"
+      "inviter_pay",
+      "invitee_pay"
     ]
   },
   "ListenerType": {

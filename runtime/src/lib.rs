@@ -72,6 +72,7 @@ use orml_xcm_support::{
 	NativePalletAssetOr,
 };
 use pallet_transfer;
+use orml_unknown_tokens;
 
 use orml_currencies::{self, BasicCurrencyAdapter};
 use sp_std::collections::btree_set::BTreeSet;
@@ -175,6 +176,10 @@ impl pallet_multisig::Config for Runtime {
 	type DepositFactor = DepositFactor;
 	type MaxSignatories = MaxSignatories;
 	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
+}
+
+impl orml_unknown_tokens::Config for Runtime {
+	type Event = Event;
 }
 
 pub struct NativeToRelay;
@@ -432,6 +437,7 @@ impl Convert<RelayChainBalance, Balance> for RelayToNative {
 
 pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	Currencies,
+	UnknownTokens,
 	IsConcreteWithGeneralKey<CurrencyId, RelayToNative>,
 	LocationConverter,
 	AccountId,
@@ -506,6 +512,7 @@ construct_runtime!(
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>},
 		Currencies: orml_currencies::{Module, Event<T>},
 		Transfer: pallet_transfer::{Module, Call, Event<T>},
+		UnknownTokens: orml_unknown_tokens::{Module, Storage, Event},
 
 	}
 );

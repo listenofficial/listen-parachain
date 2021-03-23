@@ -217,6 +217,7 @@ pallet-listen = { path = '../pallets/listen', default-features = false, version 
 pallet-listen-vesting = { path = '../pallets/listen-vesting', default-features = false, version = '0.1.0' }
 pallet-transfer = {path = '../pallets/transfer', default-features = false, version = '0.1.0'}
 
+
 # local xcm
 parachain-info = {path = '../pallets/parachain-info', default-features = false, version = "0.1.0"}
 
@@ -226,6 +227,7 @@ orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-modu
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
 orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
+orml-unknown-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
 
 # substrate
 pallet-multisig = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
@@ -283,5 +285,6 @@ std = [
 	"orml-currencies/std",
 	"orml-xcm-support/std",
 	"pallet-transfer/std",
+	"orml-unknown-tokens/std",
 #	"acala-primitives/std",
 ]

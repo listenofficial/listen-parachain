@@ -5,7 +5,7 @@
 
 pub mod raw;
 
-pub use frame_support::{traits::{Get, Currency, ReservableCurrency, EnsureOrigin, ExistenceRequirement::KeepAlive, WithdrawReasons, OnUnbalanced, BalanceStatus as Status},
+pub use frame_support::{traits::{Get, Currency, ReservableCurrency, EnsureOrigin, ExistenceRequirement::{KeepAlive, AllowDeath}, WithdrawReasons, OnUnbalanced, BalanceStatus as Status},
 					debug, ensure, decl_module, decl_storage, decl_error, decl_event, weights::{Weight}, StorageValue, StorageMap, StorageDoubleMap, IterableStorageDoubleMap, IterableStorageMap, Blake2_256};
 
 use sp_std::{result, prelude::*, collections::btree_set::BTreeSet, collections::btree_map::BTreeMap, convert::TryFrom, cmp};

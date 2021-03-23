@@ -232,10 +232,12 @@ decl_error! {
 		UnknownRoomType,
 		/// 成员重复
 		MemberDuplicate,
-		/// 服务器id没有设置
-		ServerIdNotExists,
+		// /// 服务器id没有设置
+		// ServerIdNotExists,
 		/// 不是服务器的id
 		NotServerId,
+		/// 还没有设置服务器id
+		ServerIdNotExists,
 		/// 没有 这个代币
 		TokenErr,
 		/// 除数是0
@@ -246,6 +248,12 @@ decl_error! {
 		AmountNotZero,
 		/// 消费金额是0
 		ConsumeAmountIsZero,
+		/// 群人数设置错误
+		MaxMembersUnknown,
+		/// 群人数达到上限
+		RoomMembersToMax,
+		/// 房间上限人数没有改变
+		RoomMaxNotDiff,
 }}
 
 
@@ -282,10 +290,10 @@ decl_module! {
 		/// 设置用于空投的多签
 		#[weight = 10_000]
 		fn set_multisig(origin, who: Vec<T::AccountId>, threshould: u16){
-			ensure_root(origin)?;
-			let who = Self::sort_account_id(who)?;
+			let server_id = ensure_signed(origin)?;
 
-			ensure!(threshould > 0u16 && threshould <= who.clone().len() as u16, Error::<T>::ThreshouldErr);
+			ensure!(<ServerId<T>>::get().is_some(), Error::<T>::ServerIdNotExists);
+			ensure!(<ServerId<T>>::get().unwrap() == server_id.clone(), Error::<T>::NotServerId);
 
 			let multisig_id = <pallet_multisig::Module<T>>::multi_account_id(&who, threshould.clone());
 			<Multisig<T>>::put((who, threshould, multisig_id));
@@ -297,12 +305,7 @@ decl_module! {
 		/// 设置服务器id(用来代领红包)
 		#[weight = 10_000]
 		fn set_server_id(origin, account_id: T::AccountId) {
-			let who = ensure_signed(origin)?;
-			//// 获取多签账号id
-			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
-
-			/// 是多签账号才给执行
-			ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
+			ensure_root(origin)?;
 
 			<ServerId<T>>::put(account_id.clone());
 
@@ -505,7 +508,7 @@ decl_module! {
 				ensure!(Self::is_in_room(group_id, inviter.clone())?, Error::<T>::NotInRoom);
 			}
 			else {
-				// 把被邀请人设置成资金
+				// 把被邀请人设置成自己
 				invitee = Some(inviter.clone());
 			}
 
@@ -522,6 +525,63 @@ decl_module! {
 			Self::deposit_event(RawEvent::IntoRoom(invitee.unwrap(), inviter, group_id));
 
 			Ok(())
+		}
+
+
+		/// 群主设置群上限人数
+		#[weight = 10_000]
+		fn set_max_number_of_room_members(origin, group_id: u64, new_max: GroupMaxMembers) {
+
+			let manager = ensure_signed(origin)?;
+			// 自己是群主
+			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+			ensure!(room.group_manager == manager.clone(), Error::<T>::NotManager);
+
+			// 目前群人数
+			let now_number = room.now_members_number;
+			// 目前群人数上限
+			let now_max = room.max_members;
+
+			ensure!(now_max != new_max, Error::<T>::RoomMaxNotDiff);
+
+			let now_max_number = now_max.into_u32().map_err(|_| Error::<T>::MaxMembersUnknown)?;
+			let new_max_number = new_max.into_u32().map_err(|_| Error::<T>::MaxMembersUnknown)?;
+
+			/// 现在群员人数不能超过设置的值
+			ensure!(now_number <= new_max_number, Error::<T>::RoomMembersToMax);
+
+			let old_amount = match now_max {
+				GroupMaxMembers::Ten => CreatePayment::get().Ten,
+				GroupMaxMembers::Hundred => CreatePayment::get().Hundred,
+				GroupMaxMembers::FiveHundred => CreatePayment::get().FiveHundred,
+				GroupMaxMembers::TenThousand => CreatePayment::get().TenThousand,
+				GroupMaxMembers::NoLimit => CreatePayment::get().NoLimit,
+				_ => return Err(Error::<T>::UnknownRoomType)?,
+			};
+
+			let new_amount = match new_max {
+				GroupMaxMembers::Ten => CreatePayment::get().Ten,
+				GroupMaxMembers::Hundred => CreatePayment::get().Hundred,
+				GroupMaxMembers::FiveHundred => CreatePayment::get().FiveHundred,
+				GroupMaxMembers::TenThousand => CreatePayment::get().TenThousand,
+				GroupMaxMembers::NoLimit => CreatePayment::get().NoLimit,
+				_ => return Err(Error::<T>::UnknownRoomType)?,
+			};
+
+			let add_amount = new_amount.saturating_sub(old_amount).saturated_into::<BalanceOf<T>>();
+
+			if add_amount != Zero::zero() {
+				// 群主把创建群的费用直接打到国库
+				let to = Self::treasury_id();
+				T::NativeCurrency::transfer(&manager, &to, add_amount.clone(), KeepAlive)?;
+
+			}
+
+			room.max_members = now_max;
+
+			<AllRoom<T>>::insert(group_id, room);
+
+		    Self::deposit_event(RawEvent::SetMaxNumberOfRoomMembers(manager, new_max_number));
 		}
 
 
@@ -1695,6 +1755,7 @@ decl_event!(
 		 SetServerId(AccountId),
 		 Exit(AccountId, u64),
 		 ManagerGetReward(AccountId, Amount, Amount),
+		 SetMaxNumberOfRoomMembers(AccountId, u32),
 	}
 );
 

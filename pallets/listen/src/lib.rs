@@ -31,6 +31,7 @@ use sp_std::convert::TryInto;
 
 use orml_tokens;
 use orml_traits::MultiCurrency;
+use orml_tokens::BalanceLock;
 // use crate::raw::InvitePaymentType::invitee;
 
 pub(crate) type MultiBalanceOf<T> =
@@ -737,31 +738,31 @@ decl_module! {
 				match room.max_members	{
 
 					GroupMaxMembers::Ten => {
-						if until <= T::BlockNumber::from(remove::Ten){
+						if until <= <DisbandInterval<T>>::get().Ten {
 							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					},
 
 					GroupMaxMembers::Hundred => {
-						if until <= T::BlockNumber::from(remove::Hundred){
+						if until <= <DisbandInterval<T>>::get().Hundred {
 							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					},
 
 					GroupMaxMembers::FiveHundred => {
-						if until <= T::BlockNumber::from(remove::FiveHundred){
+						if until <= <DisbandInterval<T>>::get().FiveHundred {
 							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					},
 
 					GroupMaxMembers::TenThousand => {
-						if until <= T::BlockNumber::from(remove::TenThousand){
+						if until <= <DisbandInterval<T>>::get().TenThousand {
 							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					},
 
 					GroupMaxMembers::NoLimit => {
-						if until <= T::BlockNumber::from(remove::NoLimit){
+						if until <= <DisbandInterval<T>>::get().NoLimit{
 							return Err(Error::<T>::NotRemoveTime)?;
 						}
 					}
@@ -771,9 +772,12 @@ decl_module! {
 			}
 
 			// 修改数据
+			room.now_members_number = room.now_members_number.checked_sub(1u32).ok_or(Error::<T>::Overflow)?;
 			<AllListeners<T>>::mutate(who.clone(), |h| h.rooms.retain(|x| x.0 != group_id.clone()));
 			<ListenersOfRoom<T>>::mutate(group_id, |h| h.remove(&who));
-			room.now_members_number = room.now_members_number.checked_sub(1u32).ok_or(Error::<T>::Overflow)?;
+
+			let mut room = Self::remove_consumer_info(room, who.clone());
+
 			room.last_remove_height = now;
 			<AllRoom<T>>::insert(group_id, room);
 
@@ -1111,6 +1115,9 @@ decl_module! {
 				room.now_members_number -= 1;
 				room.total_balances -= amount;
 				room.group_manager_balances -= amount;
+
+				// 把他的消费记录去掉 并从议会榜单里除名
+				let mut room = Self::remove_consumer_info(room, user.clone());
 
 				let mut listeners = <ListenersOfRoom<T>>::get(group_id);
 
@@ -1487,9 +1494,10 @@ impl <T: Config> Module <T> {
 
 		let consume_total_amount = Self::get_room_consume_amount(room_info.clone());
 
-		let half = consume_total_amount / <BalanceOf<T>>::from(2u32);
+		let half = (consume_total_amount + 1u32.saturated_into::<BalanceOf<T>>()) / <BalanceOf<T>>::from(2u32);
 
 		// 如果有票总金额超过一半
+		// fixme 只有这个逻辑就行了 超过多少容易留bug
 		if approve_total_amount >= half || reject_total_amount >= half{
 
 			if approve_total_amount >= half {
@@ -1501,27 +1509,27 @@ impl <T: Config> Module <T> {
 		}
 
 		else{
-			let max = cmp::max(approve_total_amount, reject_total_amount);
-			let min = cmp::min(approve_total_amount, reject_total_amount);
-			if Percent::from_percent(20) * consume_total_amount < max - min{
-				if approve_total_amount >= reject_total_amount{
-					 (End, Pass)
-				}
-				else{
-					 (End, NotPass)
-				}
-			}
+			// let max = cmp::max(approve_total_amount, reject_total_amount);
+			// let min = cmp::min(approve_total_amount, reject_total_amount);
+			// if Percent::from_percent(20) * consume_total_amount < max - min{
+			// 	if approve_total_amount >= reject_total_amount{
+			// 		 (End, Pass)
+			// 	}
+			// 	else{
+			// 		 (End, NotPass)
+			// 	}
+			// }
 
+			// else{
+			if start_time + T::VoteExpire::get() >= Self::now(){
+				(NotEnd, NotPass)
+			}
+			// 时间到 结束
 			else{
-				if start_time + T::VoteExpire::get() >= Self::now(){
-					(NotEnd, NotPass)
-				}
-				// 时间到 结束
-				else{
-					(End, NotPass)
-				}
-
+				(End, NotPass)
 			}
+
+			// }
 		}
 	}
 
@@ -1642,6 +1650,35 @@ impl <T: Config> Module <T> {
 			}
 
 		}
+
+	}
+
+
+	/// 删除消费者
+	fn remove_consumer_info(mut room: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio,
+			T::BlockNumber, GroupMaxMembers,
+			DisbandVote<BTreeSet<T::AccountId>,
+			BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>,
+			who: T::AccountId
+	) -> GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio,
+			T::BlockNumber, GroupMaxMembers,
+			DisbandVote<BTreeSet<T::AccountId>,
+			BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>
+	{
+		// 把他的消费记录去掉 并从议会榜单里除名
+		let use_consume_amount = room.consume.remove(&who);
+		let mut council = room.council.clone();
+		if let Some(pos) = council.iter().position(|h| h.0 == who.clone()) {
+			room.council.remove(pos);
+		}
+
+		// todo 需要对榜单进行排序更新(补上空缺)
+
+		room
+
+
+
+
 
 	}
 

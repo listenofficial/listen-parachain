@@ -194,13 +194,13 @@ impl Default for VoteType{
 /// 邀请第三人进群的缴费方式
 #[derive(PartialEq, Encode, Decode, RuntimeDebug, Clone)]
 pub enum InvitePaymentType{
-	inviter,  // 邀请人交费
-	invitee,  // 被邀请人自己交
+	inviter_pay,  // 邀请人交费
+	invitee_pay,  // 被邀请人自己交
 }
 
 impl Default for InvitePaymentType {
 	fn default() -> Self {
-		Self::invitee
+		Self::invitee_pay
 	}
 }
 

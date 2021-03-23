@@ -31,6 +31,7 @@ use sp_std::convert::TryInto;
 
 use orml_tokens;
 use orml_traits::MultiCurrency;
+// use crate::raw::InvitePaymentType::invitee;
 
 pub(crate) type MultiBalanceOf<T> =
 		<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -488,33 +489,38 @@ decl_module! {
 
 		/// 进群
 		#[weight = 10_000]
-		fn into_room(origin, group_id: u64, invite: T::AccountId, inviter: Option<T::AccountId>, payment_type: Option<InvitePaymentType>) -> DispatchResult{
-			let who = ensure_signed(origin)?;
+		fn into_room(origin, group_id: u64, invitee: Option<T::AccountId>, payment_type: Option<InvitePaymentType>) -> DispatchResult{
+			/// invite 被邀请人
+			/// payment_type 付费类型
+			let inviter = ensure_signed(origin)?;
 
-			/// fixme 暂时去掉多签账号权限
-			// /// 获取多签账号id
-			// let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
-			// /// 是多签账号才给执行
-			// ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
+			let mut invitee = invitee.clone();
 
-			if inviter.is_some() {
+			if invitee.is_some() {
 				// 被邀请人与邀请人不能相同
-				ensure!(inviter.clone().unwrap() != invite.clone(), Error::<T>::IsYourSelf);
+				ensure!(invitee.clone().unwrap() != inviter.clone(), Error::<T>::IsYourSelf);
 				// 邀请别人必须要选择付费类型
 				ensure!(payment_type.is_some(), Error::<T>::MustHavePaymentType);
+				// 邀请人必须在群里
+				ensure!(Self::is_in_room(group_id, inviter.clone())?, Error::<T>::NotInRoom);
+			}
+			else {
+				// 把被邀请人设置成资金
+				invitee = Some(inviter.clone());
 			}
 
 			let room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 
  			// 如果进群人数已经达到上限， 不能进群
-			ensure!(room_info.max_members.clone().into_u32()? > room_info.now_members_number.clone(), Error::<T>::MembersNumberToMax);
+			ensure!(room_info.max_members.clone().into_u32()? >= room_info.now_members_number.clone() + 1, Error::<T>::MembersNumberToMax);
 
-			// 如果自己已经在群里 不需要重新进
-			ensure!(!(Self::is_in_room(group_id, invite.clone())?), Error::<T>::InRoom);
+			// 如果被邀请人已经在群里 不需要重新进
+			ensure!(!(Self::is_in_room(group_id, invitee.clone().unwrap())?), Error::<T>::InRoom);
 
-			Self::join_do(invite.clone(), group_id, inviter.clone(), payment_type.clone())?;
+			Self::join_do(invitee.clone().unwrap(), group_id, inviter.clone(), payment_type.clone())?;
 
-			Self::deposit_event(RawEvent::IntoRoom(invite, inviter, group_id));
+			Self::deposit_event(RawEvent::IntoRoom(invitee.unwrap(), inviter, group_id));
+
 			Ok(())
 		}
 
@@ -770,7 +776,7 @@ decl_module! {
 			// 该群还未处于投票状态
 			ensure!(!room.is_voting.clone(), Error::<T>::IsVoting);
 
-			/// 转创建群时费用的1/10转到国库(这个费用好像已经全部转到国库了)
+			/// fixme 转创建群时费用的1/10转到国库(这个费用好像已经全部转到国库了) 这个是解散群发起人支付的费用
 			let disband_payment = Percent::from_percent(10) * room.create_payment.clone();
 			let to = Self::treasury_id();
 			T::NativeCurrency::transfer(&who, &to, disband_payment, KeepAlive)?;
@@ -780,9 +786,12 @@ decl_module! {
 
 			// 自己申请的 算自己赞成一票
 			room.disband_vote.approve_man.insert(who.clone());
-			<AllRoom<T>>::insert(group_id, room);
+			<AllRoom<T>>::insert(group_id, room.clone());
+
+			Self::judge(room.clone());
 
 			Self::deposit_event(RawEvent::AskForDisband(who.clone(), group_id));
+
 			Ok(())
 		}
 
@@ -829,7 +838,6 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
-
 
 			let mut room = <AllRoom<T>>::get(group_id).unwrap();
 
@@ -1193,38 +1201,39 @@ impl <T: Config> Module <T> {
 
 
 	// 加入群聊的操作
-	fn join_do(you: T::AccountId, group_id: u64, inviter: Option<T::AccountId>, payment_type: Option<InvitePaymentType>) -> DispatchResult{
+	fn join_do(invitee: T::AccountId, group_id: u64, inviter: T::AccountId, payment_type: Option<InvitePaymentType>) -> DispatchResult{
 
 		let room_info = <AllRoom<T>>::get(group_id).unwrap();
 
 		// 获取进群费用
 		let join_cost = room_info.join_cost.clone();
 
-		if inviter.is_some() {
+		// 如果自己是被邀请进来
+		if inviter.clone() != invitee.clone() {
 
-			let inviter = inviter.unwrap();
+			// 这里直接用unwrap 因为前面已经做了检查
 			let payment_type = payment_type.unwrap();
 
 			// 如果需要付费
 			if join_cost > <BalanceOf<T>>::from(0u32){
 				// 如果是邀请者自己出钱
-				if payment_type == InvitePaymentType::inviter{
-					// 扣除邀请者的钱(惩罚保留的)
+				if payment_type == InvitePaymentType::inviter_pay {
+					// 扣除邀请者的钱(惩罚保留的) fixme 直接先销毁 因为后面分发的形式是铸币
 					T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&inviter, join_cost.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
 
 					// 以铸币方式给其他账户转账
 					Self::pay_for(group_id, join_cost);
 				}
-				// 如果是进群的人自己交费用
+				// 如果是被邀请者自己自费
 				else{
-					T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&you, join_cost.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
+					T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&invitee, join_cost.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
 					Self::pay_for(group_id, join_cost);
 
 				}
 
 			}
 
-			Self::add_info(you.clone(), group_id)
+			Self::add_info(invitee.clone(), group_id)
 
 		}
 
@@ -1232,11 +1241,11 @@ impl <T: Config> Module <T> {
 		else {
 			// 如果需要支付群费用
 			if join_cost > <BalanceOf<T>>::from(0u32){
-				T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&you, join_cost.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
+				T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&invitee, join_cost.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
 				Self::pay_for(group_id, join_cost);
 			}
 
-			Self::add_info(you.clone(), group_id)
+			Self::add_info(invitee.clone(), group_id)
 
 			}
 
@@ -1334,6 +1343,7 @@ impl <T: Config> Module <T> {
 
 
 	// 支付给其他人
+	// fixme 用户进群的费用 部分给到群主(部分现在直接给群主， 部分群解散后给) 剩余部分转到国库
 	fn pay_for(group_id: u64, join_cost: BalanceOf<T>){
 		let payment_manager_now = Percent::from_percent(5) * join_cost;
 		let payment_manager_later = Percent::from_percent(5) * join_cost;
@@ -1665,7 +1675,7 @@ decl_event!(
 		 AirDroped(AccountId),
 		 CreatedRoom(AccountId, u64),
 		 Invited(AccountId, AccountId),
-		 IntoRoom(AccountId, Option<AccountId>, u64),
+		 IntoRoom(AccountId, AccountId, u64),
 		 RejectedInvite(AccountId, u64),
 		 ChangedPermission(AccountId, u64),
 		 BuyProps(AccountId),

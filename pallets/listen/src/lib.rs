@@ -255,6 +255,10 @@ decl_error! {
 		RoomMembersToMax,
 		/// 房间上限人数没有改变
 		RoomMaxNotDiff,
+		/// 在黑名单里面
+		InBlackList,
+		/// 不在黑名单里面
+		NotInBlackList,
 }}
 
 
@@ -412,6 +416,7 @@ decl_module! {
 				create_time: <timestamp::Module<T>>::get(),
 				consume: BTreeMap::new(),
 				council: vec![],
+				black_list: vec![],
 			};
 
 			<AllRoom<T>>::insert(group_id, group_info);
@@ -514,6 +519,13 @@ decl_module! {
 			}
 
 			let room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+
+			// 如果已经在群黑名单里 则不能进群
+			let black_list = room_info.black_list;
+			let man = invitee.clone().unwrap();
+			if let Some(pos) = black_list.iter().position(|h| h == &man) {
+				return Err(Error::<T>::InBlackList)?;
+			};
 
  			// 如果进群人数已经达到上限， 不能进群
 			ensure!(room_info.max_members.clone().into_u32()? >= room_info.now_members_number.clone() + 1, Error::<T>::MembersNumberToMax);
@@ -719,6 +731,30 @@ decl_module! {
 		}
 
 
+		/// 群主把某个账户从黑名单中移除
+		#[weight = 10_000]
+		fn remove_someone_from_blacklist(origin, group_id: u64, who: T::AccountId) {
+			let manager = ensure_signed(origin)?;
+
+			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+			// 是群主
+			ensure!(room.group_manager == manager.clone(), Error::<T>::NotManager);
+
+			let black_list = room.black_list.clone();
+			if let Some(pos) = black_list.iter().position(|h| h == &who) {
+				room.black_list.swap_remove(pos);
+			}
+			else {
+				return Err(Error::<T>::NotInBlackList)?;
+			}
+
+			<AllRoom<T>>::insert(group_id, room);
+
+			Self::deposit_event(RawEvent::RemoveSomeoneFromBlackList(who, group_id));
+
+		}
+
+
 		/// 群主踢人
 		#[weight = 10_000]
 		fn remove_someone(origin, group_id: u64, who: T::AccountId) -> DispatchResult {
@@ -779,6 +815,8 @@ decl_module! {
 			let mut room = Self::remove_consumer_info(room, who.clone());
 
 			room.last_remove_height = now;
+			room.black_list.push(who.clone());
+
 			<AllRoom<T>>::insert(group_id, room);
 
 			Self::deposit_event(RawEvent::Kicked(who.clone(), group_id));
@@ -791,9 +829,12 @@ decl_module! {
 		/// 群员要求解散群
 		#[weight = 10_000]
 		fn ask_for_disband_room(origin, group_id: u64) -> DispatchResult{
+
 			let who = ensure_signed(origin)?;
 			// 这个人是群成员
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
+
+			// todo 解散群要有一个保护的时间 要不然容易被攻击
 
 			let mut room = <AllRoom<T>>::get(group_id).unwrap();
 
@@ -1793,6 +1834,7 @@ decl_event!(
 		 Exit(AccountId, u64),
 		 ManagerGetReward(AccountId, Amount, Amount),
 		 SetMaxNumberOfRoomMembers(AccountId, u32),
+		 RemoveSomeoneFromBlackList(AccountId, u64),
 	}
 );
 

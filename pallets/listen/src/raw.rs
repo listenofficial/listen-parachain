@@ -243,6 +243,8 @@ pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, GroupMaxM
 
 	pub council: Vec<(AccountId, Balance)>,
 
+	pub black_list: Vec<AccountId>,
+
 }
 
 

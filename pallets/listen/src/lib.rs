@@ -523,6 +523,7 @@ decl_module! {
 				ensure!(payment_type.is_some(), Error::<T>::MustHavePaymentType);
 				// 邀请人必须在群里
 				ensure!(Self::is_in_room(group_id, inviter.clone())?, Error::<T>::NotInRoom);
+
 			}
 			else {
 				// 把被邀请人设置成自己

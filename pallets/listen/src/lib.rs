@@ -76,6 +76,10 @@ pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config {
 
 	type GetNativeCurrencyId: Get<CurrencyIdOf<Self>>;
 
+	type ProtectTime: Get<Self::BlockNumber>;
+
+	type CouncilMaxNumber: Get<u32>;
+
 }
 
 
@@ -259,6 +263,8 @@ decl_error! {
 		InBlackList,
 		/// 不在黑名单里面
 		NotInBlackList,
+		/// 在受保护时间段
+		InProtectTime,
 }}
 
 
@@ -286,6 +292,10 @@ decl_module! {
 		const RoomProportion: Percent = T::RoomProportion::get();
 		/// The treasury's module id, used for deriving its sovereign account ID.
 		const ModuleId: ModuleId = T::ModuleId::get();
+		/// 新群受保护时间(在这段时间里， 不能解散群)
+		const ProtectTime: T::BlockNumber = T::ProtectTime::get();
+		/// 群议会的人数上限
+		const CouncilMaxNumber: u32 = T::CouncilMaxNumber::get();
 
 
 		type Error = Error<T>;
@@ -331,7 +341,6 @@ decl_module! {
 			/// 是多签账号才给执行
 			ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
 			for user in des.iter() {
-
 
 				if <AlreadyAirDropList<T>>::get().contains(&user) {
 					continue;
@@ -414,6 +423,7 @@ decl_module! {
 				this_disband_start_time: T::BlockNumber::default(),
 				is_voting: false,
 				create_time: <timestamp::Module<T>>::get(),
+				create_block: Self::now(),
 				consume: BTreeMap::new(),
 				council: vec![],
 				black_list: vec![],
@@ -834,11 +844,12 @@ decl_module! {
 			// 这个人是群成员
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
 
-			// todo 解散群要有一个保护的时间 要不然容易被攻击
-
 			let mut room = <AllRoom<T>>::get(group_id).unwrap();
 
+			let create_block = room.create_block;
 			let now = Self::now();
+
+			ensure!(now - create_block > T::ProtectTime::get(), Error::<T>::InProtectTime);
 
 			// 如果有上一次解散记录
 			if room.last_disband_end_hight > T::BlockNumber::from(0u32){
@@ -1418,8 +1429,8 @@ impl <T: Config> Module <T> {
 				}
 			}
 
-			if index <= 3 {
-				old_council.insert(index, (who.clone(), *new_user_consume));
+			if index <= T::CouncilMaxNumber::get() {
+				old_council.insert(index as usize, (who.clone(), *new_user_consume));
 			}
 		}
 
@@ -1713,7 +1724,44 @@ impl <T: Config> Module <T> {
 			room.council.remove(pos);
 		}
 
-		// todo 需要对榜单进行排序更新(补上空缺)
+		if room.council.len() == T::CouncilMaxNumber::get() as usize -1 && room.consume.len() > 0 {
+
+			let min_user: Option<(T::AccountId, BalanceOf<T>)>;
+
+			if room.council.len() > 0 {
+				let mut council = room.council.clone();
+				min_user = council.pop();
+			}
+
+			else {min_user = None;}
+
+			let mut new_user = (T::AccountId::default(), <BalanceOf<T>>::from(0u32));
+
+			match min_user {
+				// 选择消费队列里面最大的
+				None => {
+					for user_info in room.consume.iter() {
+						if user_info.1 >= &new_user.1 {
+							new_user = (user_info.0.clone(), *user_info.1);
+						}
+					}
+				},
+
+				// 选择那个比这个u的消费小但是确是最大的那个
+				Some(u) => {
+					for user_info in room.consume.iter() {
+						// let min_user_cp = min_user.clone();
+						if user_info.1 <= &u.1.clone() && user_info.1 > &new_user.1 {
+							new_user = (user_info.0.clone(), *user_info.1);
+						}
+					}
+				},
+			};
+
+			if new_user.0 != T::AccountId::default() {
+				room.council.push(new_user);
+			}
+		}
 
 		room
 

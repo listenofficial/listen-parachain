@@ -238,6 +238,7 @@ pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, GroupMaxM
 
 	pub is_voting: bool,  // 是否出于投票状态
 	pub create_time: Moment,
+	pub create_block: BlockNumber,
 
 	pub consume: BTreeMap,  // 群里个人购买道具的具体金额
 

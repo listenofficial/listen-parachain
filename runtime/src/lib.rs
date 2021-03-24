@@ -369,12 +369,14 @@ parameter_types! {
 	pub const AirDropAmount: Balance = 1 * DOLLARS * 99 / 100;
 	pub const RedPacketMinAmount: Balance = 1 * DOLLARS;
 	pub const VoteExpire: BlockNumber = 3 * DAYS;
+	pub const ProtectTime: BlockNumber = 5 * HOURS;
 	pub const RedPackExpire: BlockNumber = 1 * DAYS;
 	pub const RewardDuration: BlockNumber = 7 * DAYS;
 	pub const PledgeRate: Percent = Percent::from_percent(5);
 	pub const ManagerProportion: Percent = Percent::from_percent(1);
 	pub const RoomProportion: Percent = Percent::from_percent(1);
 	pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
+	pub const CouncilMaxNumber: u32 = 4;
 
 }
 
@@ -395,6 +397,8 @@ impl listen::Config for Runtime{
 	type ModuleId = TreasuryModuleId;
 	type AirDropAmount = AirDropAmount;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type ProtectTime = ProtectTime;
+	type CouncilMaxNumber = CouncilMaxNumber;
 }
 
 

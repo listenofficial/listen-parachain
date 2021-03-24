@@ -20,12 +20,11 @@
 	> 空投不会返回错误 以确保队列里能够接受空投的账户都领取到空投
 ***
 2. 创建房间
-	* 代码： `fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T>, pledge: Option<BalanceOf<T>>)`
+	* 代码： `fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T> )`
 	* 参数:
 		- max_members： 房间人数上限(不是自定义)
 		- group_type： 房间类型(自己输入字符串，自定义)
 		- join_cost: 其他人加入房间需要花费的金额
-		- pledge: 群主抵押的金额（这部分属于群主个人， 相当于抵押挖矿， 年利率在5%）
 	* 逻辑
 		- 任何人都可以创建房间
 		- 根据房间人数上限收取创建费用(账上余额不够，不给创建)， 并且费用直接全部转到国库
@@ -43,16 +42,15 @@
 
 ***
 4. 进群
-	* 代码： `fn into_room(origin, group_id: u64, invitee: Option<T::AccountId>, payment_type: Option<InvitePaymentType>)`
+	* 代码： `fn into_room(origin, group_id: u64, invitee: Option<T::AccountId> )`
 	* 参数：
 		- group_id： 房间号
 		- invitee: 被邀请人
-		- payment_type: 付费类型(邀请人付费或是被邀请人付费)(可以为空值)
-		> 说明： 如果有邀请人，邀请人不能是自己，付费类型也不能为空；没有邀请人，说明是自己进群。
+		> 说明： 如果有邀请人，邀请人不能是自己，且是邀请人付费。
 	* 逻辑：
 		- 签名
 		- 房间存在
-		- 被邀请人与邀请人不能相同（如果邀请别人， 必须选择付费类型)
+		- 被邀请人与邀请人不能相同
 		- 如果群总人数已经达到上限，不能进群
 		- 如果已经进入群组黑名单， 则不能进群
 		- 如果进群人已经在群里，不能再次进入
@@ -245,8 +243,7 @@
         * 群存在并且是群主
         * 记录群主上一次领取区块的高度
         * 按照周期来执行这个方法, 周期数 = (现在区块数 - 上次区块) / 周期长度
-        * 按照群主抵押的金额跟年利率计算群主的抵押收益， 并对群主铸币
-        * 根据群的*消费金额*给群主铸币， 并累加群资产
+        * 群主从群资产中拿走一部分， 然后生成一部分给群资产
     ***
 23. 群主把某个账户从黑名单中移除
     * 代码: `fn remove_someone_from_blacklist(origin, group_id: u64, who: T::AccountId)`

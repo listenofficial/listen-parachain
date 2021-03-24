@@ -368,8 +368,10 @@ decl_module! {
 
 		/// 创建群
 		#[weight = 10_000]
-		fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T>, pledge: Option<BalanceOf<T>>) -> DispatchResult{
+		fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T> ) -> DispatchResult{
 			let who = ensure_signed(origin)?;
+
+			let pledge = None;
 
 			let pledge = match pledge {
 				Some(x) => x,
@@ -472,15 +474,17 @@ decl_module! {
 				// 领取群消费资产产生的利息
 				let consume_total_amount = Self::get_room_consume_amount(room_info.clone());
 
+				// 群主从群资产中拿走部分
 				let manager_proportion_amount = T::ManagerProportion::get() * consume_total_amount;
 				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, manager_proportion_amount));
+				room_info.total_balances = room_info.total_balances.saturating_sub(manager_proportion_amount);
 
-				// 群资产按照比例增加
+				// 群资产新增加部分
 				let room_add = T::RoomProportion::get() * consume_total_amount;
+				room_info.total_balances = room_info.total_balances.clone().saturating_add(room_add);
 
 				// 更新群信息
 				room_info.last_block_of_get_the_reward = real_this_block;
-				room_info.total_balances = room_info.total_balances.clone().saturating_add(room_add);
 				<AllRoom<T>>::insert(group_id, room_info);
 				Self::deposit_event(RawEvent::ManagerGetReward(who,  reward + manager_proportion_amount, room_add));
 
@@ -509,10 +513,12 @@ decl_module! {
 
 		/// 进群
 		#[weight = 10_000]
-		fn into_room(origin, group_id: u64, invitee: Option<T::AccountId>, payment_type: Option<InvitePaymentType>) -> DispatchResult{
+		fn into_room(origin, group_id: u64, invitee: Option<T::AccountId>) -> DispatchResult{
 			/// invite 被邀请人
 			/// payment_type 付费类型
 			let inviter = ensure_signed(origin)?;
+
+			let payment_type = Some(InvitePaymentType::inviter_pay);
 
 			let mut invitee = invitee.clone();
 
@@ -520,7 +526,8 @@ decl_module! {
 				// 被邀请人与邀请人不能相同
 				ensure!(invitee.clone().unwrap() != inviter.clone(), Error::<T>::IsYourSelf);
 				// 邀请别人必须要选择付费类型
-				ensure!(payment_type.is_some(), Error::<T>::MustHavePaymentType);
+				// fixme 邀请别人付费类型一定要是邀请人付费
+				ensure!(payment_type.is_some() && payment_type.clone().unwrap() == InvitePaymentType::inviter_pay, Error::<T>::MustHavePaymentType);
 				// 邀请人必须在群里
 				ensure!(Self::is_in_room(group_id, inviter.clone())?, Error::<T>::NotInRoom);
 
@@ -1673,7 +1680,9 @@ impl <T: Config> Module <T> {
 				// 把群主的抵押币转到自由余额
 				T::NativeCurrency::unreserve(&room.group_manager, pledge_amount);
 
+				// 群主领完剩下的金额
 				let listener_reward = total_reward.clone() - manager_reward.clone();
+
 				let session_index = Self::get_session_index();
 				let per_man_reward = listener_reward.clone() / <BalanceOf<T>>::from(room.now_members_number);
 				let room_rewad_info = RoomRewardInfo{
@@ -1683,6 +1692,8 @@ impl <T: Config> Module <T> {
 					already_get_reward: <BalanceOf<T>>::from(0u32),
 					per_man_reward: per_man_reward.clone(),
 				};
+
+				// todo 应该是在群里消费的 才有奖励 所以这部分要改
 
 				<InfoOfDisbandRoom<T>>::insert(session_index, group_id, room_rewad_info);
 

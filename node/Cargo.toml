@@ -8,6 +8,7 @@ hex-literal = "0.2.1"
 # RPC related dependencies
 jsonrpc-core = "15.1.0"
 node-primitives = {path = '../primitives', version = '0.1.0'}
+cumulus-client-cli = {git = 'https://github.com/paritytech/cumulus.git', version = '0.1.0', branch = 'rococo-v1'}
 #parachain-runtime = {path = '../runtime', version = '2.0.0'}
 
 

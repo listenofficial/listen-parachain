@@ -456,6 +456,7 @@ decl_module! {
 			let now = Self::now();
 			let time = now.saturating_sub(last_block);
 			let duration_num = time.checked_div(&T::RewardDuration::get()).ok_or(Error::<T>::DivZero)?;
+
 			/// 计算真实的领取奖励的区块
 			let real_this_block = last_block.saturating_add(duration_num * T::RewardDuration::get());
 

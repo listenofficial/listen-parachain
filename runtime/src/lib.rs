@@ -368,8 +368,8 @@ parameter_types! {
 	// 空投奖励 0.99个token
 	pub const AirDropAmount: Balance = 1 * DOLLARS * 99 / 100;
 	pub const RedPacketMinAmount: Balance = 1 * DOLLARS;
-	pub const VoteExpire: BlockNumber = 3 * DAYS;
-	pub const ProtectTime: BlockNumber = 5 * HOURS;
+	pub const VoteExpire: BlockNumber = 10 * MINUTES;
+	pub const ProtectTime: BlockNumber = 5 * MINUTES;
 	pub const RedPackExpire: BlockNumber = 1 * DAYS;
 	pub const RewardDuration: BlockNumber = 7 * DAYS;
 	pub const PledgeRate: Percent = Percent::from_percent(5);
@@ -500,23 +500,23 @@ construct_runtime!(
 		NodeBlock = opaque::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Storage, Config, Event<T>},
-		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Sudo: pallet_sudo::{Module, Call, Storage, Config<T>, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event},
-		TransactionPayment: pallet_transaction_payment::{Module, Storage},
-		ParachainInfo: parachain_info::{Module, Storage, Config},
-		XcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin},
-		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
-		Tokens: orml_tokens::{Module, Config<T>, Storage, Event<T>},
-		ListenVesting: pallet_listen_vesting::{Module, Call, Storage, Event<T>, Config<T>},
-		Listen: listen::{Module, Storage, Call, Event<T>},
-		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>},
-		Currencies: orml_currencies::{Module, Event<T>},
-		Transfer: pallet_transfer::{Module, Call, Event<T>},
-		UnknownTokens: orml_unknown_tokens::{Module, Storage, Event},
+		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>},
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage},
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event},
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+		ParachainInfo: parachain_info::{Pallet, Storage, Config},
+		XcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin},
+		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
+		Tokens: orml_tokens::{Pallet, Config<T>, Storage, Event<T>},
+		ListenVesting: pallet_listen_vesting::{Pallet, Call, Storage, Event<T>, Config<T>},
+		Listen: listen::{Pallet, Storage, Call, Event<T>},
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>},
+		Currencies: orml_currencies::{Pallet, Event<T>},
+		Transfer: pallet_transfer::{Pallet, Call, Event<T>},
+		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event},
 
 	}
 );
@@ -596,7 +596,7 @@ impl_runtime_apis! {
 		}
 
 		fn random_seed() -> <Block as BlockT>::Hash {
-			RandomnessCollectiveFlip::random_seed()
+			RandomnessCollectiveFlip::random_seed().0
 		}
 	}
 

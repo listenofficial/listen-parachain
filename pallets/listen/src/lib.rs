@@ -265,6 +265,8 @@ decl_error! {
 		NotInBlackList,
 		/// 在受保护时间段
 		InProtectTime,
+		/// 多签阀值错误
+		ThreshouldLenErr,
 }}
 
 
@@ -306,6 +308,9 @@ decl_module! {
 		#[weight = 10_000]
 		fn set_multisig(origin, who: Vec<T::AccountId>, threshould: u16){
 			let server_id = ensure_signed(origin)?;
+
+			let len = who.len();
+			ensure!(len > 0 && threshould > 0u16 && threshould <= len as u16, Error::<T>::ThreshouldLenErr);
 
 			ensure!(<ServerId<T>>::get().is_some(), Error::<T>::ServerIdNotExists);
 			ensure!(<ServerId<T>>::get().unwrap() == server_id.clone(), Error::<T>::NotServerId);
@@ -1241,11 +1246,15 @@ decl_module! {
 		#[weight = 10_000]
 		pub fn get_redpacket_in_room(origin, amount_vec: Vec<(T::AccountId, BalanceOf<T>)>, group_id: u64, redpacket_id: u128) {
 
-			let server_id = ensure_signed(origin)?;
+			let mul = ensure_signed(origin)?;
+			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
 
-			let real_server_id = <ServerId<T>>::get().ok_or(Error::<T>::ServerIdNotExists)?;
+			/// 是多签账号才给执行
+			ensure!(mul.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
 
-			ensure!(server_id.clone() == real_server_id, Error::<T>::NotServerId);
+			// let real_server_id = <ServerId<T>>::get().ok_or(Error::<T>::ServerIdNotExists)?;
+			//
+			// ensure!(server_id.clone() == real_server_id, Error::<T>::NotServerId);
 
 			/// 红包存在
 			ensure!(<RedPacketOfRoom<T>>::contains_key(group_id, redpacket_id), Error::<T>::RedPacketNotExists);

@@ -1034,6 +1034,9 @@ decl_module! {
 			let mut amount = <BalanceOf<T>>::from(0u32);
 			// 一定要有加入的房间
 			ensure!(<AllListeners<T>>::contains_key(who.clone()) && !<AllListeners<T>>::get(who.clone()).rooms.is_empty(), Error::<T>::NotIntoAnyRoom);
+
+			/// fixme 个人加入的所有房间
+			/// fixme pub rooms: Vec<(RoomId, RewardStatus)>
 			let rooms = <AllListeners<T>>::get(who.clone()).rooms;
 
 			let mut new_rooms = rooms.clone();
@@ -1041,9 +1044,9 @@ decl_module! {
 			for room in rooms.iter(){
 				// 还没有领取才会去操作
 				if room.1 == RewardStatus::NotGet{
-
+					let group_id = room.0.clone();
 					// 已经进入待奖励队列
-					if !<AllRoom<T>>::contains_key(room.0.clone()){
+					if !<AllRoom<T>>::contains_key(group_id){
 						// 获取当前的session_index
 						let session_index = Self::get_session_index();
 
@@ -1052,9 +1055,9 @@ decl_module! {
 						// 超过20个session的算是过期
 						for i in 0..20{
 							let cur_session = session_index - (i as u32);
-							if <InfoOfDisbandRoom<T>>::contains_key(cur_session, room.0.clone()){
+							if <InfoOfDisbandRoom<T>>::contains_key(cur_session, group_id){
 								// 奖励本人
-								let mut info = <InfoOfDisbandRoom<T>>::get(cur_session, room.0.clone());
+								let mut info = <InfoOfDisbandRoom<T>>::get(cur_session, group_id);
 
 								info.already_get_count += 1;
 
@@ -1062,16 +1065,16 @@ decl_module! {
 								amount += reward.clone();
 								info.already_get_reward += reward;
 
-								<InfoOfDisbandRoom<T>>::insert(cur_session, room.0.clone(), info.clone());
+								<InfoOfDisbandRoom<T>>::insert(cur_session, group_id, info.clone());
 
 								T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, reward));
 
 								// 删除个人
-								<ListenersOfRoom<T>>::mutate(room.0.clone(), |h| h.remove(&who));
+								<ListenersOfRoom<T>>::mutate(group_id, |h| h.remove(&who));
 
 								// 如果是所有人已经完成 那么就清除
 								if info.already_get_count.clone() == info.total_person.clone(){
-									<ListenersOfRoom<T>>::remove(room.0.clone());
+									<ListenersOfRoom<T>>::remove(group_id);
 								}
 
 								is_get = true;
@@ -1090,8 +1093,8 @@ decl_module! {
 						}
 
 						// 修改状态
-						new_rooms.retain(|h| h.0 != room.0.clone());
-						new_rooms.push((room.0.clone(), status));
+						new_rooms.retain(|h| h.0 != group_id);
+						new_rooms.push((group_id, status));
 
 					}
 
@@ -1665,6 +1668,7 @@ impl <T: Config> Module <T> {
 				// 先解决红包(剩余红包归还给发红包的人)
 				Self::remove_redpacket_by_room_id(group_id, true);
 
+				/// fixme 更新AllSessionIndex
 				let cur_session = Self::get_session_index();
 				let mut session_indexs = <AllSessionIndex>::get();
 				if session_indexs.is_empty(){

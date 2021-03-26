@@ -73,6 +73,7 @@ use orml_xcm_support::{
 };
 use pallet_transfer;
 use orml_unknown_tokens;
+use pallet_nicks;
 
 use orml_currencies::{self, BasicCurrencyAdapter};
 use sp_std::collections::btree_set::BTreeSet;
@@ -285,6 +286,24 @@ impl orml_currencies::Config for Runtime {
 	type WeightInfo = ();
 
 }
+
+parameter_types! {
+	pub const MinLength: usize = 3;
+	pub const MaxLength: usize = 10;
+	pub const ReservationFee: Balance = 1*DOLLARS;
+}
+
+impl pallet_nicks::Config for Runtime {
+	type Event = Event;
+	type NicksCurrency = Balances;
+	type ReservationFee = ReservationFee;
+	type Slashed = ();
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type MinLength = MinLength;
+	type MaxLength = MaxLength;
+
+}
+
 
 impl pallet_transfer::Config for Runtime {
 	type Event = Event;
@@ -517,6 +536,7 @@ construct_runtime!(
 		Currencies: orml_currencies::{Pallet, Event<T>},
 		Transfer: pallet_transfer::{Pallet, Call, Event<T>},
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event},
+		Nicks: pallet_nicks::{Pallet, Storage, Call, Event<T>},
 
 	}
 );

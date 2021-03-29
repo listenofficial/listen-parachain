@@ -218,7 +218,7 @@ pallet-listen = { path = '../pallets/listen', default-features = false, version 
 pallet-listen-vesting = { path = '../pallets/listen-vesting', default-features = false, version = '0.1.0' }
 pallet-transfer = {path = '../pallets/transfer', default-features = false, version = '0.1.0'}
 pallet-nicks = {path = '../pallets/nicks', default-features = false, version = '0.1.0'}
-
+pallet-dao = {path = '../pallets/dao', default-features = false, version = '0.1.0'}
 
 # local xcm
 parachain-info = {path = '../pallets/parachain-info', default-features = false, version = "0.1.0"}
@@ -289,5 +289,6 @@ std = [
 	"pallet-transfer/std",
 	"orml-unknown-tokens/std",
 	"pallet-nicks/std",
-#	"acala-primitives/std",
+	"pallet-dao/std",
+
 ]

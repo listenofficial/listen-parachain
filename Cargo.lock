@@ -4599,6 +4599,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-dao"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.3.1",
+ "log",
+ "pallet-balances",
+ "pallet-listen",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-democracy"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#1404f2af4cbe90d35b4c8a1405a9452feb789adc"
@@ -5144,6 +5163,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-balances",
+ "pallet-dao",
  "pallet-listen",
  "pallet-listen-vesting",
  "pallet-multisig",

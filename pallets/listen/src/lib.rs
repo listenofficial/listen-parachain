@@ -1914,6 +1914,20 @@ decl_event!(
 );
 
 
+impl<T: Config> ListenHandler<u64, T::AccountId, DispatchError> for Module<T> {
+	fn get_room_council(room_id: u64) -> Result<Vec<<T as frame_system::Config>::AccountId>, DispatchError> {
+		let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
+		let council_and_amount = room_info.council;
+		let mut council = vec![];
+		for i in council_and_amount.iter(){
+			council.push(i.0.clone());
+		}
+		council.sort();
+		Ok(council)
+	}
+}
+
+
 
 
 

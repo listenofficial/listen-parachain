@@ -4617,6 +4617,7 @@ dependencies = [
  "node-traits",
  "pallet-balances",
  "pallet-listen",
+ "pallet-timestamp",
  "parity-scale-codec",
  "serde",
  "sp-core",

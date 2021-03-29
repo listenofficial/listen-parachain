@@ -3,11 +3,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
 
-use sp_std::{prelude::*, result};
+use sp_std::{prelude::*, result, collections::{btree_set::BTreeSet, btree_map::BTreeMap} };
 use sp_core::u32_trait::Value as U32;
 use sp_io::storage;
 use sp_runtime::{RuntimeDebug, traits::Hash};
-use pallet_listen;
+use pallet_listen::{self, raw::{Audio, AllProps, GroupInfo, GroupMaxMembers, DisbandVote, }};
+use node_traits::ListenHandler;
 
 use frame_support::{
 	codec::{Decode, Encode},
@@ -17,10 +18,11 @@ use frame_support::{
 		PostDispatchInfo,
 	},
 	ensure,
-	traits::{ChangeMembers, EnsureOrigin, Get, InitializeMembers},
+	traits::{ChangeMembers, EnsureOrigin, Get, InitializeMembers, Currency, ReservableCurrency},
 	weights::{DispatchClass, GetDispatchInfo, Weight, Pays},
 };
 use frame_system::{self as system, ensure_signed, ensure_root};
+use pallet_timestamp;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -30,6 +32,8 @@ pub use weights::WeightInfo;
 
 /// Simple index type for proposal counting.
 pub type ProposalIndex = u32;
+
+type BalanceOf<T> = <<T as pallet_listen::Config>::NativeCurrency as Currency<<T as system::Config>::AccountId>>::Balance;
 
 pub type RoomIndex = u64;
 
@@ -116,7 +120,10 @@ pub trait Config<I: Instance=DefaultInstance>: frame_system::Config {
 
 	/// Weight information for extrinsics in this pallet.
 	type WeightInfo: WeightInfo;
+
+	type ListenHandler: ListenHandler<RoomIndex, Self::AccountId, DispatchError>;
 }
+
 
 /// Origin for the collective module.
 #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]

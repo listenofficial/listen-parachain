@@ -19,6 +19,7 @@ frame-support = { version = "3.0.0", default-features = false, git = "https://gi
 frame-system = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 log = { version = "0.4.14", default-features = false }
 node-traits = { path = '../../traits', default-features = false, version = '0.1.0' }
+pallet-timestamp = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 
 
 # local
@@ -42,6 +43,7 @@ std = [
 	"log/std",
 	"pallet-listen/std",
 	"node-traits/std",
+	"pallet-timestamp/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

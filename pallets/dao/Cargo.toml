@@ -18,6 +18,8 @@ frame-benchmarking = { version = "3.1.0", default-features = false, git = "https
 frame-support = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 frame-system = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 log = { version = "0.4.14", default-features = false }
+node-traits = { path = '../../traits', default-features = false, version = '0.1.0' }
+
 
 # local
 pallet-listen = { version = '0.1.0', default-features = false, path = '../listen'}
@@ -39,6 +41,7 @@ std = [
 	"frame-system/std",
 	"log/std",
 	"pallet-listen/std",
+	"node-traits/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

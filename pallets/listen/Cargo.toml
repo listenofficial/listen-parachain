@@ -18,6 +18,7 @@ pallet-treasury = { default-features = false, version = '3.0.0', git = "https://
 #local
 node-constants = { path = '../../constants', default-features = false, version = '0.1.0' }
 node-primitives = { path = '../../primitives', default-features = false, version = '0.1.0' }
+node-traits = { path = '../../traits', default-features = false, version = '0.1.0' }
 
 #orml
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }
@@ -44,6 +45,7 @@ std = [
     "node-primitives/std",
     "orml-tokens/std",
     "orml-traits/std",
+    "node-traits/std",
 
 ]
 

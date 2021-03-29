@@ -15,6 +15,7 @@ use pallet_multisig;
 use sp_runtime::{traits::{AccountIdConversion, Saturating, CheckedDiv, Zero}, DispatchResult, Percent, RuntimeDebug, ModuleId, traits::CheckedMul, DispatchError, SaturatedConversion};
 use pallet_timestamp as timestamp;
 use node_primitives::*;
+use node_traits::ListenHandler;
 
 use node_constants::{currency::*, time::*};
 

@@ -7,6 +7,7 @@ use sp_std::{prelude::*, result};
 use sp_core::u32_trait::Value as U32;
 use sp_io::storage;
 use sp_runtime::{RuntimeDebug, traits::Hash};
+use pallet_listen;
 
 use frame_support::{
 	codec::{Decode, Encode},
@@ -149,25 +150,28 @@ pub struct Votes<AccountId, BlockNumber> {
 decl_storage! {
 	trait Store for Module<T: Config<I>, I: Instance=DefaultInstance> as Collective {
 		/// The hashes of the active proposals.
-		pub Proposals get(fn proposals): Vec<T::Hash>;
+		pub Proposals get(fn proposals): map hasher(identity) RoomIndex => Vec<T::Hash>;
+
 		/// Actual proposal for a given hash, if it's current.
 		pub ProposalOf get(fn proposal_of):
-			map hasher(identity) T::Hash => Option<<T as Config<I>>::Proposal>;
+			double_map hasher(identity) RoomIndex, hasher(identity) T::Hash => Option<<T as Config<I>>::Proposal>;
 		/// Votes on a given proposal, if it is ongoing.
 		pub Voting get(fn voting):
-			map hasher(identity) T::Hash => Option<Votes<T::AccountId, T::BlockNumber>>;
+			double_map hasher(identity) RoomIndex, hasher(identity) T::Hash => Option<Votes<T::AccountId, T::BlockNumber>>;
 		/// Proposals so far.
-		pub ProposalCount get(fn proposal_count): u32;
+		pub ProposalCount get(fn proposal_count): map hasher(identity) RoomIndex => u32;
+
+		/// todo 以下这两个要从listen模块中引进来
 		/// The current members of the collective. This is stored sorted (just by value).
 		pub Members get(fn members): Vec<T::AccountId>;
 		/// The prime member that helps determine the default vote behavior in case of absentations.
 		pub Prime get(fn prime): Option<T::AccountId>;
 	}
-	add_extra_genesis {
-		config(phantom): sp_std::marker::PhantomData<I>;
-		config(members): Vec<T::AccountId>;
-		build(|config| Module::<T, I>::initialize_members(&config.members))
-	}
+	// add_extra_genesis {
+	// 	config(phantom): sp_std::marker::PhantomData<I>;
+	// 	config(members): Vec<T::AccountId>;
+	// 	build(|config| Module::<T, I>::initialize_members(&config.members))
+	// }
 }
 
 decl_event! {
@@ -223,6 +227,7 @@ decl_error! {
 		WrongProposalWeight,
 		/// The given length bound for the proposal was too low.
 		WrongProposalLength,
+
 	}
 }
 
@@ -341,6 +346,7 @@ decl_module! {
 		)]
 
 		fn propose(origin,
+			room_id: RoomIndex,
 			#[compact] threshold: MemberCount,
 			proposal: Box<<T as Config<I>>::Proposal>,
 			#[compact] length_bound: u32
@@ -352,7 +358,7 @@ decl_module! {
 			let proposal_len = proposal.using_encoded(|x| x.len());
 			ensure!(proposal_len <= length_bound as usize, Error::<T, I>::WrongProposalLength);
 			let proposal_hash = T::Hashing::hash_of(&proposal);
-			ensure!(!<ProposalOf<T, I>>::contains_key(proposal_hash), Error::<T, I>::DuplicateProposal);
+			ensure!(!<ProposalOf<T, I>>::contains_key(room_id, proposal_hash), Error::<T, I>::DuplicateProposal);
 
 			if threshold < 2 {
 				let seats = Self::members().len() as MemberCount;
@@ -369,7 +375,7 @@ decl_module! {
 				}).into())
 			} else {
 				let active_proposals =
-					<Proposals<T, I>>::try_mutate(|proposals| -> Result<usize, DispatchError> {
+					<Proposals<T, I>>::try_mutate(room_id, |proposals| -> Result<usize, DispatchError> {
 						proposals.push(proposal_hash);
 						ensure!(
 							proposals.len() <= T::MaxProposals::get() as usize,
@@ -377,12 +383,12 @@ decl_module! {
 						);
 						Ok(proposals.len())
 					})?;
-				let index = Self::proposal_count();
-				<ProposalCount<I>>::mutate(|i| *i += 1);
-				<ProposalOf<T, I>>::insert(proposal_hash, *proposal);
+				let index = Self::proposal_count(room_id);
+				<ProposalCount<I>>::mutate(room_id, |i| *i += 1);
+				<ProposalOf<T, I>>::insert(room_id, proposal_hash, *proposal);
 				let end = system::Pallet::<T>::block_number() + T::MotionDuration::get();
 				let votes = Votes { index, threshold, ayes: vec![who.clone()], nays: vec![], end };
-				<Voting<T, I>>::insert(proposal_hash, votes);
+				<Voting<T, I>>::insert(room_id, proposal_hash, votes);
 
 				Self::deposit_event(RawEvent::Proposed(who, index, proposal_hash, threshold));
 
@@ -400,6 +406,7 @@ decl_module! {
 			DispatchClass::Operational
 		)]
 		fn vote(origin,
+			room_id: RoomIndex,
 			proposal: T::Hash,
 			#[compact] index: ProposalIndex,
 			approve: bool,
@@ -408,7 +415,7 @@ decl_module! {
 			let members = Self::members();
 			ensure!(members.contains(&who), Error::<T, I>::NotMember);
 
-			let mut voting = Self::voting(&proposal).ok_or(Error::<T, I>::ProposalMissing)?;
+			let mut voting = Self::voting(room_id, &proposal).ok_or(Error::<T, I>::ProposalMissing)?;
 
 			ensure!(voting.index == index, Error::<T, I>::WrongIndex);
 
@@ -442,7 +449,7 @@ decl_module! {
 			let no_votes = voting.nays.len() as MemberCount;
 			Self::deposit_event(RawEvent::Voted(who, proposal, approve, yes_votes, no_votes));
 
-			Voting::<T, I>::insert(&proposal, voting);
+			Voting::<T, I>::insert(room_id, &proposal, voting);
 
 			if is_account_voting_first_time {
 				Ok((
@@ -475,6 +482,7 @@ decl_module! {
 
 
 		fn close(origin,
+			room_id: RoomIndex,
 			proposal_hash: T::Hash,
 			#[compact] index: ProposalIndex,
 			#[compact] proposal_weight_bound: Weight,
@@ -482,7 +490,7 @@ decl_module! {
 		) -> DispatchResultWithPostInfo {
 			let _ = ensure_signed(origin)?;
 
-			let voting = Self::voting(&proposal_hash).ok_or(Error::<T, I>::ProposalMissing)?;
+			let voting = Self::voting(room_id, &proposal_hash).ok_or(Error::<T, I>::ProposalMissing)?;
 			ensure!(voting.index == index, Error::<T, I>::WrongIndex);
 
 			let mut no_votes = voting.nays.len() as MemberCount;
@@ -493,13 +501,14 @@ decl_module! {
 			// Allow (dis-)approving the proposal as soon as there are enough votes.
 			if approved {
 				let (proposal, len) = Self::validate_and_get_proposal(
+					room_id,
 					&proposal_hash,
 					length_bound,
 					proposal_weight_bound,
 				)?;
 				Self::deposit_event(RawEvent::Closed(proposal_hash, yes_votes, no_votes));
 				let (proposal_weight, proposal_count) =
-					Self::do_approve_proposal(seats, voting, proposal_hash, proposal);
+					Self::do_approve_proposal(room_id, seats, voting, proposal_hash, proposal);
 				return Ok((
 					Some(T::WeightInfo::close_early_approved(len as u32, seats, proposal_count)
 					.saturating_add(proposal_weight)),
@@ -508,7 +517,7 @@ decl_module! {
 
 			} else if disapproved {
 				Self::deposit_event(RawEvent::Closed(proposal_hash, yes_votes, no_votes));
-				let proposal_count = Self::do_disapprove_proposal(proposal_hash);
+				let proposal_count = Self::do_disapprove_proposal(room_id, proposal_hash);
 				return Ok((
 					Some(T::WeightInfo::close_early_disapproved(seats, proposal_count)),
 					Pays::No,
@@ -536,13 +545,14 @@ decl_module! {
 
 			if approved {
 				let (proposal, len) = Self::validate_and_get_proposal(
+					room_id,
 					&proposal_hash,
 					length_bound,
 					proposal_weight_bound,
 				)?;
 				Self::deposit_event(RawEvent::Closed(proposal_hash, yes_votes, no_votes));
 				let (proposal_weight, proposal_count) =
-					Self::do_approve_proposal(seats, voting, proposal_hash, proposal);
+					Self::do_approve_proposal(room_id, seats, voting, proposal_hash, proposal);
 				return Ok((
 					Some(T::WeightInfo::close_approved(len as u32, seats, proposal_count)
 					.saturating_add(proposal_weight)),
@@ -550,7 +560,7 @@ decl_module! {
 				).into());
 			} else {
 				Self::deposit_event(RawEvent::Closed(proposal_hash, yes_votes, no_votes));
-				let proposal_count = Self::do_disapprove_proposal(proposal_hash);
+				let proposal_count = Self::do_disapprove_proposal(room_id, proposal_hash);
 				return Ok((
 					Some(T::WeightInfo::close_disapproved(seats, proposal_count)),
 					Pays::No,
@@ -560,9 +570,9 @@ decl_module! {
 
 
 		#[weight = T::WeightInfo::disapprove_proposal(T::MaxProposals::get())]
-		fn disapprove_proposal(origin, proposal_hash: T::Hash) -> DispatchResultWithPostInfo {
+		fn disapprove_proposal(origin, room_id: RoomIndex, proposal_hash: T::Hash) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
-			let proposal_count = Self::do_disapprove_proposal(proposal_hash);
+			let proposal_count = Self::do_disapprove_proposal(room_id, proposal_hash);
 			Ok(Some(T::WeightInfo::disapprove_proposal(proposal_count)).into())
 		}
 	}
@@ -581,36 +591,25 @@ impl<T: Config<I>, I: Instance> Module<T, I> {
 	/// Checks the length in storage via `storage::read` which adds an extra `size_of::<u32>() == 4`
 	/// to the length.
 	fn validate_and_get_proposal(
+		room_id: RoomIndex,
 		hash: &T::Hash,
 		length_bound: u32,
 		weight_bound: Weight
 	) -> Result<(<T as Config<I>>::Proposal, usize), DispatchError> {
-		let key = ProposalOf::<T, I>::hashed_key_for(hash);
+		let key = ProposalOf::<T, I>::hashed_key_for(room_id, hash);
 		// read the length of the proposal storage entry directly
 		let proposal_len = storage::read(&key, &mut [0; 0], 0)
 			.ok_or(Error::<T, I>::ProposalMissing)?;
 		ensure!(proposal_len <= length_bound, Error::<T, I>::WrongProposalLength);
-		let proposal = ProposalOf::<T, I>::get(hash).ok_or(Error::<T, I>::ProposalMissing)?;
+		let proposal = ProposalOf::<T, I>::get(room_id, hash).ok_or(Error::<T, I>::ProposalMissing)?;
 		let proposal_weight = proposal.get_dispatch_info().weight;
 		ensure!(proposal_weight <= weight_bound, Error::<T, I>::WrongProposalWeight);
 		Ok((proposal, proposal_len as usize))
 	}
 
-	/// Weight:
-	/// If `approved`:
-	/// - the weight of `proposal` preimage.
-	/// - two events deposited.
-	/// - two removals, one mutation.
-	/// - computation and i/o `O(P + L)` where:
-	///   - `P` is number of active proposals,
-	///   - `L` is the encoded length of `proposal` preimage.
-	///
-	/// If not `approved`:
-	/// - one event deposited.
-	/// Two removals, one mutation.
-	/// Computation and i/o `O(P)` where:
-	/// - `P` is number of active proposals
+
 	fn do_approve_proposal(
+		room_id: RoomIndex,
 		seats: MemberCount,
 		voting: Votes<T::AccountId, T::BlockNumber>,
 		proposal_hash: T::Hash,
@@ -627,22 +626,22 @@ impl<T: Config<I>, I: Instance> Module<T, I> {
 		// default to the dispatch info weight for safety
 		let proposal_weight = get_result_weight(result).unwrap_or(dispatch_weight); // P1
 
-		let proposal_count = Self::remove_proposal(proposal_hash);
+		let proposal_count = Self::remove_proposal(room_id, proposal_hash);
 		(proposal_weight, proposal_count)
 	}
 
-	fn do_disapprove_proposal(proposal_hash: T::Hash) -> u32 {
+	fn do_disapprove_proposal(room_id: RoomIndex, proposal_hash: T::Hash) -> u32 {
 		// disapproved
 		Self::deposit_event(RawEvent::Disapproved(proposal_hash));
-		Self::remove_proposal(proposal_hash)
+		Self::remove_proposal(room_id, proposal_hash)
 	}
 
 	// Removes a proposal from the pallet, cleaning up votes and the vector of proposals.
-	fn remove_proposal(proposal_hash: T::Hash) -> u32 {
+	fn remove_proposal(room_id: RoomIndex, proposal_hash: T::Hash) -> u32 {
 		// remove proposal and vote
-		ProposalOf::<T, I>::remove(&proposal_hash);
-		Voting::<T, I>::remove(&proposal_hash);
-		let num_proposals = Proposals::<T, I>::mutate(|proposals| {
+		ProposalOf::<T, I>::remove(room_id, &proposal_hash);
+		Voting::<T, I>::remove(room_id, &proposal_hash);
+		let num_proposals = Proposals::<T, I>::mutate(room_id, |proposals| {
 			proposals.retain(|h| h != &proposal_hash);
 			proposals.len() + 1 // calculate weight based on original length
 		});
@@ -650,74 +649,74 @@ impl<T: Config<I>, I: Instance> Module<T, I> {
 	}
 }
 
-impl<T: Config<I>, I: Instance> ChangeMembers<T::AccountId> for Module<T, I> {
-	/// Update the members of the collective. Votes are updated and the prime is reset.
-	///
-	/// NOTE: Does not enforce the expected `MaxMembers` limit on the amount of members, but
-	///       the weight estimations rely on it to estimate dispatchable weight.
-	///
-	/// # <weight>
-	/// ## Weight
-	/// - `O(MP + N)`
-	///   - where `M` old-members-count (governance-bounded)
-	///   - where `N` new-members-count (governance-bounded)
-	///   - where `P` proposals-count
-	/// - DB:
-	///   - 1 storage read (codec `O(P)`) for reading the proposals
-	///   - `P` storage mutations for updating the votes (codec `O(M)`)
-	///   - 1 storage write (codec `O(N)`) for storing the new members
-	///   - 1 storage write (codec `O(1)`) for deleting the old prime
-	/// # </weight>
-	fn change_members_sorted(
-		_incoming: &[T::AccountId],
-		outgoing: &[T::AccountId],
-		new: &[T::AccountId],
-	) {
-		if new.len() > T::MaxMembers::get() as usize {
-			log::error!(
-				target: "runtime::collective",
-				"New members count ({}) exceeds maximum amount of members expected ({}).",
-				new.len(),
-				T::MaxMembers::get(),
-			);
-		}
-		// remove accounts from all current voting in motions.
-		let mut outgoing = outgoing.to_vec();
-		outgoing.sort();
-		for h in Self::proposals().into_iter() {
-			<Voting<T, I>>::mutate(h, |v|
-				if let Some(mut votes) = v.take() {
-					votes.ayes = votes.ayes.into_iter()
-						.filter(|i| outgoing.binary_search(i).is_err())
-						.collect();
-					votes.nays = votes.nays.into_iter()
-						.filter(|i| outgoing.binary_search(i).is_err())
-						.collect();
-					*v = Some(votes);
-				}
-			);
-		}
-		Members::<T, I>::put(new);
-		Prime::<T, I>::kill();
-	}
+// impl<T: Config<I>, I: Instance> ChangeMembers<T::AccountId> for Module<T, I> {
+// 	/// Update the members of the collective. Votes are updated and the prime is reset.
+// 	///
+// 	/// NOTE: Does not enforce the expected `MaxMembers` limit on the amount of members, but
+// 	///       the weight estimations rely on it to estimate dispatchable weight.
+// 	///
+// 	/// # <weight>
+// 	/// ## Weight
+// 	/// - `O(MP + N)`
+// 	///   - where `M` old-members-count (governance-bounded)
+// 	///   - where `N` new-members-count (governance-bounded)
+// 	///   - where `P` proposals-count
+// 	/// - DB:
+// 	///   - 1 storage read (codec `O(P)`) for reading the proposals
+// 	///   - `P` storage mutations for updating the votes (codec `O(M)`)
+// 	///   - 1 storage write (codec `O(N)`) for storing the new members
+// 	///   - 1 storage write (codec `O(1)`) for deleting the old prime
+// 	/// # </weight>
+// 	fn change_members_sorted(
+// 		_incoming: &[T::AccountId],
+// 		outgoing: &[T::AccountId],
+// 		new: &[T::AccountId],
+// 	) {
+// 		if new.len() > T::MaxMembers::get() as usize {
+// 			log::error!(
+// 				target: "runtime::collective",
+// 				"New members count ({}) exceeds maximum amount of members expected ({}).",
+// 				new.len(),
+// 				T::MaxMembers::get(),
+// 			);
+// 		}
+// 		// remove accounts from all current voting in motions.
+// 		let mut outgoing = outgoing.to_vec();
+// 		outgoing.sort();
+// 		for h in Self::proposals().into_iter() {
+// 			<Voting<T, I>>::mutate(h, |v|
+// 				if let Some(mut votes) = v.take() {
+// 					votes.ayes = votes.ayes.into_iter()
+// 						.filter(|i| outgoing.binary_search(i).is_err())
+// 						.collect();
+// 					votes.nays = votes.nays.into_iter()
+// 						.filter(|i| outgoing.binary_search(i).is_err())
+// 						.collect();
+// 					*v = Some(votes);
+// 				}
+// 			);
+// 		}
+// 		Members::<T, I>::put(new);
+// 		Prime::<T, I>::kill();
+// 	}
+//
+// 	fn set_prime(prime: Option<T::AccountId>) {
+// 		Prime::<T, I>::set(prime);
+// 	}
+//
+// 	fn get_prime() -> Option<T::AccountId> {
+// 		Prime::<T, I>::get()
+// 	}
+// }
 
-	fn set_prime(prime: Option<T::AccountId>) {
-		Prime::<T, I>::set(prime);
-	}
-
-	fn get_prime() -> Option<T::AccountId> {
-		Prime::<T, I>::get()
-	}
-}
-
-impl<T: Config<I>, I: Instance> InitializeMembers<T::AccountId> for Module<T, I> {
-	fn initialize_members(members: &[T::AccountId]) {
-		if !members.is_empty() {
-			assert!(<Members<T, I>>::get().is_empty(), "Members are already initialized!");
-			<Members<T, I>>::put(members);
-		}
-	}
-}
+// impl<T: Config<I>, I: Instance> InitializeMembers<T::AccountId> for Module<T, I> {
+// 	fn initialize_members(members: &[T::AccountId]) {
+// 		if !members.is_empty() {
+// 			assert!(<Members<T, I>>::get().is_empty(), "Members are already initialized!");
+// 			<Members<T, I>>::put(members);
+// 		}
+// 	}
+// }
 
 // /// Ensure that the origin `o` represents at least `n` members. Returns `Ok` or an `Err`
 // /// otherwise.

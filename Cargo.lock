@@ -4230,6 +4230,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "node-traits"
+version = "0.1.0"
+dependencies = [
+ "sp-std",
+]
+
+[[package]]
 name = "nodrop"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4607,6 +4614,7 @@ dependencies = [
  "frame-system",
  "hex-literal 0.3.1",
  "log",
+ "node-traits",
  "pallet-balances",
  "pallet-listen",
  "parity-scale-codec",
@@ -4747,6 +4755,7 @@ dependencies = [
  "frame-system",
  "node-constants",
  "node-primitives",
+ "node-traits",
  "orml-tokens",
  "orml-traits",
  "pallet-multisig",

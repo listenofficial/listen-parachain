@@ -438,6 +438,7 @@ impl listen::Config for Runtime{
 	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type ProtectTime = ProtectTime;
 	type CouncilMaxNumber = CouncilMaxNumber;
+	type CollectiveHandler = RoomCommittee;
 }
 
 

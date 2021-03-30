@@ -15,7 +15,7 @@ use pallet_multisig;
 use sp_runtime::{traits::{AccountIdConversion, Saturating, CheckedDiv, Zero}, DispatchResult, Percent, RuntimeDebug, ModuleId, traits::CheckedMul, DispatchError, SaturatedConversion};
 use pallet_timestamp as timestamp;
 use node_primitives::*;
-use listen_traits::ListenHandler;
+use listen_traits::{ListenHandler, CollectiveHandler};
 
 use node_constants::{currency::*, time::*};
 
@@ -82,6 +82,8 @@ pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config {
 	type ProtectTime: Get<Self::BlockNumber>;
 
 	type CouncilMaxNumber: Get<u32>;
+
+	type CollectiveHandler: CollectiveHandler<u64, DispatchError>;
 
 }
 
@@ -270,6 +272,8 @@ decl_error! {
 		InProtectTime,
 		/// 多签阀值错误
 		ThreshouldLenErr,
+		/// 不能踢自己
+		RemoveYourself,
 }}
 
 
@@ -794,6 +798,8 @@ decl_module! {
 			// 这个人在群里
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
 
+			ensure!(manager.clone() != who.clone(), Error::<T>::RemoveYourself);
+
 			let now = Self::now();
 
 			if room.last_remove_height > T::BlockNumber::from(0u32){
@@ -1015,7 +1021,6 @@ decl_module! {
 						room.disband_vote.approve_man.remove(&who);
 						room.disband_vote.approve_total_amount -= *user_consume_amount;
 					}
-
 
 				},
 				}
@@ -1715,6 +1720,8 @@ impl <T: Config> Module <T> {
 				<InfoOfDisbandRoom<T>>::insert(session_index, group_id, room_rewad_info);
 
 				<AllRoom<T>>::remove(group_id);
+
+				T::CollectiveHandler::remove_room_collective_info(group_id);
 
 			}
 

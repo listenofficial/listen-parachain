@@ -17,6 +17,7 @@
       <sourceFolder url="file://$MODULE_DIR$/pallets/xtokens/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/pallets/dao/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/pallets/nicks/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/pallets/room-collective/src" isTestSource="false" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

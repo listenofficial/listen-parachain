@@ -7,7 +7,7 @@ use sp_std::{prelude::*, result, collections::{btree_set::BTreeSet, btree_map::B
 use sp_core::u32_trait::Value as U32;
 use sp_io::storage;
 use sp_runtime::{RuntimeDebug, traits::Hash};
-use listen_traits::ListenHandler;
+use listen_traits::{ListenHandler, CollectiveHandler};
 
 use frame_support::{
 	codec::{Decode, Encode},
@@ -824,3 +824,12 @@ impl<T: Config<I>, I: Instance> Module<T, I> {
 // 	}
 // }
 //
+impl<T: Config<I>, I: Instance> CollectiveHandler<u64, DispatchError> for Module<T, I> {
+	fn remove_room_collective_info(room_id: u64) -> result::Result<(), DispatchError> {
+		<ProposalCount>::remove(room_id);
+		<Voting<T, I>>::remove_prefix(room_id);
+		<ProposalOf<T, I>>::remove_prefix(room_id);
+		<Proposals<T, I>>::remove(room_id);
+		Ok(())
+	}
+}

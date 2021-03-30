@@ -217,6 +217,7 @@ pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, GroupMaxM
 	pub pledge_amount: Balance, // 群主抵押的费用
 
 	pub group_manager: AccountId,  // 群主
+	pub prime: Option<AccountId>,
 	pub max_members: GroupMaxMembers, // 最大群人数
 
 	pub group_type: Vec<u8>, // 群的类型（玩家自定义字符串）

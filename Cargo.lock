@@ -3746,6 +3746,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "listen-traits"
+version = "0.1.0"
+dependencies = [
+ "sp-std",
+]
+
+[[package]]
 name = "listen_parachain-collator"
 version = "2.0.0"
 dependencies = [
@@ -4230,13 +4237,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "node-traits"
-version = "0.1.0"
-dependencies = [
- "sp-std",
-]
-
-[[package]]
 name = "nodrop"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4606,27 +4606,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-dao"
-version = "0.1.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal 0.3.1",
- "log",
- "node-traits",
- "pallet-balances",
- "pallet-listen",
- "pallet-timestamp",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-democracy"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#1404f2af4cbe90d35b4c8a1405a9452feb789adc"
@@ -4754,9 +4733,9 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "listen-traits",
  "node-constants",
  "node-primitives",
- "node-traits",
  "orml-tokens",
  "orml-traits",
  "pallet-multisig",
@@ -4898,6 +4877,26 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-room-collective"
+version = "0.1.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.3.1",
+ "listen-traits",
+ "log",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -5173,12 +5172,12 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-balances",
- "pallet-dao",
  "pallet-listen",
  "pallet-listen-vesting",
  "pallet-multisig",
  "pallet-nicks 0.1.0",
  "pallet-randomness-collective-flip",
+ "pallet-room-collective",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",

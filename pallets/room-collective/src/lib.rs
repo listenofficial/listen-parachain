@@ -7,8 +7,7 @@ use sp_std::{prelude::*, result, collections::{btree_set::BTreeSet, btree_map::B
 use sp_core::u32_trait::Value as U32;
 use sp_io::storage;
 use sp_runtime::{RuntimeDebug, traits::Hash};
-use pallet_listen::{self, raw::{Audio, AllProps, GroupInfo, GroupMaxMembers, DisbandVote, }};
-use node_traits::ListenHandler;
+use listen_traits::ListenHandler;
 
 use frame_support::{
 	codec::{Decode, Encode},
@@ -32,8 +31,6 @@ pub use weights::WeightInfo;
 
 /// Simple index type for proposal counting.
 pub type ProposalIndex = u32;
-
-type BalanceOf<T> = <<T as pallet_listen::Config>::NativeCurrency as Currency<<T as system::Config>::AccountId>>::Balance;
 
 pub type RoomIndex = u64;
 

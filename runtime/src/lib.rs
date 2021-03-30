@@ -74,6 +74,7 @@ use orml_xcm_support::{
 use pallet_transfer;
 use orml_unknown_tokens;
 use pallet_nicks;
+use pallet_room_collective;
 
 use orml_currencies::{self, BasicCurrencyAdapter};
 use sp_std::collections::btree_set::BTreeSet;
@@ -285,6 +286,25 @@ impl orml_currencies::Config for Runtime {
 
 	type WeightInfo = ();
 
+}
+
+parameter_types! {
+	pub const RoomMotionDuration: BlockNumber = 5 * DAYS;
+	pub const RoomMaxProposals: u32 = 100;
+	pub const RoomMaxMembers: u32 = 100;
+}
+
+type RoomCollective = pallet_room_collective::Instance1;
+impl pallet_room_collective::Config<RoomCollective> for Runtime {
+	type Origin = Origin;
+	type Proposal = Call;
+	type Event = Event;
+	type MotionDuration = RoomMotionDuration;
+	type MaxProposals = RoomMaxProposals;
+	type MaxMembers = RoomMaxMembers;
+	type DefaultVote = pallet_room_collective::PrimeDefaultVote;
+	type WeightInfo = pallet_room_collective::weights::SubstrateWeight<Runtime>;
+	type ListenHandler = Listen;
 }
 
 parameter_types! {
@@ -537,6 +557,7 @@ construct_runtime!(
 		Transfer: pallet_transfer::{Pallet, Call, Event<T>},
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event},
 		Nicks: pallet_nicks::{Pallet, Storage, Call, Event<T>},
+		RoomCommittee: pallet_room_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>},
 
 	}
 );

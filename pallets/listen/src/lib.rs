@@ -15,7 +15,7 @@ use pallet_multisig;
 use sp_runtime::{traits::{AccountIdConversion, Saturating, CheckedDiv, Zero}, DispatchResult, Percent, RuntimeDebug, ModuleId, traits::CheckedMul, DispatchError, SaturatedConversion};
 use pallet_timestamp as timestamp;
 use node_primitives::*;
-use node_traits::ListenHandler;
+use listen_traits::ListenHandler;
 
 use node_constants::{currency::*, time::*};
 
@@ -32,7 +32,9 @@ use sp_std::convert::TryInto;
 
 use orml_tokens;
 use orml_traits::MultiCurrency;
-use orml_tokens::BalanceLock;
+
+
+
 // use crate::raw::InvitePaymentType::invitee;
 
 pub(crate) type MultiBalanceOf<T> =
@@ -417,6 +419,7 @@ decl_module! {
 				last_block_of_get_the_reward: Self::now(),
 				pledge_amount: pledge,
 				group_manager: who.clone(),
+				prime: Some(who.clone()),
 				max_members: max_members,
 				group_type: group_type,
 				join_cost: join_cost,
@@ -1924,6 +1927,12 @@ impl<T: Config> ListenHandler<u64, T::AccountId, DispatchError> for Module<T> {
 		}
 		council.sort();
 		Ok(council)
+	}
+
+	fn get_prime(room_id: u64) -> Result<Option<<T as frame_system::Config>::AccountId>, DispatchError> {
+		let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
+		let prime = room_info.prime;
+		Ok(prime)
 	}
 }
 

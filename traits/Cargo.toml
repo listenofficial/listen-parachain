@@ -1,5 +1,5 @@
 [package]
-name = "node-traits"
+name = "listen-traits"
 version = "0.1.0"
 authors = ["transxask <orwx71@163.com>"]
 edition = "2018"

@@ -141,6 +141,8 @@ pub type Origin<T, I=DefaultInstance> = RawOrigin<<T as frame_system::Config>::A
 pub struct Votes<AccountId, BlockNumber> {
 	/// The proposal's unique index.
 	index: ProposalIndex,
+	/// The proposal's reason,
+	reason: Option<Vec<u8>>,
 	/// The number of approval votes that are needed to pass the motion.
 	threshold: MemberCount,
 	/// The current set of voters that approved it.
@@ -304,6 +306,7 @@ decl_module! {
 			room_id: RoomIndex,
 			#[compact] threshold: MemberCount,
 			proposal: Box<<T as Config<I>>::Proposal>,
+			reason: Option<Vec<u8>>,
 			#[compact] length_bound: u32
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
@@ -342,7 +345,7 @@ decl_module! {
 				<ProposalCount<I>>::mutate(room_id, |i| *i += 1);
 				<ProposalOf<T, I>>::insert(room_id, proposal_hash, *proposal);
 				let end = system::Pallet::<T>::block_number() + T::MotionDuration::get();
-				let votes = Votes { index, threshold, ayes: vec![who.clone()], nays: vec![], end };
+				let votes = Votes { index, reason: reason, threshold, ayes: vec![who.clone()], nays: vec![], end };
 				<Voting<T, I>>::insert(room_id, proposal_hash, votes);
 
 				Self::deposit_event(RawEvent::Proposed(who, index, proposal_hash, threshold));

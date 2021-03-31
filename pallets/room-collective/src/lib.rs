@@ -165,11 +165,6 @@ decl_storage! {
 		/// Proposals so far.
 		pub ProposalCount get(fn proposal_count): map hasher(identity) RoomIndex => u32;
 
-		/// todo 以下这两个要从listen模块中引进来
-		/// The current members of the collective. This is stored sorted (just by value).
-		pub Members get(fn members): Vec<T::AccountId>;
-		/// The prime member that helps determine the default vote behavior in case of absentations.
-		pub Prime get(fn prime): Option<T::AccountId>;
 	}
 	// add_extra_genesis {
 	// 	config(phantom): sp_std::marker::PhantomData<I>;
@@ -307,11 +302,13 @@ decl_module! {
 			DispatchClass::Operational
 		)]
 		fn execute(origin,
+			room_id: RoomIndex,
 			proposal: Box<<T as Config<I>>::Proposal>,
 			#[compact] length_bound: u32,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let members = Self::members();
+			// let members = Self::members();
+			let members = T::ListenHandler::get_room_council(room_id)?;
 			ensure!(members.contains(&who), Error::<T, I>::NotMember);
 			let proposal_len = proposal.using_encoded(|x| x.len());
 			ensure!(proposal_len <= length_bound as usize, Error::<T, I>::WrongProposalLength);
@@ -356,7 +353,7 @@ decl_module! {
 			#[compact] length_bound: u32
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let members = Self::members();
+			let members = T::ListenHandler::get_room_council(room_id)?;
 			ensure!(members.contains(&who), Error::<T, I>::NotMember);
 
 			let proposal_len = proposal.using_encoded(|x| x.len());
@@ -365,7 +362,7 @@ decl_module! {
 			ensure!(!<ProposalOf<T, I>>::contains_key(room_id, proposal_hash), Error::<T, I>::DuplicateProposal);
 
 			if threshold < 2 {
-				let seats = Self::members().len() as MemberCount;
+				let seats = members.len() as MemberCount;
 				let result = proposal.dispatch(RawOrigin::Members(1, seats).into());
 				Self::deposit_event(
 					RawEvent::Executed(proposal_hash, result.map(|_| ()).map_err(|e| e.error))
@@ -416,7 +413,7 @@ decl_module! {
 			approve: bool,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			let members = Self::members();
+			let members = T::ListenHandler::get_room_council(room_id)?;
 			ensure!(members.contains(&who), Error::<T, I>::NotMember);
 
 			let mut voting = Self::voting(room_id, &proposal).ok_or(Error::<T, I>::ProposalMissing)?;
@@ -499,7 +496,8 @@ decl_module! {
 
 			let mut no_votes = voting.nays.len() as MemberCount;
 			let mut yes_votes = voting.ayes.len() as MemberCount;
-			let seats = Self::members().len() as MemberCount;
+			let seats = T::ListenHandler::get_room_council(room_id)?.len() as MemberCount;
+
 			let approved = yes_votes >= voting.threshold;
 			let disapproved = seats.saturating_sub(no_votes) < voting.threshold;
 			// Allow (dis-)approving the proposal as soon as there are enough votes.
@@ -531,7 +529,8 @@ decl_module! {
 			// Only allow actual closing of the proposal after the voting period has ended.
 			ensure!(system::Pallet::<T>::block_number() >= voting.end, Error::<T, I>::TooEarly);
 
-			let prime_vote = Self::prime().map(|who| voting.ayes.iter().any(|a| a == &who));
+			// let prime_vote = Self::prime().map(|who| voting.ayes.iter().any(|a| a == &who));
+			let prime_vote = T::ListenHandler::get_prime(room_id)?.map(|who| voting.ayes.iter().any(|a| a == &who));
 
 			// default voting strategy.
 			/// fixme 判断是否结束
@@ -584,11 +583,11 @@ decl_module! {
 
 impl<T: Config<I>, I: Instance> Module<T, I> {
 	/// Check whether `who` is a member of the collective.
-	pub fn is_member(who: &T::AccountId) -> bool {
-		// Note: The dispatchables *do not* use this to check membership so make sure
-		// to update those if this is changed.
-		Self::members().contains(who)
-	}
+	// pub fn is_member(who: &T::AccountId) -> bool {
+	// 	// Note: The dispatchables *do not* use this to check membership so make sure
+	// 	// to update those if this is changed.
+	// 	Self::members().contains(who)
+	// }
 
 	/// Ensure that the right proposal bounds were passed and get the proposal from storage.
 	///

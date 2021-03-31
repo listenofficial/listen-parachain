@@ -117,6 +117,16 @@
       "Expire"
     ]
   },
+  
+  "Votes": {
+    "index":"u32",
+    "reason":"Option<Vec<u8>>",
+    "threshold":"u32",
+    "ayes":"Vec<AccountId>",
+    "nays":"Vec<AccountId>",
+    "end":"BlockNumber"
+  },
+  
   "GroupInfo": {
     "group_id": "u64",
     "create_payment": "Balance",

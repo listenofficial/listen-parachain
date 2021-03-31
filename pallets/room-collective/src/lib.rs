@@ -248,52 +248,6 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-
-		// #[weight = (
-		// 	T::WeightInfo::set_members(
-		// 		*old_count, // M
-		// 		new_members.len() as u32, // N
-		// 		T::MaxProposals::get() // P
-		// 	),
-		// 	DispatchClass::Operational)]
-		//
-		// fn set_members(origin,
-		// 	new_members: Vec<T::AccountId>,
-		// 	prime: Option<T::AccountId>,
-		// 	old_count: MemberCount,
-		// ) -> DispatchResultWithPostInfo {
-		// 	ensure_root(origin)?;
-		// 	if new_members.len() > T::MaxMembers::get() as usize {
-		// 		log::error!(
-		// 			target: "runtime::collective",
-		// 			"New members count ({}) exceeds maximum amount of members expected ({}).",
-		// 			new_members.len(),
-		// 			T::MaxMembers::get(),
-		// 		);
-		// 	}
-		//
-		// 	let old = Members::<T, I>::get();
-		// 	if old.len() > old_count as usize {
-		// 		log::warn!(
-		// 			target: "runtime::collective",
-		// 			"Wrong count used to estimate set_members weight. expected ({}) vs actual ({})",
-		// 			old_count,
-		// 			old.len(),
-		// 		);
-		// 	}
-		// 	let mut new_members = new_members;
-		// 	new_members.sort();
-		// 	<Self as ChangeMembers<T::AccountId>>::set_members_sorted(&new_members, &old);
-		// 	Prime::<T, I>::set(prime);
-		//
-		// 	Ok(Some(T::WeightInfo::set_members(
-		// 		old.len() as u32, // M
-		// 		new_members.len() as u32, // N
-		// 		T::MaxProposals::get(), // P
-		// 	)).into())
-		// }
-
-
 		#[weight = (
 			T::WeightInfo::execute(
 				*length_bound, // B
@@ -734,95 +688,95 @@ impl<T: Config<I>, I: Instance> Module<T, I> {
 // 	}
 // }
 //
-// pub struct EnsureMember<AccountId, I=DefaultInstance>(sp_std::marker::PhantomData<(AccountId, I)>);
-// impl<
-// 	O: Into<Result<RawOrigin<AccountId, I>, O>> + From<RawOrigin<AccountId, I>>,
-// 	AccountId: Default,
-// 	I,
-// > EnsureOrigin<O> for EnsureMember<AccountId, I> {
-// 	type Success = AccountId;
-// 	fn try_origin(o: O) -> Result<Self::Success, O> {
-// 		o.into().and_then(|o| match o {
-// 			RawOrigin::Member(id) => Ok(id),
-// 			r => Err(O::from(r)),
-// 		})
-// 	}
-//
-// 	#[cfg(feature = "runtime-benchmarks")]
-// 	fn successful_origin() -> O {
-// 		O::from(RawOrigin::Member(Default::default()))
-// 	}
-// }
-//
-// pub struct EnsureMembers<N: U32, AccountId, I=DefaultInstance>(sp_std::marker::PhantomData<(N, AccountId, I)>);
-// impl<
-// 	O: Into<Result<RawOrigin<AccountId, I>, O>> + From<RawOrigin<AccountId, I>>,
-// 	N: U32,
-// 	AccountId,
-// 	I,
-// > EnsureOrigin<O> for EnsureMembers<N, AccountId, I> {
-// 	type Success = (MemberCount, MemberCount);
-// 	fn try_origin(o: O) -> Result<Self::Success, O> {
-// 		o.into().and_then(|o| match o {
-// 			RawOrigin::Members(n, m) if n >= N::VALUE => Ok((n, m)),
-// 			r => Err(O::from(r)),
-// 		})
-// 	}
-//
-// 	#[cfg(feature = "runtime-benchmarks")]
-// 	fn successful_origin() -> O {
-// 		O::from(RawOrigin::Members(N::VALUE, N::VALUE))
-// 	}
-// }
-//
-// pub struct EnsureProportionMoreThan<N: U32, D: U32, AccountId, I=DefaultInstance>(
-// 	sp_std::marker::PhantomData<(N, D, AccountId, I)>
-// );
-// impl<
-// 	O: Into<Result<RawOrigin<AccountId, I>, O>> + From<RawOrigin<AccountId, I>>,
-// 	N: U32,
-// 	D: U32,
-// 	AccountId,
-// 	I,
-// > EnsureOrigin<O> for EnsureProportionMoreThan<N, D, AccountId, I> {
-// 	type Success = ();
-// 	fn try_origin(o: O) -> Result<Self::Success, O> {
-// 		o.into().and_then(|o| match o {
-// 			RawOrigin::Members(n, m) if n * D::VALUE > N::VALUE * m => Ok(()),
-// 			r => Err(O::from(r)),
-// 		})
-// 	}
-//
-// 	#[cfg(feature = "runtime-benchmarks")]
-// 	fn successful_origin() -> O {
-// 		O::from(RawOrigin::Members(1u32, 0u32))
-// 	}
-// }
-//
-// pub struct EnsureProportionAtLeast<N: U32, D: U32, AccountId, I=DefaultInstance>(
-// 	sp_std::marker::PhantomData<(N, D, AccountId, I)>
-// );
-// impl<
-// 	O: Into<Result<RawOrigin<AccountId, I>, O>> + From<RawOrigin<AccountId, I>>,
-// 	N: U32,
-// 	D: U32,
-// 	AccountId,
-// 	I,
-// > EnsureOrigin<O> for EnsureProportionAtLeast<N, D, AccountId, I> {
-// 	type Success = ();
-// 	fn try_origin(o: O) -> Result<Self::Success, O> {
-// 		o.into().and_then(|o| match o {
-// 			RawOrigin::Members(n, m) if n * D::VALUE >= N::VALUE * m => Ok(()),
-// 			r => Err(O::from(r)),
-// 		})
-// 	}
-//
-// 	#[cfg(feature = "runtime-benchmarks")]
-// 	fn successful_origin() -> O {
-// 		O::from(RawOrigin::Members(0u32, 0u32))
-// 	}
-// }
-//
+pub struct EnsureMember<AccountId, I=DefaultInstance>(sp_std::marker::PhantomData<(AccountId, I)>);
+impl<
+	O: Into<Result<RawOrigin<AccountId, I>, O>> + From<RawOrigin<AccountId, I>>,
+	AccountId: Default,
+	I,
+> EnsureOrigin<O> for EnsureMember<AccountId, I> {
+	type Success = AccountId;
+	fn try_origin(o: O) -> Result<Self::Success, O> {
+		o.into().and_then(|o| match o {
+			RawOrigin::Member(id) => Ok(id),
+			r => Err(O::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> O {
+		O::from(RawOrigin::Member(Default::default()))
+	}
+}
+
+pub struct EnsureMembers<N: U32, AccountId, I=DefaultInstance>(sp_std::marker::PhantomData<(N, AccountId, I)>);
+impl<
+	O: Into<Result<RawOrigin<AccountId, I>, O>> + From<RawOrigin<AccountId, I>>,
+	N: U32,
+	AccountId,
+	I,
+> EnsureOrigin<O> for EnsureMembers<N, AccountId, I> {
+	type Success = (MemberCount, MemberCount);
+	fn try_origin(o: O) -> Result<Self::Success, O> {
+		o.into().and_then(|o| match o {
+			RawOrigin::Members(n, m) if n >= N::VALUE => Ok((n, m)),
+			r => Err(O::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> O {
+		O::from(RawOrigin::Members(N::VALUE, N::VALUE))
+	}
+}
+
+pub struct EnsureProportionMoreThan<N: U32, D: U32, AccountId, I=DefaultInstance>(
+	sp_std::marker::PhantomData<(N, D, AccountId, I)>
+);
+impl<
+	O: Into<Result<RawOrigin<AccountId, I>, O>> + From<RawOrigin<AccountId, I>>,
+	N: U32,
+	D: U32,
+	AccountId,
+	I,
+> EnsureOrigin<O> for EnsureProportionMoreThan<N, D, AccountId, I> {
+	type Success = ();
+	fn try_origin(o: O) -> Result<Self::Success, O> {
+		o.into().and_then(|o| match o {
+			RawOrigin::Members(n, m) if n * D::VALUE > N::VALUE * m => Ok(()),
+			r => Err(O::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> O {
+		O::from(RawOrigin::Members(1u32, 0u32))
+	}
+}
+
+pub struct EnsureProportionAtLeast<N: U32, D: U32, AccountId, I=DefaultInstance>(
+	sp_std::marker::PhantomData<(N, D, AccountId, I)>
+);
+impl<
+	O: Into<Result<RawOrigin<AccountId, I>, O>> + From<RawOrigin<AccountId, I>>,
+	N: U32,
+	D: U32,
+	AccountId,
+	I,
+> EnsureOrigin<O> for EnsureProportionAtLeast<N, D, AccountId, I> {
+	type Success = ();
+	fn try_origin(o: O) -> Result<Self::Success, O> {
+		o.into().and_then(|o| match o {
+			RawOrigin::Members(n, m) if n * D::VALUE >= N::VALUE * m => Ok(()),
+			r => Err(O::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> O {
+		O::from(RawOrigin::Members(0u32, 0u32))
+	}
+}
+
 impl<T: Config<I>, I: Instance> CollectiveHandler<u64, DispatchError> for Module<T, I> {
 	fn remove_room_collective_info(room_id: u64) -> result::Result<(), DispatchError> {
 		<ProposalCount>::remove(room_id);

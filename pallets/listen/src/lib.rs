@@ -289,6 +289,8 @@ decl_error! {
 		ThreshouldLenErr,
 		/// 不能踢自己
 		RemoveYourself,
+		/// 权限错误
+		OriginErr,
 }}
 
 
@@ -781,11 +783,12 @@ decl_module! {
 		/// 群主把某个账户从黑名单中移除
 		#[weight = 10_000]
 		fn remove_someone_from_blacklist(origin, group_id: u64, who: T::AccountId) {
-			let manager = ensure_signed(origin)?;
+			/// 需要群主权限或是过半的群议员同意
+			T::RoomRootOrHalfCouncilOrigin::try_origin(origin).map_err(|_| Error::<T>::OriginErr)?;
 
 			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			// 是群主
-			ensure!(room.group_manager == manager.clone(), Error::<T>::NotManager);
+			// // 是群主
+			// ensure!(room.group_manager == manager.clone(), Error::<T>::NotManager);
 
 			let black_list = room.black_list.clone();
 			if let Some(pos) = black_list.iter().position(|h| h == &who) {
@@ -805,19 +808,24 @@ decl_module! {
 		/// 群主踢人
 		#[weight = 10_000]
 		fn remove_someone(origin, group_id: u64, who: T::AccountId) -> DispatchResult {
-			let manager = ensure_signed(origin.clone())?;
+
+			T::RoomRootOrSomeCouncilOrigin::try_origin(origin.clone()).map_err(|_| Error::<T>::OriginErr)?;
 
 			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			// 是群主
-			ensure!(room.group_manager == manager.clone(), Error::<T>::NotManager);
+			// // 是群主
+			// ensure!(room.group_manager == manager.clone(), Error::<T>::NotManager);
 			// 这个人在群里
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
 
-			ensure!(manager.clone() != who.clone(), Error::<T>::RemoveYourself);
-
 			let now = Self::now();
 
-			if room.last_remove_height > T::BlockNumber::from(0u32){
+			// 如果是群主权限 则不能随意踢人
+			if T::RoomRootOrigin::try_origin(origin).is_ok() {
+
+				// 群主不能踢自己
+				ensure!(room.group_manager.clone() != who.clone(), Error::<T>::RemoveYourself);
+
+				if room.last_remove_height > T::BlockNumber::from(0u32){
 				let until = now - room.last_remove_height;
 
 				match room.max_members	{
@@ -855,6 +863,8 @@ decl_module! {
 				}
 
 			}
+			}
+
 
 			// 修改数据
 			room.now_members_number = room.now_members_number.checked_sub(1u32).ok_or(Error::<T>::Overflow)?;

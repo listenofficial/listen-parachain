@@ -85,6 +85,8 @@ pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config {
 
 	type CollectiveHandler: CollectiveHandler<u64, DispatchError>;
 
+	type RoomRootOrigin: EnsureOrigin<Self::Origin>;
+
 }
 
 
@@ -790,7 +792,7 @@ decl_module! {
 		/// 群主踢人
 		#[weight = 10_000]
 		fn remove_someone(origin, group_id: u64, who: T::AccountId) -> DispatchResult {
-			let manager = ensure_signed(origin)?;
+			let manager = ensure_signed(origin.clone())?;
 
 			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			// 是群主

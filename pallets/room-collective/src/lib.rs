@@ -737,8 +737,8 @@ pub struct EnsureRoomRoot<T, AccountId=<T as frame_system::Config>::AccountId, I
 
 impl<O: Into<Result<RawOrigin<<T as frame_system::Config>::AccountId, I>, O>> + From<RawOrigin<<T as frame_system::Config>::AccountId, I>>,
 	AccountId,
-	T: Config<DefaultInstance>,
-	I,
+	T: Config<I>,
+	I: Instance,
 
 > EnsureOrigin<O> for EnsureRoomRoot<T, AccountId, I> {
 

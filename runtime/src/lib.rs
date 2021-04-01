@@ -439,6 +439,9 @@ impl listen::Config for Runtime{
 	type ProtectTime = ProtectTime;
 	type CouncilMaxNumber = CouncilMaxNumber;
 	type CollectiveHandler = RoomCommittee;
+	// pallet_room_collective::Config` is not implemented for `pallet_room_collective::Module<Runtime, pallet_room_collective::Instance1>`
+	// trait Store for Module<T: Config<I>, I: Instance=DefaultInstance> as Collective
+	type RoomRootOrigin = pallet_room_collective::EnsureRoomRoot<Runtime, AccountId, RoomCollective>;
 }
 
 

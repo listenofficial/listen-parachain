@@ -1472,6 +1472,7 @@ impl <T: Config> Module <T> {
 		if old_council.len() == 0 {
 			old_council.insert(0, (who.clone(), *new_user_consume));
 		}
+
 		else {
 			let mut index = 0;
 			let old_council_cp = old_council.clone();
@@ -1486,6 +1487,11 @@ impl <T: Config> Module <T> {
 
 			if index <= T::CouncilMaxNumber::get() {
 				old_council.insert(index as usize, (who.clone(), *new_user_consume));
+				if old_council.len() > T::CouncilMaxNumber::get() as usize{
+					old_council.split_off(T::CouncilMaxNumber::get() as usize);
+				}
+
+
 			}
 		}
 

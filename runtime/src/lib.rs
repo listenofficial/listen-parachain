@@ -62,7 +62,7 @@ use pallet_listen_vesting;
 use orml_traits::*;
 use orml_tokens;
 use pallet_multisig;
-use frame_system::EnsureRoot;
+use frame_system::{EnsureRoot, EnsureOneOf};
 use orml_xtokens;
 use sp_runtime::traits::{Convert, Zero};
 use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
@@ -75,6 +75,9 @@ use pallet_transfer;
 use orml_unknown_tokens;
 use pallet_nicks;
 use pallet_room_collective;
+use sp_core::{
+	u32_trait::{_1, _2, _3, _4, _5},
+};
 
 use orml_currencies::{self, BasicCurrencyAdapter};
 use sp_std::collections::btree_set::BTreeSet;
@@ -419,6 +422,15 @@ parameter_types! {
 
 }
 
+type HalfRoomCouncil = pallet_room_collective::EnsureProportionMoreThan<_1, _2, AccountId, RoomCollective>;
+type RoomRoot = pallet_room_collective::EnsureRoomRoot<Runtime, AccountId, RoomCollective>;
+type RoomRootOrHalfRoomCouncil = EnsureOneOf<
+	AccountId,
+	RoomRoot,
+	HalfRoomCouncil
+>;
+
+
 impl listen::Config for Runtime{
 	type Event = Event;
 	type Create = ();
@@ -439,9 +451,16 @@ impl listen::Config for Runtime{
 	type ProtectTime = ProtectTime;
 	type CouncilMaxNumber = CouncilMaxNumber;
 	type CollectiveHandler = RoomCommittee;
-	// pallet_room_collective::Config` is not implemented for `pallet_room_collective::Module<Runtime, pallet_room_collective::Instance1>`
-	// trait Store for Module<T: Config<I>, I: Instance=DefaultInstance> as Collective
-	type RoomRootOrigin = pallet_room_collective::EnsureRoomRoot<Runtime, AccountId, RoomCollective>;
+
+	type RoomRootOrigin = RoomRoot;
+	type RoomRootOrHalfCouncilOrigin = RoomRootOrHalfRoomCouncil;
+	type RoomRootOrSomeCouncilOrigin = EnsureOneOf<
+		AccountId,
+		RoomRoot,
+		pallet_room_collective::EnsureMembers<_2, AccountId, RoomCollective>
+	>;
+	type HalfRoomCouncilOrigin = HalfRoomCouncil;
+
 }
 
 

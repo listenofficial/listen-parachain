@@ -79,13 +79,26 @@ pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config {
 
 	type GetNativeCurrencyId: Get<CurrencyIdOf<Self>>;
 
+	/// 群受保护的时间
 	type ProtectTime: Get<Self::BlockNumber>;
 
+	/// 群议员的最大个数
 	type CouncilMaxNumber: Get<u32>;
 
+	/// 操作room-collective模块
 	type CollectiveHandler: CollectiveHandler<u64, DispatchError>;
 
+	/// 群主权限
 	type RoomRootOrigin: EnsureOrigin<Self::Origin>;
+
+	/// 群主权限或是一半的群议员给通过
+	type RoomRootOrHalfCouncilOrigin: EnsureOrigin<Self::Origin>;
+
+	/// 群主权限或是固定个数的群议员
+	type RoomRootOrSomeCouncilOrigin: EnsureOrigin<Self::Origin>;
+
+	/// 一半群议员
+	type HalfRoomCouncilOrigin: EnsureOrigin<Self::Origin>;
 
 }
 

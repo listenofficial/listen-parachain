@@ -1941,6 +1941,12 @@ impl<T: Config> ListenHandler<u64, T::AccountId, DispatchError> for Module<T> {
 		let prime = room_info.prime;
 		Ok(prime)
 	}
+
+	fn get_root(room_id: u64) -> Result<<T as frame_system::Config>::AccountId, DispatchError> {
+		let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
+		let root = room_info.group_manager;
+		Ok(root)
+	}
 }
 
 

@@ -6,6 +6,7 @@
 use sp_std::{prelude::*, result, collections::{btree_set::BTreeSet, btree_map::BTreeMap} };
 use sp_core::u32_trait::Value as U32;
 use sp_io::storage;
+use sp_std::convert::From;
 use sp_runtime::{RuntimeDebug, traits::Hash};
 use listen_traits::{ListenHandler, CollectiveHandler};
 
@@ -128,7 +129,7 @@ pub enum RawOrigin<AccountId, I> {
 	/// It has been condoned by a given number of members of the collective from a given total.
 	Members(MemberCount, MemberCount),
 	/// It has been condoned by a single member of the collective.
-	Member(AccountId),
+	Member(RoomIndex, AccountId),
 	/// Dummy to manage the fact we have instancing.
 	_Phantom(sp_std::marker::PhantomData<I>),
 }
@@ -271,7 +272,7 @@ decl_module! {
 
 			let proposal_hash = T::Hashing::hash_of(&proposal);
 
-			let result = proposal.dispatch(RawOrigin::Member(who).into());
+			let result = proposal.dispatch(RawOrigin::Member(room_id, who).into());
 
 			Self::deposit_event(
 				RawEvent::MemberExecuted(proposal_hash, result.map(|_| ()).map_err(|e| e.error))
@@ -700,14 +701,14 @@ impl<
 	type Success = AccountId;
 	fn try_origin(o: O) -> Result<Self::Success, O> {
 		o.into().and_then(|o| match o {
-			RawOrigin::Member(id) => Ok(id),
+			RawOrigin::Member(id, who) => Ok(who),
 			r => Err(O::from(r)),
 		})
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> O {
-		O::from(RawOrigin::Member(Default::default()))
+		O::from(RawOrigin::Member(Default::default(), Default::default()))
 	}
 }
 
@@ -729,6 +730,29 @@ impl<
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> O {
 		O::from(RawOrigin::Members(N::VALUE, N::VALUE))
+	}
+}
+
+pub struct EnsureRoomRoot<T, AccountId=<T as frame_system::Config>::AccountId, I=DefaultInstance>(sp_std::marker::PhantomData<(T, AccountId, I)>);
+
+impl<O: Into<Result<RawOrigin<<T as frame_system::Config>::AccountId, I>, O>> + From<RawOrigin<<T as frame_system::Config>::AccountId, I>>,
+	AccountId,
+	T: Config<DefaultInstance>,
+	I,
+
+> EnsureOrigin<O> for EnsureRoomRoot<T, AccountId, I> {
+
+	type Success = ();
+	fn try_origin(o: O) -> Result<Self::Success, O> {
+		o.into().and_then(|o| match o {
+			RawOrigin::Member(room_id, who) if T::ListenHandler::get_root(room_id).is_ok() && T::ListenHandler::get_root(room_id).unwrap() == who => Ok(()),
+			r => Err(O::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> O {
+		unimplemented!()
 	}
 }
 

@@ -1,6 +1,6 @@
 [package]
 name = "pallet-listen"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["transxask <orwx71@163.com>"]
 edition = "2018"
 
@@ -16,9 +16,9 @@ pallet-timestamp = { default-features = false, version = '3.0.0', git = "https:/
 pallet-treasury = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 
 #local
-node-constants = { path = '../../constants', default-features = false, version = '0.1.0' }
-node-primitives = { path = '../../primitives', default-features = false, version = '0.1.0' }
-listen-traits = { path = '../../traits', default-features = false, version = '0.1.0' }
+node-constants = { path = '../../constants', default-features = false, version = '1.0.0' }
+node-primitives = { path = '../../primitives', default-features = false, version = '1.0.0' }
+listen-traits = { path = '../../traits', default-features = false, version = '1.0.0' }
 
 #orml
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }

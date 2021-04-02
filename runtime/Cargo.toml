@@ -212,16 +212,16 @@ funty = { version = "=1.1.0", default-features = false } # https://github.com/bi
 winapi = { version = "=0.2.8" }
 
 # local dependencies
-node-primitives = {path = '../primitives', default-features = false, version = '0.1.0'}
-node-constants = {path = '../constants', default-features = false, version = '0.1.0'}
-pallet-listen = { path = '../pallets/listen', default-features = false, version = '0.1.0' }
-pallet-listen-vesting = { path = '../pallets/listen-vesting', default-features = false, version = '0.1.0' }
-pallet-transfer = {path = '../pallets/transfer', default-features = false, version = '0.1.0'}
-pallet-nicks = {path = '../pallets/nicks', default-features = false, version = '0.1.0'}
-pallet-room-collective = {path = '../pallets/room-collective', default-features = false, version = '0.1.0'}
+node-primitives = {path = '../primitives', default-features = false, version = '1.0.0'}
+node-constants = {path = '../constants', default-features = false, version = '1.0.0'}
+pallet-listen = { path = '../pallets/listen', default-features = false, version = '1.0.0' }
+pallet-listen-vesting = { path = '../pallets/listen-vesting', default-features = false, version = '1.0.0' }
+pallet-transfer = {path = '../pallets/transfer', default-features = false, version = '1.0.0'}
+pallet-nicks = {path = '../pallets/nicks', default-features = false, version = '1.0.0'}
+pallet-room-collective = {path = '../pallets/room-collective', default-features = false, version = '1.0.0'}
 
 # local xcm
-parachain-info = {path = '../pallets/parachain-info', default-features = false, version = "0.1.0"}
+parachain-info = {path = '../pallets/parachain-info', default-features = false, version = "1.0.0"}
 
 # orml
 orml-currencies = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, version = '0.4.1-dev' }

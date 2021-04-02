@@ -1,6 +1,6 @@
 [package]
 name = "pallet-listen-vesting"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["transxask <orwx71@163.com>"]
 edition = "2018"
 

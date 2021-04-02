@@ -3747,7 +3747,7 @@ dependencies = [
 
 [[package]]
 name = "listen-traits"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "sp-std",
 ]
@@ -4214,14 +4214,14 @@ dependencies = [
 
 [[package]]
 name = "node-constants"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "node-primitives",
 ]
 
 [[package]]
 name = "node-primitives"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "bstringify",
  "evm",
@@ -4729,7 +4729,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-listen"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4748,7 +4748,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-listen-vesting"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "enumflags2",
  "frame-benchmarking",
@@ -4796,7 +4796,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-nicks"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4884,7 +4884,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-room-collective"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5079,7 +5079,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-transfer"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5139,7 +5139,7 @@ dependencies = [
 
 [[package]]
 name = "parachain-info"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -5175,7 +5175,7 @@ dependencies = [
  "pallet-listen",
  "pallet-listen-vesting",
  "pallet-multisig",
- "pallet-nicks 0.1.0",
+ "pallet-nicks 1.0.0",
  "pallet-randomness-collective-flip",
  "pallet-room-collective",
  "pallet-sudo",

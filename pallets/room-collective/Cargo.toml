@@ -1,6 +1,6 @@
 [package]
 name = "pallet-room-collective"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["transxask <orwx71@163.com>"]
 edition = "2018"
 
@@ -18,7 +18,7 @@ frame-benchmarking = { version = "3.1.0", default-features = false, git = "https
 frame-support = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 frame-system = { version = "3.0.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 log = { version = "0.4.14", default-features = false }
-listen-traits = { path = '../../traits', default-features = false, version = '0.1.0' }
+listen-traits = { path = '../../traits', default-features = false, version = '1.0.0' }
 pallet-timestamp = { default-features = false, version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 
 

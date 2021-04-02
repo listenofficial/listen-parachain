@@ -639,7 +639,8 @@ decl_module! {
 
 			}
 
-			room.max_members = now_max;
+			room.max_members = new_max;
+			room.create_payment = new_amount.saturated_into::<BalanceOf<T>>();
 
 			<AllRoom<T>>::insert(group_id, room);
 

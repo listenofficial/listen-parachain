@@ -1210,7 +1210,7 @@ decl_module! {
 			let user_amount = room.total_balances - room.group_manager_balances;
 
 			/// 如果退完群里还有人
-			if number != 1 {
+			if number > 1 {
 
 				let amount = user_amount / room.now_members_number.saturated_into::<BalanceOf<T>>() / 4u32.saturated_into::<BalanceOf<T>>();
 
@@ -1225,22 +1225,16 @@ decl_module! {
 
 				let mut listeners = <ListenersOfRoom<T>>::get(group_id);
 
+				/// 删除人
+				let _ = listeners.take(&user);
+
 				// 如果退出的是群主 则换群主
 				if room.clone().group_manager == user {
 
-					let _ = listeners.take(&room.group_manager);
-
 					let listeners_cp = listeners.clone();
 
-					if let Some(manager) = listeners_cp.clone().iter().last() {
+					room.group_manager = listeners_cp.iter().next().unwrap().clone();
 
-						let new_manager = listeners.take(&manager).unwrap();
-
-						room.group_manager = new_manager.clone();
-
-						listeners.insert(room.group_manager.clone());
-
-					}
 				}
 
 				// 如果是群议会成员 则从议中删除

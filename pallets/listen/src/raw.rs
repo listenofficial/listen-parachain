@@ -247,6 +247,8 @@ pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, GroupMaxM
 
 	pub black_list: Vec<AccountId>,
 
+	pub is_private: bool,
+
 }
 
 

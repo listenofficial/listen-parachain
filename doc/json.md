@@ -118,7 +118,7 @@
     ]
   },
   
-  "Votes": {
+  "RoomCollectiveVotes": {
     "index":"u32",
     "reason":"Option<Vec<u8>>",
     "threshold":"u32",
@@ -151,7 +151,8 @@
     "create_block": "BlockNumber",
     "consume": "BTreeMap<AccountId, Balance>",
     "council": "Vec<(AccountId, Balance)>",
-    "black_list":"Vec<AccountId>"
+    "black_list":"Vec<AccountId>",
+    "is_private":"bool"
   },
   "InvitePaymentType": {
     "_enum": [

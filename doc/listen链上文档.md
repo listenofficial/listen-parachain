@@ -20,11 +20,12 @@
 	> 空投不会返回错误 以确保队列里能够接受空投的账户都领取到空投
 ***
 2. 创建房间
-	* 代码： `fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T> )`
+	* 代码： `fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T>, is_private: bool  )`
 	* 参数:
 		- max_members： 房间人数上限(不是自定义)
 		- group_type： 房间类型(自己输入字符串，自定义)
 		- join_cost: 其他人加入房间需要花费的金额
+		- is_private: 是否私有
 	* 逻辑
 		- 任何人都可以创建房间
 		- 根据房间人数上限收取创建费用(账上余额不够，不给创建)， 并且费用直接全部转到国库
@@ -51,6 +52,7 @@
 		- 签名
 		- 房间存在
 		- 被邀请人与邀请人不能相同
+		- 私人房间只有群主邀请才能进入
 		- 如果群总人数已经达到上限，不能进群
 		- 如果已经进入群组黑名单， 则不能进群
 		- 如果进群人已经在群里，不能再次进入
@@ -253,4 +255,14 @@
     * 逻辑:
         * 群主或是过半的群议员才能操作
         * 人在黑名单中
+***
+24. 设置群隐私属性
+    * 代码`fn set_room_privacy(origin, room_id: u64, is_private: bool)`
+    * 参数:
+        * room_id: 房间号
+        * is_private: 是否私有
+    * 逻辑：
+        * 群主权限
+        * 属性不与上次相同
+        
 

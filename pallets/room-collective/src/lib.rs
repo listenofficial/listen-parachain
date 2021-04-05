@@ -139,12 +139,12 @@ pub type Origin<T, I=DefaultInstance> = RawOrigin<<T as frame_system::Config>::A
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Info for keeping track of a motion being voted on.
-pub struct Votes<AccountId, BlockNumber> {
+pub struct RoomCollectiveVotes<AccountId, BlockNumber> {
 	/// The proposal's unique index.
 	index: ProposalIndex,
 	/// The proposal's reason,
 	reason: Option<Vec<u8>>,
-	/// The number of approval votes that are needed to pass the motion.
+	/// The number of approval RoomCollectiveVotes that are needed to pass the motion.
 	threshold: MemberCount,
 	/// The current set of voters that approved it.
 	ayes: Vec<AccountId>,
@@ -164,7 +164,7 @@ decl_storage! {
 			double_map hasher(identity) RoomIndex, hasher(identity) T::Hash => Option<<T as Config<I>>::Proposal>;
 		/// Votes on a given proposal, if it is ongoing.
 		pub Voting get(fn voting):
-			double_map hasher(identity) RoomIndex, hasher(identity) T::Hash => Option<Votes<T::AccountId, T::BlockNumber>>;
+			double_map hasher(identity) RoomIndex, hasher(identity) T::Hash => Option<RoomCollectiveVotes<T::AccountId, T::BlockNumber>>;
 		/// Proposals so far.
 		pub ProposalCount get(fn proposal_count): map hasher(identity) RoomIndex => u32;
 
@@ -346,7 +346,7 @@ decl_module! {
 				<ProposalCount<I>>::mutate(room_id, |i| *i += 1);
 				<ProposalOf<T, I>>::insert(room_id, proposal_hash, *proposal);
 				let end = system::Pallet::<T>::block_number() + T::MotionDuration::get();
-				let votes = Votes { index, reason: reason, threshold, ayes: vec![who.clone()], nays: vec![], end };
+				let votes = RoomCollectiveVotes { index, reason: reason, threshold, ayes: vec![who.clone()], nays: vec![], end };
 				<Voting<T, I>>::insert(room_id, proposal_hash, votes);
 
 				Self::deposit_event(RawEvent::Proposed(who, index, proposal_hash, threshold));
@@ -572,7 +572,7 @@ impl<T: Config<I>, I: Instance> Module<T, I> {
 	fn do_approve_proposal(
 		room_id: RoomIndex,
 		seats: MemberCount,
-		voting: Votes<T::AccountId, T::BlockNumber>,
+		voting: RoomCollectiveVotes<T::AccountId, T::BlockNumber>,
 		proposal_hash: T::Hash,
 		proposal: <T as Config<I>>::Proposal,
 	) -> (Weight, u32) {

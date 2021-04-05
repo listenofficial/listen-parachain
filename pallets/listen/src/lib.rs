@@ -268,7 +268,7 @@ decl_error! {
 		/// 除数是0
 		DivZero,
 		/// 群主已经领取奖励
-		AlreadyReward,
+		NotRewardTime,
 		/// 账户金额不是0
 		AmountNotZero,
 		/// 消费金额是0
@@ -291,6 +291,10 @@ decl_error! {
 		RemoveYourself,
 		/// 权限错误
 		OriginErr,
+		/// 受保护的房间
+		PrivatedRoom,
+		/// 群隐私属性未改变
+		PrivacyNotChange,
 }}
 
 
@@ -397,7 +401,7 @@ decl_module! {
 
 		/// 创建群
 		#[weight = 10_000]
-		fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T> ) -> DispatchResult{
+		fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T>, is_private: bool ) -> DispatchResult{
 			let who = ensure_signed(origin)?;
 
 			let pledge = None;
@@ -459,6 +463,7 @@ decl_module! {
 				consume: BTreeMap::new(),
 				council: vec![],
 				black_list: vec![],
+				is_private: is_private,
 			};
 
 			<AllRoom<T>>::insert(group_id, group_info);
@@ -493,7 +498,7 @@ decl_module! {
 			let real_this_block = last_block.saturating_add(duration_num * T::RewardDuration::get());
 
 			if duration_num.is_zero() {
-				return Err(Error::<T>::AlreadyReward)?;
+				return Err(Error::<T>::NotRewardTime)?;
 			}
 			else {
 				// 领取抵押币的奖励
@@ -548,6 +553,15 @@ decl_module! {
 			/// payment_type 付费类型
 			let inviter = ensure_signed(origin)?;
 
+			let room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+
+			// 如果群的属性是私有 那么必须是群主邀请才能进
+			if room_info.is_private.clone() {
+
+				ensure!(invitee.is_some() && inviter.clone() == room_info.group_manager.clone(), Error::<T>::PrivatedRoom);
+
+			}
+
 			let payment_type = Some(InvitePaymentType::inviter_pay);
 
 			let mut invitee = invitee.clone();
@@ -567,8 +581,6 @@ decl_module! {
 				invitee = Some(inviter.clone());
 			}
 
-			let room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-
 			// 如果已经在群黑名单里 则不能进群
 			let black_list = room_info.black_list;
 			let man = invitee.clone().unwrap();
@@ -587,6 +599,26 @@ decl_module! {
 			Self::deposit_event(RawEvent::IntoRoom(invitee.unwrap(), inviter, group_id));
 
 			Ok(())
+		}
+
+
+		/// 设置群隐私属性
+		#[weight = 10_000]
+		fn set_room_privacy(origin, room_id: u64, is_private: bool) {
+			let manager = ensure_signed(origin)?;
+			// 自己是群主
+			let mut room = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
+			ensure!(room.group_manager == manager.clone(), Error::<T>::NotManager);
+
+			// 房间的属性不能跟上次相同
+			ensure!(room.is_private.clone() != is_private, Error::<T>::PrivacyNotChange);
+
+			room.is_private = is_private;
+
+			<AllRoom<T>>::insert(room_id, room);
+
+			Self::deposit_event(RawEvent::SetRoomPrivacy(room_id, is_private));
+
 		}
 
 
@@ -1696,7 +1728,7 @@ impl <T: Config> Module <T> {
 
 		// 如果结束  就进行下一步
 		let vote_result = Self::is_vote_end(room.clone());
-		if vote_result.0 == End{
+		if vote_result.0 == End {
 			// 如果是通过 那么就删除房间信息跟投票信息 添加投票结果信息
 			if vote_result.1 == Pass{
 
@@ -1765,6 +1797,8 @@ impl <T: Config> Module <T> {
 			}
 
 		}
+
+
 
 	}
 
@@ -1946,6 +1980,7 @@ decl_event!(
 		 ManagerGetReward(AccountId, Amount, Amount),
 		 SetMaxNumberOfRoomMembers(AccountId, u32),
 		 RemoveSomeoneFromBlackList(AccountId, u64),
+		 SetRoomPrivacy(u64, bool),
 	}
 );
 

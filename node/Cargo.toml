@@ -47,6 +47,16 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '0.9.0'
 
+[dependencies.sp-consensus-aura]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '0.9.0'
+
+[dependencies.sc-finality-grandpa]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '0.9.0'
+
 [dependencies.sc-client-api]
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'

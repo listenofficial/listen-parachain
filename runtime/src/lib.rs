@@ -70,6 +70,7 @@ use cumulus_pallet_xcm_handler;
 use orml_xcm_support::{
 	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, XcmHandler as XcmHandlerT,
 	NativePalletAssetOr,
+	// XcmHandler as XcmHandlerT,
 };
 use pallet_transfer;
 use orml_unknown_tokens;
@@ -273,6 +274,7 @@ impl frame_system::Config for Runtime {
 	type SystemWeightInfo = ();
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
+	type OnSetCode = ();
 }
 
 parameter_types! {
@@ -469,7 +471,8 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type OnValidationData = ();
 	type SelfParaId = parachain_info::Module<Runtime>;
 	type DownwardMessageHandlers = ();
-	type HrmpMessageHandlers = ();
+	// type HrmpMessageHandlers = ();
+	type XcmpMessageHandlers = XcmHandler;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -549,7 +552,7 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
-	type HrmpMessageSender = ParachainSystem;
+	type XcmpMessageSender = ParachainSystem;
 	type SendXcmOrigin = EnsureRoot<AccountId>;
 	type AccountIdConverter = LocationConverter;
 }

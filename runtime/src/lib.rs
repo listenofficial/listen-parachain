@@ -414,8 +414,8 @@ parameter_types! {
 	pub const RedPacketMinAmount: Balance = 1 * DOLLARS;
 	pub const VoteExpire: BlockNumber = 10 * MINUTES;
 	pub const ProtectTime: BlockNumber = 5 * MINUTES;
-	pub const RedPackExpire: BlockNumber = 1 * DAYS;
-	pub const RewardDuration: BlockNumber = 7 * DAYS;
+	pub const RedPackExpire: BlockNumber = 30 * MINUTES;
+	pub const RewardDuration: BlockNumber = 30 * MINUTES;
 	pub const PledgeRate: Percent = Percent::from_percent(5);
 	pub const ManagerProportion: Percent = Percent::from_percent(1);
 	pub const RoomProportion: Percent = Percent::from_percent(1);

@@ -1,5 +1,6 @@
 ```
 {
+  "RoomIndex": "u64",
   "CurrencyIdOf":"CurrencyId",
   "TokenSymbol":{
        "_enum":["LT", "DOT", "ACA", "BTC", "KSM", "PHA", "PLM"]

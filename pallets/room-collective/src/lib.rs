@@ -264,10 +264,15 @@ decl_module! {
 			#[compact] length_bound: u32,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			// let members = Self::members();
+
 			let members = T::ListenHandler::get_room_council(room_id)?;
-			ensure!(members.contains(&who), Error::<T, I>::NotMember);
+
+			let room_owner = T::ListenHandler::get_root(room_id)?;
+
+			ensure!(members.contains(&who) || room_owner == who.clone(), Error::<T, I>::NotMember);
+
 			let proposal_len = proposal.using_encoded(|x| x.len());
+
 			ensure!(proposal_len <= length_bound as usize, Error::<T, I>::WrongProposalLength);
 
 			let proposal_hash = T::Hashing::hash_of(&proposal);

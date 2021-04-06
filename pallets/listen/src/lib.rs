@@ -1242,6 +1242,8 @@ decl_module! {
 			// 获取群员资产
 			let user_amount = room.total_balances - room.group_manager_balances;
 
+			// todo 如果在消费榜单 则需要处理(消费榜单需要重新处理）
+
 			/// 如果退完群里还有人
 			if number > 1 {
 
@@ -1249,9 +1251,9 @@ decl_module! {
 
 				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&user, amount));
 
-				room.now_members_number -= 1;
-				room.total_balances -= amount;
-				room.group_manager_balances -= amount;
+				room.now_members_number = room.now_members_number.saturating_sub(1);
+
+				room.total_balances = room.total_balances.saturating_sub(amount);
 
 				// 把他的消费记录去掉 并从议会榜单里除名
 				let mut room = Self::remove_consumer_info(room, user.clone());

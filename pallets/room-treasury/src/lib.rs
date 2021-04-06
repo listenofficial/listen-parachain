@@ -10,7 +10,7 @@ pub mod weights;
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 use sp_std::prelude::*;
-use frame_support::{decl_module, decl_storage, decl_event, ensure, print, decl_error};
+use frame_support::{decl_module, decl_storage, decl_event, ensure, print, decl_error, StorageDoubleMap};
 use frame_support::traits::{
 	Currency, Get, Imbalance, OnUnbalanced, ExistenceRequirement::{KeepAlive},
 	ReservableCurrency, WithdrawReasons
@@ -60,43 +60,14 @@ pub trait Config<I=DefaultInstance>: frame_system::Config {
 	/// Period between successive spends.
 	type SpendPeriod: Get<Self::BlockNumber>;
 
-	/// Percentage of spare funds (if any) that are burnt per spend period.
-	type Burn: Get<Permill>;
-
-	/// Handler for the unbalanced decrease when treasury funds are burned.
-	type BurnDestination: OnUnbalanced<NegativeImbalanceOf<Self, I>>;
-
 	/// Weight information for extrinsics in this pallet.
 	type WeightInfo: WeightInfo;
 
-	/// Runtime hooks to external pallet using treasury to compute spend funds.
-	type SpendFunds: SpendFunds<Self, I>;
-}
-
-/// A trait to allow the Treasury Pallet to spend it's funds for other purposes.
-/// There is an expectation that the implementer of this trait will correctly manage
-/// the mutable variables passed to it:
-/// * `budget_remaining`: How much available funds that can be spent by the treasury.
-///    As funds are spent, you must correctly deduct from this value.
-/// * `imbalance`: Any imbalances that you create should be subsumed in here to
-///    maximize efficiency of updating the total issuance. (i.e. `deposit_creating`)
-/// * `total_weight`: Track any weight that your `spend_fund` implementation uses by
-///    updating this value.
-/// * `missed_any`: If there were items that you want to spend on, but there were
-///    not enough funds, mark this value as `true`. This will prevent the treasury
-///    from burning the excess funds.
-#[impl_trait_for_tuples::impl_for_tuples(30)]
-pub trait SpendFunds<T: Config<I>, I=DefaultInstance> {
-	fn spend_funds(
-		budget_remaining: &mut BalanceOf<T, I>,
-		imbalance: &mut PositiveImbalanceOf<T, I>,
-		total_weight: &mut Weight,
-		missed_any: &mut bool,
-	);
 }
 
 /// An index of a proposal. Just a `u32`.
 pub type ProposalIndex = u32;
+pub type RoomIndex = u64;
 
 /// A spending proposal.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -115,15 +86,15 @@ pub struct Proposal<AccountId, Balance> {
 decl_storage! {
 	trait Store for Module<T: Config<I>, I: Instance=DefaultInstance> as Treasury {
 		/// Number of proposals that have been made.
-		ProposalCount get(fn proposal_count): ProposalIndex;
+		ProposalCount get(fn proposal_count): map hasher(identity) RoomIndex => ProposalIndex;
 
 		/// Proposals that have been made.
 		pub Proposals get(fn proposals):
-			map hasher(twox_64_concat) ProposalIndex
+			double_map hasher(identity) RoomIndex, hasher(identity) ProposalIndex
 			=> Option<Proposal<T::AccountId, BalanceOf<T, I>>>;
 
 		/// Proposal indices that have been approved but not yet awarded.
-		pub Approvals get(fn approvals): Vec<ProposalIndex>;
+		pub Approvals get(fn approvals): map hasher(identity) RoomIndex => Vec<ProposalIndex>;
 	}
 
 }
@@ -177,9 +148,6 @@ decl_module! {
 		/// Period between successive spends.
 		const SpendPeriod: T::BlockNumber = T::SpendPeriod::get();
 
-		/// Percentage of spare funds (if any) that are burnt per spend period.
-		const Burn: Permill = T::Burn::get();
-
 		/// The treasury's module id, used for deriving its sovereign account ID.
 		const ModuleId: ModuleId = T::ModuleId::get();
 
@@ -199,6 +167,7 @@ decl_module! {
 		#[weight = T::WeightInfo::propose_spend()]
 		pub fn propose_spend(
 			origin,
+			room_id: RoomIndex,
 			#[compact] value: BalanceOf<T, I>,
 			beneficiary: <T::Lookup as StaticLookup>::Source
 		) {
@@ -209,9 +178,9 @@ decl_module! {
 			T::Currency::reserve(&proposer, bond)
 				.map_err(|_| Error::<T, I>::InsufficientProposersBalance)?;
 
-			let c = Self::proposal_count();
-			<ProposalCount<I>>::put(c + 1);
-			<Proposals<T, I>>::insert(c, Proposal { proposer, value, beneficiary, bond });
+			let c = Self::proposal_count(room_id);
+			<ProposalCount<I>>::insert(room_id, c + 1);
+			<Proposals<T, I>>::insert(room_id, c, Proposal { proposer, value, beneficiary, bond });
 
 			Self::deposit_event(RawEvent::Proposed(c));
 		}
@@ -226,10 +195,10 @@ decl_module! {
 		/// - DbWrites: `Proposals`, `rejected proposer account`
 		/// # </weight>
 		#[weight = (T::WeightInfo::reject_proposal(), DispatchClass::Operational)]
-		pub fn reject_proposal(origin, #[compact] proposal_id: ProposalIndex) {
+		pub fn reject_proposal(origin, room_id: RoomIndex, #[compact] proposal_id: ProposalIndex) {
 			T::RejectOrigin::ensure_origin(origin)?;
 
-			let proposal = <Proposals<T, I>>::take(&proposal_id).ok_or(Error::<T, I>::InvalidIndex)?;
+			let proposal = <Proposals<T, I>>::take(room_id, &proposal_id).ok_or(Error::<T, I>::InvalidIndex)?;
 			let value = proposal.bond;
 			let imbalance = T::Currency::slash_reserved(&proposal.proposer, value).0;
 			T::OnSlash::on_unbalanced(imbalance);
@@ -248,11 +217,11 @@ decl_module! {
 		/// - DbWrite: `Approvals`
 		/// # </weight>
 		#[weight = (T::WeightInfo::approve_proposal(), DispatchClass::Operational)]
-		pub fn approve_proposal(origin, #[compact] proposal_id: ProposalIndex) {
+		pub fn approve_proposal(origin, room_id: RoomIndex, #[compact] proposal_id: ProposalIndex) {
 			T::ApproveOrigin::ensure_origin(origin)?;
 
-			ensure!(<Proposals<T, I>>::contains_key(proposal_id), Error::<T, I>::InvalidIndex);
-			Approvals::<I>::append(proposal_id);
+			ensure!(<Proposals<T, I>>::contains_key(room_id, proposal_id), Error::<T, I>::InvalidIndex);
+			Approvals::<I>::mutate(room_id, |h| h.push(proposal_id));
 		}
 
 	}

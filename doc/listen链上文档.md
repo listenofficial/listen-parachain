@@ -100,7 +100,7 @@
 
 ***
 
-8. 群主踢人
+8. 群主或是群议员（超过3票)踢人
 	* 代码： `fn remove_someone(origin, group_id: u64, who: T::AccountId)`
 	* 参数：
 		- group_id： 房间id
@@ -247,7 +247,7 @@
         * 按照周期来执行这个方法, 周期数 = (现在区块数 - 上次区块) / 周期长度
         * 群主从群资产中拿走一部分， 然后生成一部分给群资产
     ***
-23. 群主把某个账户从黑名单中移除
+23. 群主或过半议员把某个账户从黑名单中移除
     * 代码: `fn remove_someone_from_blacklist(origin, group_id: u64, who: T::AccountId)`
     * 参数: 
         * group_id: 房间号

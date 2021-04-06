@@ -480,13 +480,13 @@ decl_module! {
 		/// 群主领取自己的奖励(一部分是抵押的奖励， 一部分是群资产产生的利息)
 		#[weight = 10_000]
 		fn manager_get_reward(origin, group_id: u64) {
-			let who = ensure_signed(origin)?;
-			let room_info = <AllRoom<T>>::get(group_id);
+
+			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::OriginErr)?;
+
 			/// 群存在
-			ensure!(room_info.is_some(), Error::<T>::RoomNotExists);
-			let mut room_info = room_info.unwrap();
-			/// 是群主
-			ensure!(who.clone() == room_info.group_manager.clone(), Error::<T>::NotManager);
+			let mut room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+
+			let who = room_info.group_manager.clone();
 
 			/// 获取群主上一次领取奖励的高度
 			let last_block = room_info.last_block_of_get_the_reward.clone();
@@ -530,14 +530,12 @@ decl_module! {
 		/// 群主修改进群的费用
 		#[weight = 10_000]
 		fn update_join_cost(origin, group_id: u64, join_cost: BalanceOf<T>) -> DispatchResult{
-			let who = ensure_signed(origin)?;
-			let room_info = <AllRoom<T>>::get(group_id);
-			// 群存在
-			ensure!(room_info.is_some(), Error::<T>::RoomNotExists);
-			let mut room_info = room_info.unwrap();
-			// 是群主
-			ensure!(who.clone() == room_info.group_manager.clone(), Error::<T>::NotManager);
-			// 金额不能与原先的相同
+
+			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::OriginErr)?;
+
+			/// 群存在
+			let mut room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+
 			ensure!(room_info.join_cost.clone() != join_cost.clone(),  Error::<T>::InVailAmount);
 			room_info.join_cost = join_cost.clone();
 			<AllRoom<T>>::insert(group_id, room_info);
@@ -605,10 +603,11 @@ decl_module! {
 		/// 设置群隐私属性
 		#[weight = 10_000]
 		fn set_room_privacy(origin, room_id: u64, is_private: bool) {
-			let manager = ensure_signed(origin)?;
-			// 自己是群主
+
+			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::OriginErr)?;
+
+			/// 群存在
 			let mut room = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
-			ensure!(room.group_manager == manager.clone(), Error::<T>::NotManager);
 
 			// 房间的属性不能跟上次相同
 			ensure!(room.is_private.clone() != is_private, Error::<T>::PrivacyNotChange);
@@ -626,10 +625,12 @@ decl_module! {
 		#[weight = 10_000]
 		fn set_max_number_of_room_members(origin, group_id: u64, new_max: GroupMaxMembers) {
 
-			let manager = ensure_signed(origin)?;
-			// 自己是群主
+			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::OriginErr)?;
+
+			/// 群存在
 			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			ensure!(room.group_manager == manager.clone(), Error::<T>::NotManager);
+
+			let manager = room.group_manager.clone();
 
 			// 目前群人数
 			let now_number = room.now_members_number;
@@ -813,7 +814,7 @@ decl_module! {
 		}
 
 
-		/// 群主把某个账户从黑名单中移除
+		/// 群主或过半议员把某个账户从黑名单中移除
 		#[weight = 10_000]
 		fn remove_someone_from_blacklist(origin, group_id: u64, who: T::AccountId) {
 			/// 需要群主权限或是过半的群议员同意
@@ -838,7 +839,7 @@ decl_module! {
 		}
 
 
-		/// 群主踢人
+		/// 群主或是群议员（超过3票)踢人
 		#[weight = 10_000]
 		fn remove_someone(origin, group_id: u64, who: T::AccountId) -> DispatchResult {
 

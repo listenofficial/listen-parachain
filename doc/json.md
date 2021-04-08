@@ -150,7 +150,7 @@
     "is_voting": "bool",
     "create_time": "Moment",
     "create_block": "BlockNumber",
-    "consume": "BTreeMap<AccountId, Balance>",
+    "consume": "Vec<(AccountId, Balance)>",
     "council": "Vec<(AccountId, Balance)>",
     "black_list":"Vec<AccountId>",
     "is_private":"bool"

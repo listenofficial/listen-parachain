@@ -567,7 +567,7 @@ decl_module! {
 				// 被邀请人与邀请人不能相同
 				ensure!(invitee.clone().unwrap() != inviter.clone(), Error::<T>::IsYourSelf);
 				// 邀请别人必须要选择付费类型
-				// fixme 邀请别人付费类型一定要是邀请人付费
+				// 邀请别人付费类型一定要是邀请人付费
 				ensure!(payment_type.is_some() && payment_type.clone().unwrap() == InvitePaymentType::inviter_pay, Error::<T>::MustHavePaymentType);
 				// 邀请人必须在群里
 				ensure!(Self::is_in_room(group_id, inviter.clone())?, Error::<T>::NotInRoom);
@@ -974,7 +974,7 @@ decl_module! {
 			// 该群还未处于投票状态
 			ensure!(!room.is_voting.clone(), Error::<T>::IsVoting);
 
-			/// fixme 转创建群时费用的1/10转到国库(这个费用好像已经全部转到国库了) 这个是解散群发起人支付的费用
+			// 转创建群时费用的1/10转到国库(这个费用好像已经全部转到国库了) 这个是解散群发起人支付的费用
 			let disband_payment = Percent::from_percent(10) * room.create_payment.clone();
 			let to = Self::treasury_id();
 			T::NativeCurrency::transfer(&who, &to, disband_payment, KeepAlive)?;
@@ -1240,8 +1240,6 @@ decl_module! {
 			// 获取群员资产
 			let user_amount = room.total_balances - room.group_manager_balances;
 
-			// todo 如果在消费榜单 则需要处理(消费榜单需要重新处理）
-
 			/// 如果退完群里还有人
 			if number > 1 {
 
@@ -1316,10 +1314,6 @@ decl_module! {
 
 			/// 是多签账号才给执行
 			ensure!(mul.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
-
-			// let real_server_id = <ServerId<T>>::get().ok_or(Error::<T>::ServerIdNotExists)?;
-			//
-			// ensure!(server_id.clone() == real_server_id, Error::<T>::NotServerId);
 
 			/// 红包存在
 			ensure!(<RedPacketOfRoom<T>>::contains_key(group_id, redpacket_id), Error::<T>::RedPacketNotExists);
@@ -1420,7 +1414,7 @@ impl <T: Config> Module <T> {
 			if join_cost > <BalanceOf<T>>::from(0u32){
 				// 如果是邀请者自己出钱
 				if payment_type == InvitePaymentType::inviter_pay {
-					// 扣除邀请者的钱(惩罚保留的) fixme 直接先销毁 因为后面分发的形式是铸币
+					// 扣除邀请者的钱(惩罚保留的) 直接先销毁 因为后面分发的形式是铸币
 					T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&inviter, join_cost.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
 
 					// 以铸币方式给其他账户转账
@@ -1479,13 +1473,6 @@ impl <T: Config> Module <T> {
 		}
 	}
 
-
-	// ///  tokens转变成改currency_id
-	// fn tokens_convert_to_currency_id(token: Tokens) -> Result<CurrencyIdOf<T>, DispatchError> {
-	// 	let currency_id: Result<CurrencyId, &'static str> = token.try_into();
-	// 	let currency_id= currency_id.map_err(|_| Error::<T>::TokenErr)?;
-	// 	Ok(<CurrencyIdOf<T>>::from(currency_id))
-	// }
 
 	/// 个人消费数据更新  (如果在投票期间 那么判断自己是否投过票 投票的话更新)
 	fn update_user_consume(who: T::AccountId, room_info: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment>,
@@ -1550,7 +1537,7 @@ impl <T: Config> Module <T> {
 
 
 	// 支付给其他人
-	// fixme 用户进群的费用 部分给到群主(部分现在直接给群主， 部分群解散后给) 剩余部分转到国库
+	// 用户进群的费用 部分给到群主(部分现在直接给群主， 部分群解散后给) 剩余部分转到国库
 	fn pay_for(group_id: u64, join_cost: BalanceOf<T>){
 		let payment_manager_now = Percent::from_percent(5) * join_cost;
 		let payment_manager_later = Percent::from_percent(5) * join_cost;
@@ -1637,7 +1624,6 @@ impl <T: Config> Module <T> {
 		let half = (consume_total_amount + 1u32.saturated_into::<BalanceOf<T>>()) / <BalanceOf<T>>::from(2u32);
 
 		// 如果有票总金额超过一半
-		// fixme 只有这个逻辑就行了 超过多少容易留bug
 		if approve_total_amount >= half || reject_total_amount >= half{
 
 			if approve_total_amount >= half {

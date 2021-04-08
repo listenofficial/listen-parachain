@@ -34,7 +34,6 @@ use orml_tokens;
 use orml_traits::MultiCurrency;
 
 
-
 // use crate::raw::InvitePaymentType::invitee;
 
 pub(crate) type MultiBalanceOf<T> =
@@ -120,7 +119,7 @@ decl_storage! {
 
 		/// 全网创建的所有群 (group_id => group_info)
 		pub AllRoom get(fn all_room): map hasher(blake2_128_concat) u64 => Option<GroupInfo<T::AccountId, BalanceOf<T>,
-		AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>>;
+		AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment>>;
 
 		/// 群里的所有人
 		pub ListenersOfRoom get(fn listeners_of_room): map hasher(blake2_128_concat) u64 => BTreeSet<T::AccountId>;
@@ -460,7 +459,7 @@ decl_module! {
 				is_voting: false,
 				create_time: <timestamp::Module<T>>::get(),
 				create_block: Self::now(),
-				consume: BTreeMap::new(),
+				consume: vec![],
 				council: vec![],
 				black_list: vec![],
 				is_private: is_private,
@@ -1040,12 +1039,11 @@ decl_module! {
 
 			let mut room = <AllRoom<T>>::get(group_id).unwrap();
 
-			/// 在群里的消费金额不能是0
-		    let user_consume_amount_opt = room.consume.get(&who);
-		    if user_consume_amount_opt.is_none() {
+    		/// 在群里消费金额不能是0
+		    let user_consume_amount = Self::get_user_consume_amount(who.clone(), room.clone());
+		    if user_consume_amount == <BalanceOf<T>>::from(0u32) {
 		    	return Err(Error::<T>::ConsumeAmountIsZero)?;
 		    }
-		    let user_consume_amount = user_consume_amount_opt.unwrap();
 
 			// 正在投票
 			ensure!(room.is_voting, Error::<T>::NotVoting);
@@ -1060,11 +1058,11 @@ decl_module! {
 						return Err(Error::<T>::RepeatVote)?;
 					}
 					room.disband_vote.approve_man.insert(who.clone());
-					room.disband_vote.approve_total_amount += *user_consume_amount;
+					room.disband_vote.approve_total_amount += user_consume_amount;
 
 					if room.disband_vote.reject_man.get(&who).is_some() {
 						room.disband_vote.reject_man.remove(&who);
-						room.disband_vote.reject_total_amount -= *user_consume_amount;
+						room.disband_vote.reject_total_amount -= user_consume_amount;
 					}
 
 
@@ -1075,10 +1073,10 @@ decl_module! {
 						return Err(Error::<T>::RepeatVote)?;
 					}
 					room.disband_vote.reject_man.insert(who.clone());
-					room.disband_vote.reject_total_amount += *user_consume_amount;
+					room.disband_vote.reject_total_amount += user_consume_amount;
 					if room.disband_vote.approve_man.get(&who).is_some() {
 						room.disband_vote.approve_man.remove(&who);
-						room.disband_vote.approve_total_amount -= *user_consume_amount;
+						room.disband_vote.approve_total_amount -= user_consume_amount;
 					}
 
 				},
@@ -1458,13 +1456,27 @@ impl <T: Config> Module <T> {
 
 	/// 获取群消费的总资产
 	fn get_room_consume_amount(room: GroupInfo<T::AccountId, BalanceOf<T>,
-			AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>) -> BalanceOf<T>{
+			AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment>) -> BalanceOf<T>{
 		let mut consume_total_amount = <BalanceOf<T>>::from(0u32);
-		for (account_id, amount) in room.consume.clone() {
-			consume_total_amount += amount;
+		for (account_id, amount) in room.consume.clone().iter() {
+			consume_total_amount += *amount;
 		}
 
 		consume_total_amount
+	}
+
+	/// 获取个人的群消费
+	fn get_user_consume_amount (who: T::AccountId, room: GroupInfo<T::AccountId, BalanceOf<T>,
+			AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment>) -> BalanceOf<T> {
+
+		let mut room = room.clone();
+		if let Some(pos) = room.consume.clone().iter().position(|h| h.0 == who) {
+			let consume = room.consume.swap_remove(pos);
+			return consume.1;
+		}
+		else {
+			return <BalanceOf<T>>::from(0u32);
+		}
 	}
 
 
@@ -1475,58 +1487,43 @@ impl <T: Config> Module <T> {
 	// 	Ok(<CurrencyIdOf<T>>::from(currency_id))
 	// }
 
-	/// 个人消费数据更新  如果在投票期间 那么判断自己是否投过票 投票的话更新
-	fn update_user_consume(who: T::AccountId, room_info: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>,
+	/// 个人消费数据更新  (如果在投票期间 那么判断自己是否投过票 投票的话更新)
+	fn update_user_consume(who: T::AccountId, room_info: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment>,
 						   amount: BalanceOf<T>) {
 		let mut room = room_info;
 		let group_id = room.group_id;
-		let user_consume_opt = room.consume.get(&who);
-		match user_consume_opt {
-			Some(x) => {
-				room.consume.insert(who.clone(), *x + amount);
-			},
-			None => {
-				room.consume.insert(who.clone(), amount);
-			},
-		};
+		let mut new_who_consume: (T::AccountId, BalanceOf<T>);
 
-		/// 获取新的用户消费信息
-		let new_user_consume = room.consume.get(&who).unwrap();
-		let mut old_council = room.council.clone();
-		// let remain_council = vec![];
-		if let Some(pos) = old_council.iter().position(|h| h.0 == who.clone()) {
-			old_council.remove(pos);
+		if let Some(pos) = room.consume.clone().iter().position(|h| h.0 == who.clone()) {
+			let old_who_consume = room.consume.swap_remove(pos);
+			new_who_consume = (old_who_consume.0, old_who_consume.1.saturating_add(amount));
 
-		};
-
-		if old_council.len() == 0 {
-			old_council.insert(0, (who.clone(), *new_user_consume));
 		}
-
 		else {
-			let mut index = 0;
-			let old_council_cp = old_council.clone();
-			for info in old_council_cp.iter() {
-				if info.1 >= *new_user_consume {
-					index += 1;
-				}
-				else {
-					break;
-				}
-			}
-
-			if index <= T::CouncilMaxNumber::get() {
-				old_council.insert(index as usize, (who.clone(), *new_user_consume));
-				if old_council.len() > T::CouncilMaxNumber::get() as usize{
-					old_council.split_off(T::CouncilMaxNumber::get() as usize);
-				}
-
-
-			}
+			new_who_consume = (who.clone(), amount);
 		}
 
-		// 更新群议员
-		room.council = old_council;
+		let mut index = 0;
+		for per_consume in room.consume.iter() {
+			if per_consume.1 < new_who_consume.1 {
+				break;
+			}
+			index += 1;
+		}
+
+		room.consume.insert(index, new_who_consume.clone());
+
+		// 更新议会成员
+		let mut consume = room.consume.clone();
+		room.council = vec![];
+		if consume.len() > T::CouncilMaxNumber::get() as usize {
+			consume.split_off(T::CouncilMaxNumber::get() as usize);
+			room.council = consume;
+		}
+		else {
+			room.council = room.consume.clone();
+		}
+
 
 		// 如果本群正在投票 那么更新投票信息
 		if room.is_voting.clone() {
@@ -1627,7 +1624,7 @@ impl <T: Config> Module <T> {
 
 	/// 判断投票是否结束 (结束 , 通过)
 	fn is_vote_end(room_info: GroupInfo<T::AccountId, BalanceOf<T>,
-		AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>)
+		AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment>)
 		-> (bool, bool){
 
 		let start_time = room_info.this_disband_start_time.clone();
@@ -1722,7 +1719,7 @@ impl <T: Config> Module <T> {
 
 
 	/// 投票后进行的判断
-	fn judge(room: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>,
+	fn judge(room: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment>,
 			) {
 
 		let mut room = room.clone();
@@ -1776,8 +1773,6 @@ impl <T: Config> Module <T> {
 					per_man_reward: per_man_reward.clone(),
 				};
 
-				// todo 应该是在群里消费的 才有奖励 所以这部分要改
-
 				<InfoOfDisbandRoom<T>>::insert(session_index, group_id, room_rewad_info);
 
 				<AllRoom<T>>::remove(group_id);
@@ -1810,64 +1805,31 @@ impl <T: Config> Module <T> {
 	fn remove_consumer_info(mut room: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio,
 			T::BlockNumber, GroupMaxMembers,
 			DisbandVote<BTreeSet<T::AccountId>,
-			BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>,
+			BalanceOf<T>>, T::Moment>,
 			who: T::AccountId
 	) -> GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio,
 			T::BlockNumber, GroupMaxMembers,
 			DisbandVote<BTreeSet<T::AccountId>,
-			BalanceOf<T>>, T::Moment, BTreeMap<T::AccountId, BalanceOf<T>>>
+			BalanceOf<T>>, T::Moment>
 	{
 		// 把他的消费记录去掉 并从议会榜单里除名
-		let use_consume_amount = room.consume.remove(&who);
-		let mut council = room.council.clone();
-		if let Some(pos) = council.iter().position(|h| h.0 == who.clone()) {
-			room.council.remove(pos);
+		if let Some(pos) = room.consume.iter().position(|h| h.0 == who.clone()) {
+			room.consume.swap_remove(pos);
 		}
 
-		if room.council.len() == T::CouncilMaxNumber::get() as usize -1 && room.consume.len() > 0 {
+		room.council = vec![];
 
-			let min_user: Option<(T::AccountId, BalanceOf<T>)>;
+		let mut consume = room.consume.clone();
 
-			if room.council.len() > 0 {
-				let mut council = room.council.clone();
-				min_user = council.pop();
-			}
-
-			else {min_user = None;}
-
-			let mut new_user = (T::AccountId::default(), <BalanceOf<T>>::from(0u32));
-
-			match min_user {
-				// 选择消费队列里面最大的
-				None => {
-					for user_info in room.consume.iter() {
-						if user_info.1 >= &new_user.1 {
-							new_user = (user_info.0.clone(), *user_info.1);
-						}
-					}
-				},
-
-				// 选择那个比这个u的消费小但是确是最大的那个
-				Some(u) => {
-					for user_info in room.consume.iter() {
-						// let min_user_cp = min_user.clone();
-						if user_info.1 <= &u.1.clone() && user_info.1 > &new_user.1 {
-							new_user = (user_info.0.clone(), *user_info.1);
-						}
-					}
-				},
-			};
-
-			if new_user.0 != T::AccountId::default() {
-				room.council.push(new_user);
-			}
+		if consume.len() > T::CouncilMaxNumber::get() as usize {
+			consume.split_off(T::CouncilMaxNumber::get() as usize);
+			room.council = consume;
+		}
+		else {
+			room.council = room.consume.clone();
 		}
 
 		room
-
-
-
-
 
 	}
 

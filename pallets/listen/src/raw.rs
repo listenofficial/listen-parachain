@@ -207,7 +207,7 @@ impl Default for InvitePaymentType {
 
 /// 群的信息
 #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone)]
-pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, GroupMaxMembers, DisbandVote, Moment, BTreeMap>{
+pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, GroupMaxMembers, DisbandVote, Moment>{
 	pub group_id: u64,  // 群的id直接用自增的u64类型
 
 	pub create_payment: Balance,  // 创建群时支付的费用
@@ -241,7 +241,7 @@ pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, GroupMaxM
 	pub create_time: Moment,
 	pub create_block: BlockNumber,
 
-	pub consume: BTreeMap,  // 群里个人购买道具的具体金额
+	pub consume: Vec<(AccountId, Balance)>,  // 群里个人购买道具的具体金额
 
 	pub council: Vec<(AccountId, Balance)>,
 

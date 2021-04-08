@@ -293,6 +293,8 @@ decl_error! {
 		PrivatedRoom,
 		/// 群隐私属性未改变
 		PrivacyNotChange,
+		/// 是群主
+		RoomManager,
 }}
 
 
@@ -402,12 +404,12 @@ decl_module! {
 		fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T>, is_private: bool ) -> DispatchResult{
 			let who = ensure_signed(origin)?;
 
-			let pledge = None;
-
-			let pledge = match pledge {
-				Some(x) => x,
-				None => <BalanceOf<T>>::from(0u32),
-			};
+			// let pledge = None;
+			//
+			// let pledge = match pledge {
+			// 	Some(x) => x,
+			// 	None => <BalanceOf<T>>::from(0u32),
+			// };
 
 			let create_cost = Self::create_cost();
 
@@ -425,22 +427,22 @@ decl_module! {
 			/// 查看群主的余额是否足够
 			let reasons = WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE;
 			let free_balance = T::NativeCurrency::free_balance(&who);
-			let new_balance = free_balance.saturating_sub(create_payment + pledge);
+			let new_balance = free_balance.saturating_sub(create_payment);
 			T::NativeCurrency::ensure_can_withdraw(&who, <BalanceOf<T>>::from(10u32), reasons, new_balance)?;
 
 			// 群主把创建群的费用直接打到国库
 			let to = Self::treasury_id();
 			T::NativeCurrency::transfer(&who, &to, create_payment.clone(), KeepAlive)?;
 
-			//群主把抵押的费用转到自己的抵押账户中
-			T::NativeCurrency::repatriate_reserved(&who, &who, pledge, Status::Reserved)?;
+			// //群主把抵押的费用转到自己的抵押账户中
+			// T::NativeCurrency::repatriate_reserved(&who, &who, pledge, Status::Reserved)?;
 
 			let group_id = <GroupId>::get();
 			let group_info = GroupInfo{
 				group_id: group_id,
 				create_payment: create_payment,
 				last_block_of_get_the_reward: Self::now(),
-				pledge_amount: pledge,
+				// pledge_amount: pledge,
 				group_manager: who.clone(),
 				prime: Some(who.clone()),
 				max_members: max_members,
@@ -499,10 +501,10 @@ decl_module! {
 				return Err(Error::<T>::NotRewardTime)?;
 			}
 			else {
-				// 领取抵押币的奖励
-				let pledge = room_info.pledge_amount.clone();
-				let reward = T::PledgeRate::get() * pledge;
-				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, reward));
+				// // 领取抵押币的奖励
+				// let pledge = room_info.pledge_amount.clone();
+				// let reward = T::PledgeRate::get() * pledge;
+				// T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, reward));
 
 				// 领取群消费资产产生的利息
 				let consume_total_amount = Self::get_room_consume_amount(room_info.clone());
@@ -519,7 +521,7 @@ decl_module! {
 				// 更新群信息
 				room_info.last_block_of_get_the_reward = real_this_block;
 				<AllRoom<T>>::insert(group_id, room_info);
-				Self::deposit_event(RawEvent::ManagerGetReward(who,  reward + manager_proportion_amount, room_add));
+				Self::deposit_event(RawEvent::ManagerGetReward(who, manager_proportion_amount, room_add));
 
 			}
 		}
@@ -835,8 +837,8 @@ decl_module! {
 			T::RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin::try_origin(origin.clone()).map_err(|_| Error::<T>::OriginErr)?;
 
 			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			// // 是群主
-			// ensure!(room.group_manager == manager.clone(), Error::<T>::NotManager);
+			// 不能踢群主
+			ensure!(room.group_manager != who.clone(), Error::<T>::RoomManager);
 			// 这个人在群里
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
 
@@ -844,9 +846,6 @@ decl_module! {
 
 			// 如果是群主权限 则不能随意踢人
 			if T::RoomRootOrigin::try_origin(origin).is_ok() {
-
-				// 群主不能踢自己
-				ensure!(room.group_manager.clone() != who.clone(), Error::<T>::RemoveYourself);
 
 				if room.last_remove_height > T::BlockNumber::from(0u32){
 				let until = now - room.last_remove_height;
@@ -888,16 +887,10 @@ decl_module! {
 			}
 			}
 
-
-			// 修改数据
-			room.now_members_number = room.now_members_number.checked_sub(1u32).ok_or(Error::<T>::Overflow)?;
-			<AllListeners<T>>::mutate(who.clone(), |h| h.rooms.retain(|x| x.0 != group_id.clone()));
-			<ListenersOfRoom<T>>::mutate(group_id, |h| h.remove(&who));
-
-			let mut room = Self::remove_consumer_info(room, who.clone());
-
 			room.last_remove_height = now;
 			room.black_list.push(who.clone());
+
+			let room = Self::remove_someone_in_room(who.clone(), room);
 
 			<AllRoom<T>>::insert(group_id, room);
 
@@ -913,6 +906,7 @@ decl_module! {
 		fn ask_for_disband_room(origin, group_id: u64) -> DispatchResult{
 
 			let who = ensure_signed(origin)?;
+
 			// 这个人是群成员
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
 
@@ -961,10 +955,9 @@ decl_module! {
 			}
 			}
 
-			// 该群还未处于投票状态
-			ensure!(!room.is_voting.clone(), Error::<T>::IsVoting);
+			// 如果该群处于投票状态且投票还没有结束 那么不给投票
+			ensure!(!(Self::is_voting(room.clone())) , Error::<T>::IsVoting);
 
-			// 转创建群时费用的1/10转到国库(这个费用好像已经全部转到国库了) 这个是解散群发起人支付的费用
 			let disband_payment = Percent::from_percent(10) * room.create_payment.clone();
 			let to = Self::treasury_id();
 			T::NativeCurrency::transfer(&who, &to, disband_payment, KeepAlive)?;
@@ -1035,8 +1028,13 @@ decl_module! {
 		    	return Err(Error::<T>::ConsumeAmountIsZero)?;
 		    }
 
-			// 正在投票
-			ensure!(room.is_voting, Error::<T>::NotVoting);
+			// 必须正在投票 (如果投票已经过期 那么删除相应的记录)
+			if !Self::is_voting(room.clone()) {
+				if room.is_voting {
+					Self::remove_vote_info(room);
+				}
+				return Err(Error::<T>::NotVoting)?;
+			}
 
 			let now = Self::now();
 
@@ -1054,8 +1052,6 @@ decl_module! {
 						room.disband_vote.reject_man.remove(&who);
 						room.disband_vote.reject_total_amount -= user_consume_amount;
 					}
-
-
 
 				},
 				VoteType::Reject => {
@@ -1237,37 +1233,11 @@ decl_module! {
 
 				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&user, amount));
 
-				room.now_members_number = room.now_members_number.saturating_sub(1);
-
 				room.total_balances = room.total_balances.saturating_sub(amount);
 
-				// 把他的消费记录去掉 并从议会榜单里除名
-				let mut room = Self::remove_consumer_info(room, user.clone());
-
-				let mut listeners = <ListenersOfRoom<T>>::get(group_id);
-
-				/// 删除人
-				let _ = listeners.take(&user);
-
-				// 如果退出的是群主 则换群主
-				if room.clone().group_manager == user {
-
-					let listeners_cp = listeners.clone();
-
-					room.group_manager = listeners_cp.iter().next().unwrap().clone();
-
-				}
-
-				// 如果是群议会成员 则从议中删除
-				let mut council = room.council;
-				if let Some(pos) = council.iter().position(|h| h.0 == user.clone()) {
-					council.remove(pos);
-				}
-				room.council = council;
+				let room = Self::remove_someone_in_room(user.clone(), room.clone());
 
 				<AllRoom<T>>::insert(group_id, room);
-
-				<ListenersOfRoom<T>>::insert(group_id, listeners);
 
 			}
 
@@ -1502,8 +1472,8 @@ impl <T: Config> Module <T> {
 		}
 
 
-		// 如果本群正在投票 那么更新投票信息
-		if room.is_voting.clone() {
+		// 如果本群正在投票
+		if  Self::is_voting(room.clone()) {
 			let mut is_in_vote = false;
 			let disband_vote_info = room.disband_vote.clone();
 			if disband_vote_info.approve_man.get(&who).is_some() {
@@ -1681,6 +1651,48 @@ impl <T: Config> Module <T> {
 	}
 
 
+	/// 删除某人(群里还有人的情况下)
+	fn remove_someone_in_room(who: T::AccountId, room: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment>)
+		-> GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment> {
+		let mut room = room;
+		room.now_members_number = room.now_members_number.saturating_sub(1);
+
+		// 把他的消费记录去掉 并从议会榜单里除名
+		let mut room = Self::remove_consumer_info(room, who.clone());
+
+		let mut listeners = <ListenersOfRoom<T>>::get(room.group_id.clone());
+		/// 删除人
+		let _ = listeners.take(&who);
+
+		// 如果退出的是群主 则换群主
+		if room.clone().group_manager == who.clone() {
+			if room.consume.len() > 0 {
+				let mut consume = room.consume.clone();
+				room.group_manager = consume.swap_remove(0).0;
+			}
+			else {
+				room.group_manager = listeners.clone().iter().next().unwrap().clone();
+			}
+
+		}
+
+		<ListenersOfRoom<T>>::insert(room.group_id.clone(), listeners);
+
+		room
+	}
+
+
+	/// 判断群是否处于投票阶段
+	fn is_voting(room: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment>)
+		-> bool
+	{
+		if room.is_voting.clone() && (Self::now() - room.this_disband_start_time.clone() < T::VoteExpire::get()) {
+			return true;
+		}
+		false
+	}
+
+
 	/// 投票后进行的判断
 	fn judge(room: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment>,
 			) {
@@ -1717,11 +1729,11 @@ impl <T: Config> Module <T> {
 
 				let total_reward = room.total_balances.clone();
 				let manager_reward = room.group_manager_balances.clone();
-				let pledge_amount = room.pledge_amount.clone();
+				// let pledge_amount = room.pledge_amount.clone();
 				// 把属于群主的那部分给群主
 				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&room.group_manager, manager_reward));
-				// 把群主的抵押币转到自由余额
-				T::NativeCurrency::unreserve(&room.group_manager, pledge_amount);
+				// // 把群主的抵押币转到自由余额
+				// T::NativeCurrency::unreserve(&room.group_manager, pledge_amount);
 
 				// 群主领完剩下的金额
 				let listener_reward = total_reward.clone() - manager_reward.clone();
@@ -1746,21 +1758,29 @@ impl <T: Config> Module <T> {
 
 			// 如果是不通过 那么就删除投票信息 回到投票之前的状态
 			else{
-				// 删除有关投票信息
-				let last_disband_end_hight = now.clone();
-				room.last_disband_end_hight = last_disband_end_hight;
-				room.is_voting = false;
-				room.this_disband_start_time = <T::BlockNumber>::from(0u32);
-
-				room.disband_vote = <DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>>::default();
-
-				<AllRoom<T>>::insert(group_id, room);
+				Self::remove_vote_info(room);
 			}
 
 		}
 
+	}
 
 
+	/// 删除投票信息
+	fn remove_vote_info(mut room: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio,
+			T::BlockNumber, GroupMaxMembers,
+			DisbandVote<BTreeSet<T::AccountId>,
+			BalanceOf<T>>, T::Moment>) {
+		// 删除有关投票信息
+		room.last_disband_end_hight = room.this_disband_start_time.clone() + T::VoteExpire::get();
+
+		room.is_voting = false;
+
+		room.this_disband_start_time = <T::BlockNumber>::from(0u32);
+
+		room.disband_vote = <DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>>::default();
+
+		<AllRoom<T>>::insert(room.group_id.clone(), room);
 	}
 
 
@@ -1829,7 +1849,7 @@ impl <T: Config> Module <T> {
 	}
 
 
-	// 删除过期的解散群产生的信息
+	/// 删除过期的解散群产生的信息
 	fn remove_expire_disband_info() {
 		let session_indexs = <AllSessionIndex>::get();
 

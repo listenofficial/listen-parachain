@@ -132,7 +132,6 @@
     "group_id": "u64",
     "create_payment": "Balance",
     "last_block_of_get_the_reward": "BlockNumber",
-    "pledge_amount":"Balance",
     "group_manager": "AccountId",
     "prime":"Option<AccountId>",
     "max_members": "GroupMaxMembers",

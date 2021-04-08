@@ -431,6 +431,19 @@ type RoomRootOrHalfRoomCouncil = EnsureOneOf<
 	RoomRoot,
 	HalfRoomCouncil
 >;
+type SomeCouncil = pallet_room_collective::EnsureMembers<_2, AccountId, RoomCollective>;
+type HalfRoomCouncilOrSomeRoomCouncil = EnsureOneOf<
+	AccountId,
+	HalfRoomCouncil,
+	SomeCouncil,
+>;
+
+type RoomRootOrHalfRoomCouncilOrSomeRoomCouncil = EnsureOneOf<
+	AccountId,
+	RoomRoot,
+	HalfRoomCouncilOrSomeRoomCouncil,
+>;
+
 
 
 impl listen::Config for Runtime{
@@ -456,11 +469,7 @@ impl listen::Config for Runtime{
 
 	type RoomRootOrigin = RoomRoot;
 	type RoomRootOrHalfCouncilOrigin = RoomRootOrHalfRoomCouncil;
-	type RoomRootOrSomeCouncilOrigin = EnsureOneOf<
-		AccountId,
-		RoomRoot,
-		pallet_room_collective::EnsureMembers<_2, AccountId, RoomCollective>
-	>;
+	type RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin = RoomRootOrHalfRoomCouncilOrSomeRoomCouncil;
 	type HalfRoomCouncilOrigin = HalfRoomCouncil;
 
 }

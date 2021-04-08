@@ -15,6 +15,7 @@ use pallet_multisig;
 use sp_runtime::{traits::{AccountIdConversion, Saturating, CheckedDiv, Zero}, DispatchResult, Percent, RuntimeDebug, ModuleId, traits::CheckedMul, DispatchError, SaturatedConversion};
 use pallet_timestamp as timestamp;
 use node_primitives::*;
+use sp_runtime::traits::CheckedAdd;
 use listen_traits::{ListenHandler, CollectiveHandler};
 
 use node_constants::{currency::*, time::*};
@@ -33,8 +34,6 @@ use sp_std::convert::TryInto;
 use orml_tokens;
 use orml_traits::MultiCurrency;
 
-
-// use crate::raw::InvitePaymentType::invitee;
 
 pub(crate) type MultiBalanceOf<T> =
 		<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -94,7 +93,7 @@ pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config {
 	type RoomRootOrHalfCouncilOrigin: EnsureOrigin<Self::Origin>;
 
 	/// 群主权限或是固定个数的群议员
-	type RoomRootOrSomeCouncilOrigin: EnsureOrigin<Self::Origin>;
+	type RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin: EnsureOrigin<Self::Origin>;
 
 	/// 一半群议员
 	type HalfRoomCouncilOrigin: EnsureOrigin<Self::Origin>;
@@ -693,40 +692,36 @@ decl_module! {
 
 			let props_cost = <PropsPayment<T>>::get();
 			if props.picture > 0u32{
-				dollars = props_cost.picture * <BalanceOf<T>>::from(props.picture);
+				dollars = props_cost.picture.checked_mul(&<BalanceOf<T>>::from(props.picture)).ok_or(Error::<T>::Overflow)?;
 			}
 			if props.text > 0u32{
-				dollars += props_cost.text * <BalanceOf<T>>::from(props.text);
+				dollars = dollars.checked_add(&props_cost.text.checked_mul(&<BalanceOf<T>>::from(props.text)).ok_or(Error::<T>::Overflow)?
+				).ok_or(Error::<T>::Overflow)?;
 			}
 			if props.video > 0u32{
-				dollars += props_cost.video * <BalanceOf<T>>::from(props.video);
+				dollars = dollars.checked_add(&props_cost.video.checked_mul(&<BalanceOf<T>>::from(props.video)).ok_or(Error::<T>::Overflow)?
+				).ok_or(Error::<T>::Overflow)?;
 			}
 
-			/// 把U128转换成balance
-			let cost = dollars;
-
-			/// ********以上数据不需要额外处理 不可能出现panic*************
-
-			/// 扣除费用
-			T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&who, cost.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
-
-			// 修改群信息
+			/// 获取群信息
 			let mut room = <AllRoom<T>>::get(group_id).unwrap();
+			/// 获取个人信息
+			let mut person = <AllListeners<T>>::get(who.clone());
+
 			room.props.picture = room.props.picture.checked_add(props.picture).ok_or(Error::<T>::Overflow)?;
 			room.props.text = room.props.text.checked_add(props.text).ok_or(Error::<T>::Overflow)?;
 			room.props.video = room.props.video.checked_add(props.video).ok_or(Error::<T>::Overflow)?;
+			room.total_balances = room.total_balances.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
 
-			room.total_balances += cost.clone();
-
-			Self::update_user_consume(who.clone(), room, cost);
-
-			// 修改个人信息
-			let mut person = <AllListeners<T>>::get(who.clone());
 			person.props.picture = person.props.picture.checked_add(props.picture).ok_or(Error::<T>::Overflow)?;
 			person.props.text = person.props.text.checked_add(props.text).ok_or(Error::<T>::Overflow)?;
 			person.props.video = person.props.video.checked_add(props.video).ok_or(Error::<T>::Overflow)?;
-			person.cost += cost.clone();
+			person.cost = person.cost.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
 
+			/// 扣除费用
+			T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&who, dollars.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
+
+			Self::update_user_consume(who.clone(), room, dollars);
 			<AllListeners<T>>::insert(who.clone(), person);
 
 			Self::deposit_event(RawEvent::BuyProps(who));
@@ -749,43 +744,40 @@ decl_module! {
 
 			let audio_cost = <AudioPayment<T>>::get();
 			if audio.ten_seconds > 0u32{
-				dollars = audio_cost.ten_seconds * <BalanceOf<T>>::from(audio.ten_seconds);
+				dollars = audio_cost.ten_seconds.checked_mul(&<BalanceOf<T>>::from(audio.ten_seconds)).ok_or(Error::<T>::Overflow)?;
 			}
 			if audio.thirty_seconds > 0u32{
-				dollars += audio_cost.thirty_seconds * <BalanceOf<T>>::from(audio.thirty_seconds);
+				dollars =  dollars.checked_add(&audio_cost.thirty_seconds.checked_mul(&<BalanceOf<T>>::from(audio.thirty_seconds)).ok_or(Error::<T>::Overflow)?
+				).ok_or(Error::<T>::Overflow)?;
 			}
 			if audio.minutes > 0u32{
-				dollars += audio_cost.minutes * <BalanceOf<T>>::from(audio.minutes);
+				dollars =dollars.checked_add(&audio_cost.minutes.checked_mul(&<BalanceOf<T>>::from(audio.minutes)).ok_or(Error::<T>::Overflow)?
+				).ok_or(Error::<T>::Overflow)?;
 			}
 
-			// 把U128转换成balance
-			let cost = dollars;
-			// ********以上数据不需要额外处理 不可能出现panic*************
-
-			// 扣除费用
-			T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&who, cost.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
+			/// 获取群信息
+			let mut room = <AllRoom<T>>::get(group_id).unwrap();
+			/// 获取个人信息
+			let mut person = <AllListeners<T>>::get(who.clone());
 
 			// 修改群信息
-			let mut room = <AllRoom<T>>::get(group_id).unwrap();
 			room.audio.ten_seconds = room.audio.ten_seconds.checked_add(audio.ten_seconds).ok_or(Error::<T>::Overflow)?;
 			room.audio.thirty_seconds = room.audio.thirty_seconds.checked_add(audio.thirty_seconds).ok_or(Error::<T>::Overflow)?;
 			room.audio.minutes = room.audio.minutes.checked_add(audio.minutes).ok_or(Error::<T>::Overflow)?;
-
-			room.total_balances += cost.clone();
-
-			// 更新个人消费信息
-			Self::update_user_consume(who.clone(), room, cost);
-
-			// <AllRoom<T>>::insert(group_id, room);
+			room.total_balances = room.total_balances.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
 
 			// 修改个人信息
-			let mut person = <AllListeners<T>>::get(who.clone());
 			person.audio.ten_seconds = person.audio.ten_seconds.checked_add(audio.ten_seconds).ok_or(Error::<T>::Overflow)?;
 			person.audio.thirty_seconds = person.audio.thirty_seconds.checked_add(audio.thirty_seconds).ok_or(Error::<T>::Overflow)?;
 			person.audio.minutes = person.audio.minutes.checked_add(audio.minutes).ok_or(Error::<T>::Overflow)?;
-			person.cost += cost.clone();
+			person.cost = person.cost.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
+
+			// 扣除费用
+			T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(&who, dollars.clone(), WithdrawReasons::TRANSFER.into(), KeepAlive)?);
 
 			<AllListeners<T>>::insert(who.clone(), person);
+			// 更新个人消费信息
+			Self::update_user_consume(who.clone(), room, dollars);
 
 			Self::deposit_event(RawEvent::BuyAudio(who));
 
@@ -842,7 +834,7 @@ decl_module! {
 		#[weight = 10_000]
 		fn remove_someone(origin, group_id: u64, who: T::AccountId) -> DispatchResult {
 
-			T::RoomRootOrSomeCouncilOrigin::try_origin(origin.clone()).map_err(|_| Error::<T>::OriginErr)?;
+			T::RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin::try_origin(origin.clone()).map_err(|_| Error::<T>::OriginErr)?;
 
 			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			// // 是群主
@@ -1347,7 +1339,7 @@ decl_module! {
 				}
 
 				// 红包有足够余额
-				if redpacket.total.clone() - redpacket.already_get_amount.clone() < *amount {
+				if redpacket.total.clone().saturating_sub(redpacket.already_get_amount.clone()) < *amount {
 					continue;
 				}
 
@@ -1453,7 +1445,7 @@ impl <T: Config> Module <T> {
 			AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment>) -> BalanceOf<T>{
 		let mut consume_total_amount = <BalanceOf<T>>::from(0u32);
 		for (account_id, amount) in room.consume.clone().iter() {
-			consume_total_amount += *amount;
+			consume_total_amount = consume_total_amount.saturating_add(*amount);
 		}
 
 		consume_total_amount
@@ -1579,7 +1571,6 @@ impl <T: Config> Module <T> {
 	}
 
 
-
 	fn get_session_index() -> SessionIndex{
 		0 as SessionIndex
 	}
@@ -1635,18 +1626,7 @@ impl <T: Config> Module <T> {
 		}
 
 		else{
-			// let max = cmp::max(approve_total_amount, reject_total_amount);
-			// let min = cmp::min(approve_total_amount, reject_total_amount);
-			// if Percent::from_percent(20) * consume_total_amount < max - min{
-			// 	if approve_total_amount >= reject_total_amount{
-			// 		 (End, Pass)
-			// 	}
-			// 	else{
-			// 		 (End, NotPass)
-			// 	}
-			// }
 
-			// else{
 			if start_time + T::VoteExpire::get() >= Self::now(){
 				(NotEnd, NotPass)
 			}
@@ -1654,9 +1634,8 @@ impl <T: Config> Module <T> {
 			else{
 				(End, NotPass)
 			}
-
-			// }
 		}
+
 	}
 
 	pub fn treasury_id() -> T::AccountId {

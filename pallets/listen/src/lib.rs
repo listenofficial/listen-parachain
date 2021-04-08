@@ -92,7 +92,7 @@ pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config {
 	/// 群主权限或是一半的群议员给通过
 	type RoomRootOrHalfCouncilOrigin: EnsureOrigin<Self::Origin>;
 
-	/// 群主权限或是固定个数的群议员
+	/// 群主权限或是固定个数的群议员或是一半的群议员
 	type RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin: EnsureOrigin<Self::Origin>;
 
 	/// 一半群议员
@@ -812,8 +812,6 @@ decl_module! {
 			T::RoomRootOrHalfCouncilOrigin::try_origin(origin).map_err(|_| Error::<T>::OriginErr)?;
 
 			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			// // 是群主
-			// ensure!(room.group_manager == manager.clone(), Error::<T>::NotManager);
 
 			let black_list = room.black_list.clone();
 			if let Some(pos) = black_list.iter().position(|h| h == &who) {

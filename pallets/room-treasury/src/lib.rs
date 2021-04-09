@@ -69,7 +69,7 @@ pub type RoomIndex = u64;
 /// A spending proposal.
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
-pub struct Proposal<AccountId, Balance> {
+pub struct Proposal<AccountId, Balance, BlockNumber> {
 	/// The account proposing it.
 	proposer: AccountId,
 	/// The (total) amount that should be paid if the proposal is accepted.
@@ -78,6 +78,8 @@ pub struct Proposal<AccountId, Balance> {
 	beneficiary: AccountId,
 	/// The amount held on deposit (reserved) for making this proposal.
 	bond: Balance,
+	/// 可以消费的时间
+	spend_time: Option<BlockNumber>,
 }
 
 decl_storage! {
@@ -88,7 +90,7 @@ decl_storage! {
 		/// Proposals that have been made.
 		pub Proposals get(fn proposals):
 			double_map hasher(identity) RoomIndex, hasher(identity) ProposalIndex
-			=> Option<Proposal<T::AccountId, BalanceOf<T>>>;
+			=> Option<Proposal<T::AccountId, BalanceOf<T>, T::BlockNumber>>;
 
 		/// Proposal indices that have been approved but not yet awarded.
 		pub Approvals get(fn approvals): map hasher(identity) RoomIndex => Vec<ProposalIndex>;
@@ -145,7 +147,7 @@ decl_module! {
 		/// Minimum amount of funds that should be placed in a deposit for making a proposal.
 		const ProposalBondMinimum: BalanceOf<T> = T::ProposalBondMinimum::get();
 
-		/// Period between successive spends.
+		/// 议案通过多久后可以进行资金消费
 		const SpendPeriod: T::BlockNumber = T::SpendPeriod::get();
 
 		// /// The treasury's module id, used for deriving its sovereign account ID.
@@ -172,8 +174,9 @@ decl_module! {
 				.map_err(|_| Error::<T>::InsufficientProposersBalance)?;
 
 			let c = Self::proposal_count(room_id);
+			let spend_time = None;
 			<ProposalCount>::insert(room_id, c + 1);
-			<Proposals<T>>::insert(room_id, c, Proposal { proposer, value, beneficiary, bond });
+			<Proposals<T>>::insert(room_id, c, Proposal { proposer, value, beneficiary, bond, spend_time });
 
 			Self::deposit_event(RawEvent::Proposed(c));
 		}
@@ -199,6 +202,10 @@ decl_module! {
 			T::ApproveOrigin::ensure_origin(origin)?;
 
 			ensure!(<Proposals<T>>::contains_key(room_id, proposal_id), Error::<T>::InvalidIndex);
+			<Proposals<T>>::mutate(room_id, proposal_id, |h| if let Some(p) = h {
+				p.spend_time = Some(<pallet_listen::Module<T>>::now() + T::SpendPeriod::get());
+			});
+
 			<Approvals>::mutate(room_id, |h| h.push(proposal_id));
 
 		}

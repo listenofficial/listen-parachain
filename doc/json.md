@@ -184,7 +184,7 @@
     "value":"Balance",
     "beneficiary":"AccountId",
     "bond":"Balance",
-    "spend_time":"Option<BlockNumber>"
+    "start_spend_time":"Option<BlockNumber>"
     },
 
   "PropsPrice": {

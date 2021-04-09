@@ -79,7 +79,7 @@ pub struct Proposal<AccountId, Balance, BlockNumber> {
 	/// The amount held on deposit (reserved) for making this proposal.
 	bond: Balance,
 	/// 可以消费的时间
-	spend_time: Option<BlockNumber>,
+	start_spend_time: Option<BlockNumber>,
 }
 
 decl_storage! {
@@ -174,9 +174,9 @@ decl_module! {
 				.map_err(|_| Error::<T>::InsufficientProposersBalance)?;
 
 			let c = Self::proposal_count(room_id);
-			let spend_time = None;
+			let start_spend_time = None;
 			<ProposalCount>::insert(room_id, c + 1);
-			<Proposals<T>>::insert(room_id, c, Proposal { proposer, value, beneficiary, bond, spend_time });
+			<Proposals<T>>::insert(room_id, c, Proposal { proposer, value, beneficiary, bond, start_spend_time });
 
 			Self::deposit_event(RawEvent::Proposed(c));
 		}
@@ -202,9 +202,11 @@ decl_module! {
 			T::ApproveOrigin::ensure_origin(origin)?;
 
 			ensure!(<Proposals<T>>::contains_key(room_id, proposal_id), Error::<T>::InvalidIndex);
+			
 			<Proposals<T>>::mutate(room_id, proposal_id, |h| if let Some(p) = h {
-				p.spend_time = Some(<pallet_listen::Module<T>>::now() + T::SpendPeriod::get());
+				p.start_spend_time = Some(<pallet_listen::Module<T>>::now() + T::SpendPeriod::get());
 			});
+			
 			<Approvals>::mutate(room_id, |h| h.push(proposal_id));
 
 		}
@@ -222,7 +224,7 @@ decl_module! {
 			for proposal_id in proposal_ids.clone().iter() {
 				if let Some(proposal) =  <Proposals<T>>::get(room_id, proposal_id) {
 
-					if <pallet_listen::Module<T>>::sub_room_free_amount(room_id, proposal.value.saturated_into::<u128>()).is_ok() {
+					if proposal.start_spend_time.is_some() && proposal.start_spend_time.unwrap() <= <pallet_listen::Module<T>>::now() && <pallet_listen::Module<T>>::sub_room_free_amount(room_id, proposal.value.saturated_into::<u128>()).is_ok() {
 						T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&proposal.beneficiary, proposal.value));
 						T::NativeCurrency::reserve(&proposal.proposer, proposal.bond);
 						proposal_ids.retain(|h| h != proposal_id);

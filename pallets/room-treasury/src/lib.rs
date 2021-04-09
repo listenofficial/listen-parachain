@@ -23,20 +23,20 @@ use frame_support::traits::{EnsureOrigin};
 use codec::{Encode, Decode};
 use frame_system::{ensure_signed};
 pub use weights::WeightInfo;
+use pallet_listen;
 
-pub type BalanceOf<T, I=DefaultInstance> =
-	<<T as Config<I>>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-pub type PositiveImbalanceOf<T, I=DefaultInstance> =
-	<<T as Config<I>>::Currency as Currency<<T as frame_system::Config>::AccountId>>::PositiveImbalance;
-pub type NegativeImbalanceOf<T, I=DefaultInstance> =
-	<<T as Config<I>>::Currency as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
-pub trait Config<I=DefaultInstance>: frame_system::Config {
+type BalanceOf<T> = <<T as pallet_listen::Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
+pub type NegativeImbalanceOf<T> =
+	<<T as pallet_listen::Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
+
+pub trait Config<I=DefaultInstance>: frame_system::Config + pallet_listen::Config {
 	/// The treasury's module id, used for deriving its sovereign account ID.
 	type ModuleId: Get<ModuleId>;
 
-	/// The staking balance.
-	type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+	// /// The staking balance.
+	// type NativeCurrency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 
 	/// Origin from which approvals must come.
 	type ApproveOrigin: EnsureOrigin<Self::Origin>;
@@ -48,14 +48,14 @@ pub trait Config<I=DefaultInstance>: frame_system::Config {
 	type Event: From<Event<Self, I>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// Handler for the unbalanced decrease when slashing for a rejected proposal or bounty.
-	type OnSlash: OnUnbalanced<NegativeImbalanceOf<Self, I>>;
+	type OnSlash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
 	/// Fraction of a proposal's value that should be bonded in order to place the proposal.
 	/// An accepted proposal gets these back. A rejected proposal does not.
 	type ProposalBond: Get<Permill>;
 
 	/// Minimum amount of funds that should be placed in a deposit for making a proposal.
-	type ProposalBondMinimum: Get<BalanceOf<Self, I>>;
+	type ProposalBondMinimum: Get<BalanceOf<Self>>;
 
 	/// Period between successive spends.
 	type SpendPeriod: Get<Self::BlockNumber>;
@@ -91,7 +91,7 @@ decl_storage! {
 		/// Proposals that have been made.
 		pub Proposals get(fn proposals):
 			double_map hasher(identity) RoomIndex, hasher(identity) ProposalIndex
-			=> Option<Proposal<T::AccountId, BalanceOf<T, I>>>;
+			=> Option<Proposal<T::AccountId, BalanceOf<T>>>;
 
 		/// Proposal indices that have been approved but not yet awarded.
 		pub Approvals get(fn approvals): map hasher(identity) RoomIndex => Vec<ProposalIndex>;
@@ -102,7 +102,7 @@ decl_storage! {
 decl_event!(
 	pub enum Event<T, I=DefaultInstance>
 	where
-		Balance = BalanceOf<T, I>,
+		Balance = BalanceOf<T>,
 		<T as frame_system::Config>::AccountId,
 	{
 		/// New proposal. \[proposal_index\]
@@ -130,6 +130,8 @@ decl_error! {
 		InsufficientProposersBalance,
 		/// No proposal or bounty at that index.
 		InvalidIndex,
+		/// 房间没有议案
+		RoomHaveNoProposal,
 	}
 }
 
@@ -143,39 +145,31 @@ decl_module! {
 		const ProposalBond: Permill = T::ProposalBond::get();
 
 		/// Minimum amount of funds that should be placed in a deposit for making a proposal.
-		const ProposalBondMinimum: BalanceOf<T, I> = T::ProposalBondMinimum::get();
+		const ProposalBondMinimum: BalanceOf<T> = T::ProposalBondMinimum::get();
 
 		/// Period between successive spends.
 		const SpendPeriod: T::BlockNumber = T::SpendPeriod::get();
 
-		/// The treasury's module id, used for deriving its sovereign account ID.
-		const ModuleId: ModuleId = T::ModuleId::get();
+		// /// The treasury's module id, used for deriving its sovereign account ID.
+		// const ModuleId: ModuleId = T::ModuleId::get();
 
 		type Error = Error<T, I>;
 
 		fn deposit_event() = default;
 
-		/// Put forward a suggestion for spending. A deposit proportional to the value
-		/// is reserved and slashed if the proposal is rejected. It is returned once the
-		/// proposal is awarded.
-		///
-		/// # <weight>
-		/// - Complexity: O(1)
-		/// - DbReads: `ProposalCount`, `origin account`
-		/// - DbWrites: `ProposalCount`, `Proposals`, `origin account`
-		/// # </weight>
-		#[weight = T::WeightInfo::propose_spend()]
+		/// 提一个消费议案
+		#[weight = 10000]
 		pub fn propose_spend(
 			origin,
 			room_id: RoomIndex,
-			#[compact] value: BalanceOf<T, I>,
+			#[compact] value: BalanceOf<T>,
 			beneficiary: <T::Lookup as StaticLookup>::Source
 		) {
 			let proposer = ensure_signed(origin)?;
 			let beneficiary = T::Lookup::lookup(beneficiary)?;
 
 			let bond = Self::calculate_bond(value);
-			T::Currency::reserve(&proposer, bond)
+			T::NativeCurrency::reserve(&proposer, bond)
 				.map_err(|_| Error::<T, I>::InsufficientProposersBalance)?;
 
 			let c = Self::proposal_count(room_id);
@@ -185,72 +179,74 @@ decl_module! {
 			Self::deposit_event(RawEvent::Proposed(c));
 		}
 
-		/// Reject a proposed spend. The original deposit will be slashed.
-		///
-		/// May only be called from `T::RejectOrigin`.
-		///
-		/// # <weight>
-		/// - Complexity: O(1)
-		/// - DbReads: `Proposals`, `rejected proposer account`
-		/// - DbWrites: `Proposals`, `rejected proposer account`
-		/// # </weight>
-		#[weight = (T::WeightInfo::reject_proposal(), DispatchClass::Operational)]
+
+		/// 拒绝议案
+		#[weight = 10000]
 		pub fn reject_proposal(origin, room_id: RoomIndex, #[compact] proposal_id: ProposalIndex) {
 			T::RejectOrigin::ensure_origin(origin)?;
 
 			let proposal = <Proposals<T, I>>::take(room_id, &proposal_id).ok_or(Error::<T, I>::InvalidIndex)?;
 			let value = proposal.bond;
-			let imbalance = T::Currency::slash_reserved(&proposal.proposer, value).0;
+			let imbalance = T::NativeCurrency::slash_reserved(&proposal.proposer, value).0;
 			T::OnSlash::on_unbalanced(imbalance);
 
 			Self::deposit_event(Event::<T, I>::Rejected(proposal_id, value));
 		}
 
-		/// Approve a proposal. At a later time, the proposal will be allocated to the beneficiary
-		/// and the original deposit will be returned.
-		///
-		/// May only be called from `T::ApproveOrigin`.
-		///
-		/// # <weight>
-		/// - Complexity: O(1).
-		/// - DbReads: `Proposals`, `Approvals`
-		/// - DbWrite: `Approvals`
-		/// # </weight>
-		#[weight = (T::WeightInfo::approve_proposal(), DispatchClass::Operational)]
+		/// 赞成议案（加入待执行队列)
+		#[weight = 10000]
 		pub fn approve_proposal(origin, room_id: RoomIndex, #[compact] proposal_id: ProposalIndex) {
 			T::ApproveOrigin::ensure_origin(origin)?;
 
 			ensure!(<Proposals<T, I>>::contains_key(room_id, proposal_id), Error::<T, I>::InvalidIndex);
 			Approvals::<I>::mutate(room_id, |h| h.push(proposal_id));
+
+		}
+
+
+		/// 手动获取资金
+		#[weight = 10000]
+		pub fn spend_fund(origin, room_id: RoomIndex) {
+			let who = ensure_signed(origin)?;
+			let mut proposal_ids = <Approvals>::get(room_id); //Error::<T>::RoomHaveNoProposal)?;
+			if proposal_ids.len() == 0 {
+				return Err(Error::<T, I>::RoomHaveNoProposal)?;
+			}
+
+			for proposal_id in proposal_ids.iter() {
+				if let Some(proposal) =  <Proposals<T, I>>::get(room_id, proposal_id) {
+					// todo 查看房间自由金额是否足够满足支出
+					// todo 给用户铸造相应金额
+					// todo 减掉国库自由余额
+					// todo 归还proposer抵押金额
+					// todo 从proposal_ids中删除掉proposal_id
+					// todo 从Proposals中删除掉该proposal
+				}
+			}
+			// todo 如果proposal_ids长度为0 那么删除掉存储
+
 		}
 
 	}
 }
 
 impl<T: Config<I>, I: Instance> Module<T, I> {
-	// Add public immutables and private mutables.
 
-	/// The account ID of the treasury pot.
-	///
-	/// This actually does computation. If you need to keep using it, then make sure you cache the
-	/// value and only call this once.
-	pub fn account_id() -> T::AccountId {
-		T::ModuleId::get().into_account()
-	}
 
-	/// The needed bond for a proposal whose spend is `value`.
-	fn calculate_bond(value: BalanceOf<T, I>) -> BalanceOf<T, I> {
+	fn calculate_bond(value: BalanceOf<T>) -> BalanceOf<T> {
 		T::ProposalBondMinimum::get().max(T::ProposalBond::get() * value)
 	}
 
-
-	/// Return the amount of money in the pot.
-	// The existential deposit is not part of the pot so treasury account never gets deleted.
-	pub fn pot() -> BalanceOf<T, I> {
-		T::Currency::free_balance(&Self::account_id())
-			// Must never be less than 0 but better be safe.
-			.saturating_sub(T::Currency::minimum_balance())
+	/// todo 获取群里可用的金额
+	fn get_room_free_amount(room_id: RoomIndex) -> BalanceOf<T> {
+		unimplemented!()
 	}
+
+	/// todo 对群里资产进行扣除
+	fn sub_room_free_amount(room_id: RoomIndex) {
+
+	}
+
 
 }
 

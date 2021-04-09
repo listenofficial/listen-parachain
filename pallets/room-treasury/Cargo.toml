@@ -19,6 +19,9 @@ impl-trait-for-tuples = "0.2.1"
 
 frame-benchmarking = { version = "3.1.0", default-features = false, git = "https://github.com/paritytech/substrate", branch = "rococo-v1", optional = true }
 
+# local
+pallet-listen = { path = '../listen', default-features = false, version = '1.0.0' }
+
 [dev-dependencies]
 sp-io ={ version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 sp-core = { version = '3.0.0', git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
@@ -34,6 +37,7 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"pallet-balances/std",
+	"pallet-listen/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

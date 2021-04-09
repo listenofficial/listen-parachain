@@ -4899,6 +4899,7 @@ dependencies = [
  "frame-system",
  "impl-trait-for-tuples",
  "pallet-balances",
+ "pallet-listen",
  "parity-scale-codec",
  "serde",
  "sp-core",

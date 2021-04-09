@@ -16,7 +16,7 @@ use sp_runtime::{traits::{AccountIdConversion, Saturating, CheckedDiv, Zero}, Di
 use pallet_timestamp as timestamp;
 use node_primitives::*;
 use sp_runtime::traits::CheckedAdd;
-use listen_traits::{ListenHandler, CollectiveHandler};
+use listen_traits::{ListenHandler, CollectiveHandler, RoomTreasuryHandler};
 
 use node_constants::{currency::*, time::*};
 
@@ -101,6 +101,8 @@ pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config {
 
 	/// 解散延迟时间
 	type DisbandDelayTime: Get<Self::BlockNumber>;
+
+	type RoomTreasuryHandler: RoomTreasuryHandler<u64>;
 
 }
 
@@ -1941,6 +1943,7 @@ impl <T: Config> Module <T> {
 		<AllRoom<T>>::remove(group_id);
 
 		T::CollectiveHandler::remove_room_collective_info(group_id);
+		T::RoomTreasuryHandler::remove_room_treasury_info(group_id);
 
 	}
 

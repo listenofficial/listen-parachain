@@ -5186,6 +5186,7 @@ dependencies = [
  "pallet-nicks 1.0.0",
  "pallet-randomness-collective-flip",
  "pallet-room-collective",
+ "pallet-room-treasury",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",

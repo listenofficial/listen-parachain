@@ -79,9 +79,9 @@ use pallet_room_collective;
 use sp_core::{
 	u32_trait::{_1, _2, _3, _4, _5},
 };
-
 use orml_currencies::{self, BasicCurrencyAdapter};
 use sp_std::collections::btree_set::BTreeSet;
+use pallet_room_treasury;
 
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -391,6 +391,24 @@ impl pallet_transaction_payment::Config for Runtime {
 	type FeeMultiplierUpdate = ();
 }
 
+parameter_types! {
+	pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
+	pub const SpendPeriod: BlockNumber = 20 * MINUTES;
+	pub const ProposalBond: Permill = Permill::from_percent(10);
+}
+
+impl pallet_room_treasury::Config for Runtime {
+	type Event = Event;
+	type ApproveOrigin = HalfRoomCouncil;
+	type RejectOrigin = HalfRoomCouncil;
+	type OnSlash = ();
+	type ProposalBond = ProposalBond;
+	type ProposalBondMinimum = ProposalBondMinimum;
+	type SpendPeriod = SpendPeriod;
+	type WeightInfo = ();
+}
+
+
 impl pallet_sudo::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
@@ -473,6 +491,7 @@ impl listen::Config for Runtime{
 	type RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin = RoomRootOrHalfRoomCouncilOrSomeRoomCouncil;
 	type HalfRoomCouncilOrigin = HalfRoomCouncil;
 	type DisbandDelayTime = DisbandDelayTime;
+	type RoomTreasuryHandler = RoomTreasury;
 
 }
 
@@ -595,6 +614,7 @@ construct_runtime!(
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event},
 		Nicks: pallet_nicks::{Pallet, Storage, Call, Event<T>},
 		RoomCommittee: pallet_room_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>},
+		RoomTreasury: pallet_room_treasury::{Pallet, Storage, Call, Event<T>},
 
 	}
 );

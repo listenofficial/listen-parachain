@@ -17,5 +17,5 @@ pub trait CollectiveHandler<RoomIndex, DispatchErr> {
 }
 
 pub trait RoomTreasuryHandler<RoomIndex> {
-    fn remove_room_info(room_id: RoomIndex);
+    fn remove_room_treasury_info(room_id: RoomIndex);
 }

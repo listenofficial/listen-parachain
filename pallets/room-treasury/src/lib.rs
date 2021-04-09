@@ -245,7 +245,7 @@ impl<T: Config> Module<T> {
 
 
 impl<T: Config> RoomTreasuryHandler<RoomIndex> for Module<T> {
-	fn remove_room_info(room_id: RoomIndex) {
+	fn remove_room_treasury_info(room_id: RoomIndex) {
 		<Proposals<T>>::remove_prefix(room_id);
 		<Approvals>::remove(room_id);
 	}

@@ -178,6 +178,15 @@
     "thirty_seconds": "Balance",
     "minutes": "Balance"
   },
+
+  "Proposal": {
+    "proposer":"AccountId",
+    "value":"Balance",
+    "beneficiary":"AccountId",
+    "bond":"Balance",
+    "spend_time":"Option<BlockNumber>"
+    },
+
   "PropsPrice": {
     "picture": "Balance",
     "text": "Balance",

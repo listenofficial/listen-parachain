@@ -1596,7 +1596,7 @@ impl <T: Config> Module <T> {
 
 
 	/// 获取现在的区块时间
-	fn now() -> T::BlockNumber{
+	pub fn now() -> T::BlockNumber{
 		<system::Module<T>>::block_number()
 	}
 

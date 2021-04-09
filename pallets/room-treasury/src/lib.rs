@@ -205,7 +205,6 @@ decl_module! {
 			<Proposals<T>>::mutate(room_id, proposal_id, |h| if let Some(p) = h {
 				p.spend_time = Some(<pallet_listen::Module<T>>::now() + T::SpendPeriod::get());
 			});
-
 			<Approvals>::mutate(room_id, |h| h.push(proposal_id));
 
 		}

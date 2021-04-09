@@ -10,6 +10,8 @@ pub mod weights;
 #[cfg(feature = "std")]
 use serde::{Serialize, Deserialize};
 use sp_std::prelude::*;
+ use sp_runtime::SaturatedConversion;
+ use listen_traits::{ListenHandler, RoomTreasuryHandler};
 use frame_support::{decl_module, decl_storage, decl_event, ensure, print, decl_error, StorageDoubleMap};
 use frame_support::traits::{
 	Currency, Get, Imbalance, OnUnbalanced, ExistenceRequirement::{KeepAlive},
@@ -115,6 +117,7 @@ decl_event!(
 		Rollover(Balance),
 		/// Some funds have been deposited. \[deposit\]
 		Deposit(Balance),
+		SpendFund(AccountId, RoomIndex),
 	}
 );
 
@@ -210,17 +213,21 @@ decl_module! {
 				return Err(Error::<T, I>::RoomHaveNoProposal)?;
 			}
 
-			for proposal_id in proposal_ids.iter() {
+			for proposal_id in proposal_ids.clone().iter() {
 				if let Some(proposal) =  <Proposals<T, I>>::get(room_id, proposal_id) {
-					// todo 查看房间自由金额是否足够满足支出
-					// todo 给用户铸造相应金额
-					// todo 减掉国库自由余额
-					// todo 归还proposer抵押金额
-					// todo 从proposal_ids中删除掉proposal_id
-					// todo 从Proposals中删除掉该proposal
+
+					if <pallet_listen::Module<T>>::sub_room_free_amount(room_id, proposal.value.saturated_into::<u128>()).is_ok() {
+						T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&proposal.beneficiary, proposal.value));
+						T::NativeCurrency::reserve(&proposal.proposer, proposal.bond);
+						proposal_ids.retain(|h| h != proposal_id);
+						<Proposals<T, I>>::remove(room_id, proposal_id);
+					}
 				}
 			}
-			// todo 如果proposal_ids长度为0 那么删除掉存储
+
+			<Approvals>::insert(room_id, proposal_ids);
+
+			Self::deposit_event(Event::<T, I>::SpendFund(who, room_id));
 
 		}
 
@@ -234,16 +241,13 @@ impl<T: Config<I>, I: Instance> Module<T, I> {
 		T::ProposalBondMinimum::get().max(T::ProposalBond::get() * value)
 	}
 
-	/// todo 获取群里可用的金额
-	fn get_room_free_amount(room_id: RoomIndex) -> BalanceOf<T> {
-		unimplemented!()
+}
+
+
+impl<T: Config<I>, I: Instance> RoomTreasuryHandler<RoomIndex> for Module<T, I> {
+	fn remove_room_info(room_id: RoomIndex) {
+		<Proposals<T, I>>::remove_prefix(room_id);
+		<Approvals>::remove(room_id);
 	}
-
-	/// todo 对群里资产进行扣除
-	fn sub_room_free_amount(room_id: RoomIndex) {
-
-	}
-
-
 }
 

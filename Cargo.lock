@@ -4898,6 +4898,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
+ "listen-traits",
  "pallet-balances",
  "pallet-listen",
  "parity-scale-codec",

@@ -15,3 +15,7 @@ pub trait ListenHandler<RoomIndex, AccountId, DispatchErr, Balance> {
 pub trait CollectiveHandler<RoomIndex, DispatchErr> {
     fn remove_room_collective_info(room_id: RoomIndex) -> result::Result<(), DispatchErr>;
 }
+
+pub trait RoomTreasuryHandler<RoomIndex> {
+    fn remove_room_info(room_id: RoomIndex);
+}

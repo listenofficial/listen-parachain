@@ -119,7 +119,7 @@ pub trait Config<I: Instance=DefaultInstance>: frame_system::Config {
 	/// Weight information for extrinsics in this pallet.
 	type WeightInfo: WeightInfo;
 
-	type ListenHandler: ListenHandler<RoomIndex, Self::AccountId, DispatchError>;
+	type ListenHandler: ListenHandler<RoomIndex, Self::AccountId, DispatchError, u128>;
 }
 
 

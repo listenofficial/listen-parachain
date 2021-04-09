@@ -3,10 +3,13 @@
 
 use sp_std::{prelude::*, result};
 
-pub trait ListenHandler<RoomIndex, AccountId, DispatchErr> {
+pub trait ListenHandler<RoomIndex, AccountId, DispatchErr, Balance> {
     fn get_room_council(room_id: RoomIndex) -> result::Result<Vec<AccountId>, DispatchErr>;
     fn get_prime(room_id: RoomIndex) -> result::Result<Option<AccountId>, DispatchErr>;
     fn get_root(room_id: RoomIndex) -> result::Result<AccountId, DispatchErr>;
+    fn get_room_free_amount(room_id: RoomIndex) -> Balance;
+    fn sub_room_free_amount(room_id: RoomIndex, amount: Balance) -> result::Result<(), DispatchErr>;
+
 }
 
 pub trait CollectiveHandler<RoomIndex, DispatchErr> {

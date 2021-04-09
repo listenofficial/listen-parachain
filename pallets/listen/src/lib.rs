@@ -33,6 +33,7 @@ use sp_std::convert::TryInto;
 
 use orml_tokens;
 use orml_traits::MultiCurrency;
+use orml_tokens::BalanceLock;
 
 
 pub(crate) type MultiBalanceOf<T> =
@@ -305,6 +306,8 @@ decl_error! {
 		Disbanding,
 		/// 不在解散队列
 		NotDisbanding,
+		/// 群金额不足
+		RoomFreeAmountTooLow,
 }}
 
 
@@ -2024,11 +2027,12 @@ decl_event!(
 		 SetRoomPrivacy(u64, bool),
 		 DisbandRoom(u64, AccountId),
 		 CouncilRejectDisband(u64),
+
 	}
 );
 
 
-impl<T: Config> ListenHandler<u64, T::AccountId, DispatchError> for Module<T> {
+impl<T: Config> ListenHandler<u64, T::AccountId, DispatchError, u128> for Module<T> {
 	fn get_room_council(room_id: u64) -> Result<Vec<<T as frame_system::Config>::AccountId>, DispatchError> {
 		ensure!(!Self::is_disbanding(room_id)?, Error::<T>::Disbanding);
 		let room_info = Self::room_must_exists(room_id)?;
@@ -2053,6 +2057,40 @@ impl<T: Config> ListenHandler<u64, T::AccountId, DispatchError> for Module<T> {
 		let room_info = Self::room_must_exists(room_id)?;
 		let root = room_info.group_manager;
 		Ok(root)
+	}
+
+	/// 获取房间金额
+	fn get_room_free_amount(room_id: u64) -> u128 {
+		if let Some(room) = <AllRoom<T>>::get(room_id) {
+			let disband_rooms = <DisbandRooms<T>>::get();
+			if let Some(disband_time) = disband_rooms.get(&room_id) {
+				if Self::now() >= *disband_time {
+					return 0u128;
+				}
+			}
+
+			let free_amount = room.total_balances.saturating_sub(room.group_manager_balances);
+			free_amount.saturated_into::<u128>()
+			}
+		else {
+			return 0u128;
+		}
+
+	}
+
+	/// 减少群的金额
+	fn sub_room_free_amount(room_id: u64, amount: u128) -> Result<(), DispatchError>{
+		ensure!(!Self::is_disbanding(room_id)?, Error::<T>::Disbanding);
+		let mut room = Self::room_must_exists(room_id)?;
+		if room.total_balances.saturating_sub(room.group_manager_balances) >= amount.saturated_into::<BalanceOf<T>>() {
+			room.total_balances = room.total_balances - amount.saturated_into::<BalanceOf<T>>();
+			<AllRoom<T>>::insert(room_id, room);
+		}
+		else {
+			return Err(Error::<T>::RoomFreeAmountTooLow)?;
+		}
+		Ok(())
+
 	}
 }
 

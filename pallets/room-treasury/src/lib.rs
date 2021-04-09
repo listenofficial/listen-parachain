@@ -32,11 +32,6 @@ pub type NegativeImbalanceOf<T> =
 	<<T as pallet_listen::Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
 pub trait Config<I=DefaultInstance>: frame_system::Config + pallet_listen::Config {
-	/// The treasury's module id, used for deriving its sovereign account ID.
-	type ModuleId: Get<ModuleId>;
-
-	// /// The staking balance.
-	// type NativeCurrency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 
 	/// Origin from which approvals must come.
 	type ApproveOrigin: EnsureOrigin<Self::Origin>;
@@ -157,6 +152,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+
 		/// 提一个消费议案
 		#[weight = 10000]
 		pub fn propose_spend(
@@ -193,6 +189,7 @@ decl_module! {
 			Self::deposit_event(Event::<T, I>::Rejected(proposal_id, value));
 		}
 
+
 		/// 赞成议案（加入待执行队列)
 		#[weight = 10000]
 		pub fn approve_proposal(origin, room_id: RoomIndex, #[compact] proposal_id: ProposalIndex) {
@@ -208,7 +205,7 @@ decl_module! {
 		#[weight = 10000]
 		pub fn spend_fund(origin, room_id: RoomIndex) {
 			let who = ensure_signed(origin)?;
-			let mut proposal_ids = <Approvals>::get(room_id); //Error::<T>::RoomHaveNoProposal)?;
+			let mut proposal_ids = <Approvals>::get(room_id);
 			if proposal_ids.len() == 0 {
 				return Err(Error::<T, I>::RoomHaveNoProposal)?;
 			}

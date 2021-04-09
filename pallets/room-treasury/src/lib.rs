@@ -33,7 +33,7 @@ type BalanceOf<T> = <<T as pallet_listen::Config>::NativeCurrency as Currency<<T
 pub type NegativeImbalanceOf<T> =
 	<<T as pallet_listen::Config>::NativeCurrency as Currency<<T as frame_system::Config>::AccountId>>::NegativeImbalance;
 
-pub trait Config<I=DefaultInstance>: frame_system::Config + pallet_listen::Config {
+pub trait Config: frame_system::Config + pallet_listen::Config {
 
 	/// Origin from which approvals must come.
 	type ApproveOrigin: EnsureOrigin<Self::Origin>;
@@ -42,7 +42,7 @@ pub trait Config<I=DefaultInstance>: frame_system::Config + pallet_listen::Confi
 	type RejectOrigin: EnsureOrigin<Self::Origin>;
 
 	/// The overarching event type.
-	type Event: From<Event<Self, I>> + Into<<Self as frame_system::Config>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// Handler for the unbalanced decrease when slashing for a rejected proposal or bounty.
 	type OnSlash: OnUnbalanced<NegativeImbalanceOf<Self>>;
@@ -81,7 +81,7 @@ pub struct Proposal<AccountId, Balance> {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config<I>, I: Instance=DefaultInstance> as Treasury {
+	trait Store for Module<T: Config> as Treasury {
 		/// Number of proposals that have been made.
 		ProposalCount get(fn proposal_count): map hasher(identity) RoomIndex => ProposalIndex;
 
@@ -97,7 +97,7 @@ decl_storage! {
 }
 
 decl_event!(
-	pub enum Event<T, I=DefaultInstance>
+	pub enum Event<T>
 	where
 		Balance = BalanceOf<T>,
 		<T as frame_system::Config>::AccountId,
@@ -123,7 +123,7 @@ decl_event!(
 
 decl_error! {
 	/// Error for the treasury module.
-	pub enum Error for Module<T: Config<I>, I: Instance> {
+	pub enum Error for Module<T: Config> {
 		/// Proposer's balance is too low.
 		InsufficientProposersBalance,
 		/// No proposal or bounty at that index.
@@ -134,7 +134,7 @@ decl_error! {
 }
 
 decl_module! {
-	pub struct Module<T: Config<I>, I: Instance=DefaultInstance>
+	pub struct Module<T: Config>
 		for enum Call
 		where origin: T::Origin
 	{
@@ -151,7 +151,7 @@ decl_module! {
 		// /// The treasury's module id, used for deriving its sovereign account ID.
 		// const ModuleId: ModuleId = T::ModuleId::get();
 
-		type Error = Error<T, I>;
+		type Error = Error<T>;
 
 		fn deposit_event() = default;
 
@@ -169,11 +169,11 @@ decl_module! {
 
 			let bond = Self::calculate_bond(value);
 			T::NativeCurrency::reserve(&proposer, bond)
-				.map_err(|_| Error::<T, I>::InsufficientProposersBalance)?;
+				.map_err(|_| Error::<T>::InsufficientProposersBalance)?;
 
 			let c = Self::proposal_count(room_id);
-			<ProposalCount<I>>::insert(room_id, c + 1);
-			<Proposals<T, I>>::insert(room_id, c, Proposal { proposer, value, beneficiary, bond });
+			<ProposalCount>::insert(room_id, c + 1);
+			<Proposals<T>>::insert(room_id, c, Proposal { proposer, value, beneficiary, bond });
 
 			Self::deposit_event(RawEvent::Proposed(c));
 		}
@@ -184,12 +184,12 @@ decl_module! {
 		pub fn reject_proposal(origin, room_id: RoomIndex, #[compact] proposal_id: ProposalIndex) {
 			T::RejectOrigin::ensure_origin(origin)?;
 
-			let proposal = <Proposals<T, I>>::take(room_id, &proposal_id).ok_or(Error::<T, I>::InvalidIndex)?;
+			let proposal = <Proposals<T>>::take(room_id, &proposal_id).ok_or(Error::<T>::InvalidIndex)?;
 			let value = proposal.bond;
 			let imbalance = T::NativeCurrency::slash_reserved(&proposal.proposer, value).0;
 			T::OnSlash::on_unbalanced(imbalance);
 
-			Self::deposit_event(Event::<T, I>::Rejected(proposal_id, value));
+			Self::deposit_event(Event::<T>::Rejected(proposal_id, value));
 		}
 
 
@@ -198,8 +198,8 @@ decl_module! {
 		pub fn approve_proposal(origin, room_id: RoomIndex, #[compact] proposal_id: ProposalIndex) {
 			T::ApproveOrigin::ensure_origin(origin)?;
 
-			ensure!(<Proposals<T, I>>::contains_key(room_id, proposal_id), Error::<T, I>::InvalidIndex);
-			Approvals::<I>::mutate(room_id, |h| h.push(proposal_id));
+			ensure!(<Proposals<T>>::contains_key(room_id, proposal_id), Error::<T>::InvalidIndex);
+			<Approvals>::mutate(room_id, |h| h.push(proposal_id));
 
 		}
 
@@ -210,31 +210,31 @@ decl_module! {
 			let who = ensure_signed(origin)?;
 			let mut proposal_ids = <Approvals>::get(room_id);
 			if proposal_ids.len() == 0 {
-				return Err(Error::<T, I>::RoomHaveNoProposal)?;
+				return Err(Error::<T>::RoomHaveNoProposal)?;
 			}
 
 			for proposal_id in proposal_ids.clone().iter() {
-				if let Some(proposal) =  <Proposals<T, I>>::get(room_id, proposal_id) {
+				if let Some(proposal) =  <Proposals<T>>::get(room_id, proposal_id) {
 
 					if <pallet_listen::Module<T>>::sub_room_free_amount(room_id, proposal.value.saturated_into::<u128>()).is_ok() {
 						T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&proposal.beneficiary, proposal.value));
 						T::NativeCurrency::reserve(&proposal.proposer, proposal.bond);
 						proposal_ids.retain(|h| h != proposal_id);
-						<Proposals<T, I>>::remove(room_id, proposal_id);
+						<Proposals<T>>::remove(room_id, proposal_id);
 					}
 				}
 			}
 
 			<Approvals>::insert(room_id, proposal_ids);
 
-			Self::deposit_event(Event::<T, I>::SpendFund(who, room_id));
+			Self::deposit_event(Event::<T>::SpendFund(who, room_id));
 
 		}
 
 	}
 }
 
-impl<T: Config<I>, I: Instance> Module<T, I> {
+impl<T: Config> Module<T> {
 
 
 	fn calculate_bond(value: BalanceOf<T>) -> BalanceOf<T> {
@@ -244,9 +244,9 @@ impl<T: Config<I>, I: Instance> Module<T, I> {
 }
 
 
-impl<T: Config<I>, I: Instance> RoomTreasuryHandler<RoomIndex> for Module<T, I> {
+impl<T: Config> RoomTreasuryHandler<RoomIndex> for Module<T> {
 	fn remove_room_info(room_id: RoomIndex) {
-		<Proposals<T, I>>::remove_prefix(room_id);
+		<Proposals<T>>::remove_prefix(room_id);
 		<Approvals>::remove(room_id);
 	}
 }

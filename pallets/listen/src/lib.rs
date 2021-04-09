@@ -98,6 +98,9 @@ pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config {
 	/// 一半群议员
 	type HalfRoomCouncilOrigin: EnsureOrigin<Self::Origin>;
 
+	/// 解散延迟时间
+	type DisbandDelayTime: Get<Self::BlockNumber>;
+
 }
 
 
@@ -173,6 +176,9 @@ decl_storage! {
 
 		/// 服务器id（用来领取红包)
 		pub ServerId get(fn server_id): Option<T::AccountId>;
+
+		/// 群解散
+		pub DisbandRooms get(fn disband_rooms): BTreeMap<u64, T::BlockNumber>;
 
 	}
 }
@@ -295,6 +301,10 @@ decl_error! {
 		PrivacyNotChange,
 		/// 是群主
 		RoomManager,
+		/// 解散中(投票通过并且已经到解散时间)
+		Disbanding,
+		/// 不在解散队列
+		NotDisbanding,
 }}
 
 
@@ -335,6 +345,7 @@ decl_module! {
 		/// 设置用于空投的多签
 		#[weight = 10_000]
 		fn set_multisig(origin, who: Vec<T::AccountId>, threshould: u16){
+
 			let server_id = ensure_signed(origin)?;
 
 			let len = who.len();
@@ -404,13 +415,6 @@ decl_module! {
 		fn create_room(origin, max_members: GroupMaxMembers, group_type: Vec<u8>, join_cost: BalanceOf<T>, is_private: bool ) -> DispatchResult{
 			let who = ensure_signed(origin)?;
 
-			// let pledge = None;
-			//
-			// let pledge = match pledge {
-			// 	Some(x) => x,
-			// 	None => <BalanceOf<T>>::from(0u32),
-			// };
-
 			let create_cost = Self::create_cost();
 
 			let create_payment: Balance = match max_members.clone(){
@@ -433,9 +437,6 @@ decl_module! {
 			// 群主把创建群的费用直接打到国库
 			let to = Self::treasury_id();
 			T::NativeCurrency::transfer(&who, &to, create_payment.clone(), KeepAlive)?;
-
-			// //群主把抵押的费用转到自己的抵押账户中
-			// T::NativeCurrency::repatriate_reserved(&who, &who, pledge, Status::Reserved)?;
 
 			let group_id = <GroupId>::get();
 			let group_info = GroupInfo{
@@ -501,10 +502,6 @@ decl_module! {
 				return Err(Error::<T>::NotRewardTime)?;
 			}
 			else {
-				// // 领取抵押币的奖励
-				// let pledge = room_info.pledge_amount.clone();
-				// let reward = T::PledgeRate::get() * pledge;
-				// T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, reward));
 
 				// 领取群消费资产产生的利息
 				let consume_total_amount = Self::get_room_consume_amount(room_info.clone());
@@ -533,6 +530,8 @@ decl_module! {
 
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::OriginErr)?;
 
+			ensure!(!Self::is_disbanding(group_id)?, Error::<T>::Disbanding);
+
 			/// 群存在
 			let mut room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 
@@ -550,6 +549,8 @@ decl_module! {
 			/// invite 被邀请人
 			/// payment_type 付费类型
 			let inviter = ensure_signed(origin)?;
+
+			ensure!(!Self::is_disbanding(group_id)?, Error::<T>::Disbanding);
 
 			let room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 
@@ -606,6 +607,8 @@ decl_module! {
 
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::OriginErr)?;
 
+			ensure!(!Self::is_disbanding(room_id)?, Error::<T>::Disbanding);
+
 			/// 群存在
 			let mut room = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
 
@@ -626,6 +629,8 @@ decl_module! {
 		fn set_max_number_of_room_members(origin, group_id: u64, new_max: GroupMaxMembers) {
 
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::OriginErr)?;
+
+			ensure!(!Self::is_disbanding(group_id)?, Error::<T>::Disbanding);
 
 			/// 群存在
 			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
@@ -686,6 +691,8 @@ decl_module! {
 		fn buy_props_in_room(origin, group_id: u64, props: AllProps) -> DispatchResult{
 			let who = ensure_signed(origin)?;
 
+			ensure!(!Self::is_disbanding(group_id)?, Error::<T>::Disbanding);
+
 			/// 自己在群里
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
 
@@ -737,6 +744,8 @@ decl_module! {
 		#[weight = 10_000]
 		fn buy_audio_in_room(origin, group_id: u64, audio: Audio) -> DispatchResult{
 			let who = ensure_signed(origin)?;
+
+			ensure!(!Self::is_disbanding(group_id)?, Error::<T>::Disbanding);
 
 			// 自己在群里
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
@@ -813,6 +822,8 @@ decl_module! {
 			/// 需要群主权限或是过半的群议员同意
 			T::RoomRootOrHalfCouncilOrigin::try_origin(origin).map_err(|_| Error::<T>::OriginErr)?;
 
+			ensure!(!Self::is_disbanding(group_id)?, Error::<T>::Disbanding);
+
 			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 
 			let black_list = room.black_list.clone();
@@ -835,6 +846,8 @@ decl_module! {
 		fn remove_someone(origin, group_id: u64, who: T::AccountId) -> DispatchResult {
 
 			T::RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin::try_origin(origin.clone()).map_err(|_| Error::<T>::OriginErr)?;
+
+			ensure!(!Self::is_disbanding(group_id)?, Error::<T>::Disbanding);
 
 			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			// 不能踢群主
@@ -906,6 +919,8 @@ decl_module! {
 		fn ask_for_disband_room(origin, group_id: u64) -> DispatchResult{
 
 			let who = ensure_signed(origin)?;
+
+			ensure!(!Self::is_disbanding(group_id)?, Error::<T>::Disbanding);
 
 			// 这个人是群成员
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
@@ -1017,6 +1032,8 @@ decl_module! {
 		#[weight = 10_000]
 		fn vote(origin, group_id: u64, vote: VoteType) -> DispatchResult{
 			let who = ensure_signed(origin)?;
+
+			ensure!(!Self::is_disbanding(group_id)?, Error::<T>::Disbanding);
 
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
 
@@ -1165,6 +1182,8 @@ decl_module! {
 		pub fn send_redpacket_in_room(origin, group_id: u64, currency_id: CurrencyIdOf<T>, lucky_man_number: u32, amount: BalanceOf<T>) -> DispatchResult{
 			let who = ensure_signed(origin)?;
 
+			ensure!(!Self::is_disbanding(group_id)?, Error::<T>::Disbanding);
+
 			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
 
 			// 金额太小不能发红包
@@ -1214,6 +1233,8 @@ decl_module! {
 		fn exit(origin, group_id: u64) {
 
 			let user = ensure_signed(origin)?;
+
+			ensure!(!Self::is_disbanding(group_id)?, Error::<T>::Disbanding);
 
 			// 自己要在群里
 			ensure!(Self::is_in_room(group_id, user.clone())?, Error::<T>::NotInRoom);
@@ -1265,11 +1286,47 @@ decl_module! {
 		}
 
 
+		/// 解散群（任何人都可以进行的操作, 前提是该群处于解散队列并且时间到)
+		#[weight = 10_000]
+		fn disband_room(origin, group_id: u64) {
+			let who = ensure_signed(origin)?;
+			ensure!(Self::is_disbanding(group_id)?, Error::<T>::NotDisbanding);
+			let room = Self::room_must_exists(group_id)?;
+			Self::disband(room);
+			Self::deposit_event(RawEvent::DisbandRoom(group_id, who));
+		}
+
+
+		/// 群议会拒绝解散群
+		#[weight = 10_000]
+		fn council_reject_disband(origin, group_id: u64) {
+			T::HalfRoomCouncilOrigin::try_origin(origin).map_err(|_| Error::<T>::OriginErr)?;
+			let disband_rooms = <DisbandRooms<T>>::get();
+			if let Some(disband_time) = disband_rooms.get(&group_id) {
+
+				if Self::now() > *disband_time {
+					<DisbandRooms<T>>::mutate(|h| h.remove(&group_id));
+				}
+				else {
+					return Err(Error::<T>::Disbanding)?;
+				}
+			}
+
+			else {
+				return Err(Error::<T>::NotDisbanding)?;
+			}
+
+	        Self::deposit_event(RawEvent::CouncilRejectDisband(group_id));
+
+		}
+
+
 		/// 在群里收红包(需要基金会权限 比如基金会指定某个人可以领取多少)
 		#[weight = 10_000]
 		pub fn get_redpacket_in_room(origin, amount_vec: Vec<(T::AccountId, BalanceOf<T>)>, group_id: u64, redpacket_id: u128) {
 
 			let mul = ensure_signed(origin)?;
+
 			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
 
 			/// 是多签账号才给执行
@@ -1613,7 +1670,7 @@ impl <T: Config> Module <T> {
 
 	/// 判断人是否在群里
 	fn is_in_room(group_id: u64, who: T::AccountId) -> result::Result<bool, DispatchError> {
-		let _ = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+		Self::room_must_exists(group_id)?;
 		let listeners = <ListenersOfRoom<T>>::get(group_id);
 
 		if listeners.clone().len() == 0 {
@@ -1626,6 +1683,27 @@ impl <T: Config> Module <T> {
 		else {
 			Ok(false)
 		}
+	}
+
+	/// 判断群是否存在
+	fn room_must_exists(group_id: u64) -> result::Result<GroupInfo<T::AccountId, BalanceOf<T>,
+			AllProps, Audio, T::BlockNumber, GroupMaxMembers, DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>, T::Moment>, DispatchError> {
+		let room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+		Ok(room)
+	}
+
+
+	/// 是否处于解散中（投票已经通过)
+	fn is_disbanding(group_id: u64) -> result::Result<bool, DispatchError> {
+		Self::room_must_exists(group_id)?;
+		let disband_rooms = <DisbandRooms<T>>::get();
+		if let Some(disband_time) = disband_rooms.get(&group_id) {
+			if Self::now() >= *disband_time {
+				return Ok(true);
+			}
+		}
+		Ok(false)
+
 	}
 
 
@@ -1707,52 +1785,7 @@ impl <T: Config> Module <T> {
 			// 如果是通过 那么就删除房间信息跟投票信息 添加投票结果信息
 			if vote_result.1 == Pass{
 
-				// 先解决红包(剩余红包归还给发红包的人)
-				Self::remove_redpacket_by_room_id(group_id, true);
-
-				/// fixme 更新AllSessionIndex
-				let cur_session = Self::get_session_index();
-				let mut session_indexs = <AllSessionIndex>::get();
-				if session_indexs.is_empty(){
-					session_indexs.push(cur_session)
-				}
-				else{
-					let len = session_indexs.clone().len();
-					// 获取最后一个数据
-					let last = session_indexs.swap_remove(len - 1);
-					if last != cur_session{
-						session_indexs.push(last);
-					}
-					session_indexs.push(cur_session);
-				}
-				<AllSessionIndex>::put(session_indexs);
-
-				let total_reward = room.total_balances.clone();
-				let manager_reward = room.group_manager_balances.clone();
-				// let pledge_amount = room.pledge_amount.clone();
-				// 把属于群主的那部分给群主
-				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&room.group_manager, manager_reward));
-				// // 把群主的抵押币转到自由余额
-				// T::NativeCurrency::unreserve(&room.group_manager, pledge_amount);
-
-				// 群主领完剩下的金额
-				let listener_reward = total_reward.clone() - manager_reward.clone();
-
-				let session_index = Self::get_session_index();
-				let per_man_reward = listener_reward.clone() / <BalanceOf<T>>::from(room.now_members_number);
-				let room_rewad_info = RoomRewardInfo{
-					total_person: room.now_members_number.clone(),
-					already_get_count: 0u32,
-					total_reward: listener_reward.clone(),
-					already_get_reward: <BalanceOf<T>>::from(0u32),
-					per_man_reward: per_man_reward.clone(),
-				};
-
-				<InfoOfDisbandRoom<T>>::insert(session_index, group_id, room_rewad_info);
-
-				<AllRoom<T>>::remove(group_id);
-
-				T::CollectiveHandler::remove_room_collective_info(group_id);
+				<DisbandRooms<T>>::mutate(|h| h.insert(group_id, now + T::DisbandDelayTime::get()));
 
 			}
 
@@ -1849,6 +1882,66 @@ impl <T: Config> Module <T> {
 	}
 
 
+	/// 解散房间
+	fn disband(room: GroupInfo<T::AccountId, BalanceOf<T>, AllProps, Audio,
+			T::BlockNumber, GroupMaxMembers,
+			DisbandVote<BTreeSet<T::AccountId>,
+			BalanceOf<T>>, T::Moment>) {
+
+		let group_id = room.group_id;
+		// 先解决红包(剩余红包归还给发红包的人)
+		// todo 红包剩余金额如果不是群解散 则自己去领取
+		Self::remove_redpacket_by_room_id(group_id, true);
+
+		/// fixme 更新AllSessionIndex
+		let cur_session = Self::get_session_index();
+		let mut session_indexs = <AllSessionIndex>::get();
+		if session_indexs.is_empty(){
+			session_indexs.push(cur_session)
+		}
+
+		else{
+			let len = session_indexs.clone().len();
+			// 获取最后一个数据
+			let last = session_indexs.swap_remove(len - 1);
+			if last != cur_session{
+				session_indexs.push(last);
+			}
+			session_indexs.push(cur_session);
+		}
+
+		<AllSessionIndex>::put(session_indexs);
+
+		let total_reward = room.total_balances.clone();
+		let manager_reward = room.group_manager_balances.clone();
+		// let pledge_amount = room.pledge_amount.clone();
+		// 把属于群主的那部分给群主
+		T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&room.group_manager, manager_reward));
+		// // 把群主的抵押币转到自由余额
+		// T::NativeCurrency::unreserve(&room.group_manager, pledge_amount);
+
+		// 群主领完剩下的金额
+		let listener_reward = total_reward.clone() - manager_reward.clone();
+
+		let session_index = Self::get_session_index();
+		let per_man_reward = listener_reward.clone() / <BalanceOf<T>>::from(room.now_members_number);
+		let room_rewad_info = RoomRewardInfo{
+			total_person: room.now_members_number.clone(),
+			already_get_count: 0u32,
+			total_reward: listener_reward.clone(),
+			already_get_reward: <BalanceOf<T>>::from(0u32),
+			per_man_reward: per_man_reward.clone(),
+		};
+
+		<InfoOfDisbandRoom<T>>::insert(session_index, group_id, room_rewad_info);
+
+		<AllRoom<T>>::remove(group_id);
+
+		T::CollectiveHandler::remove_room_collective_info(group_id);
+
+	}
+
+
 	/// 删除过期的解散群产生的信息
 	fn remove_expire_disband_info() {
 		let session_indexs = <AllSessionIndex>::get();
@@ -1929,13 +2022,16 @@ decl_event!(
 		 SetMaxNumberOfRoomMembers(AccountId, u32),
 		 RemoveSomeoneFromBlackList(AccountId, u64),
 		 SetRoomPrivacy(u64, bool),
+		 DisbandRoom(u64, AccountId),
+		 CouncilRejectDisband(u64),
 	}
 );
 
 
 impl<T: Config> ListenHandler<u64, T::AccountId, DispatchError> for Module<T> {
 	fn get_room_council(room_id: u64) -> Result<Vec<<T as frame_system::Config>::AccountId>, DispatchError> {
-		let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
+		ensure!(!Self::is_disbanding(room_id)?, Error::<T>::Disbanding);
+		let room_info = Self::room_must_exists(room_id)?;
 		let council_and_amount = room_info.council;
 		let mut council = vec![];
 		for i in council_and_amount.iter(){
@@ -1946,13 +2042,15 @@ impl<T: Config> ListenHandler<u64, T::AccountId, DispatchError> for Module<T> {
 	}
 
 	fn get_prime(room_id: u64) -> Result<Option<<T as frame_system::Config>::AccountId>, DispatchError> {
-		let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
+		ensure!(!Self::is_disbanding(room_id)?, Error::<T>::Disbanding);
+		let room_info = Self::room_must_exists(room_id)?;
 		let prime = room_info.prime;
 		Ok(prime)
 	}
 
 	fn get_root(room_id: u64) -> Result<<T as frame_system::Config>::AccountId, DispatchError> {
-		let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
+		ensure!(!Self::is_disbanding(room_id)?, Error::<T>::Disbanding);
+		let room_info = Self::room_must_exists(room_id)?;
 		let root = room_info.group_manager;
 		Ok(root)
 	}

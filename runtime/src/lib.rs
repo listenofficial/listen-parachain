@@ -416,6 +416,7 @@ parameter_types! {
 	pub const ProtectTime: BlockNumber = 5 * MINUTES;
 	pub const RedPackExpire: BlockNumber = 30 * MINUTES;
 	pub const RewardDuration: BlockNumber = 30 * MINUTES;
+	pub const DisbandDelayTime: BlockNumber = 30 * MINUTES;
 	pub const PledgeRate: Percent = Percent::from_percent(5);
 	pub const ManagerProportion: Percent = Percent::from_percent(1);
 	pub const RoomProportion: Percent = Percent::from_percent(1);
@@ -471,6 +472,7 @@ impl listen::Config for Runtime{
 	type RoomRootOrHalfCouncilOrigin = RoomRootOrHalfRoomCouncil;
 	type RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin = RoomRootOrHalfRoomCouncilOrSomeRoomCouncil;
 	type HalfRoomCouncilOrigin = HalfRoomCouncil;
+	type DisbandDelayTime = DisbandDelayTime;
 
 }
 

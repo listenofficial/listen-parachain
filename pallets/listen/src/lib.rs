@@ -66,8 +66,6 @@ pub trait Config: system::Config + timestamp::Config + pallet_multisig::Config {
 
 	type RewardDuration: Get<Self::BlockNumber>;
 
-	type PledgeRate: Get<Percent>;
-
 	type ManagerProportion: Get<Percent>;
 
 	type RoomProportion: Get<Percent>;
@@ -329,8 +327,6 @@ decl_module! {
 		const RedPackExpire: T::BlockNumber = T::RedPackExpire::get();
 		/// 奖励群主的周期(多久奖励群主一次)
 		const RewardDuration: T::BlockNumber = T::RewardDuration::get();
-		/// 群主抵押的利率
-		const PledgeRate: Percent = T::PledgeRate::get();
 		/// 群主领取的群资产的比例（按照周期领取)
 		const ManagerProportion: Percent = T::ManagerProportion::get();
 		/// 给群生成新资产的比例（按照周期)
@@ -1229,9 +1225,6 @@ decl_module! {
 			<RedPacketId>::put(now_id);
 			<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket);
 
-			// // 顺便处理过期红包
-			// Self::remove_redpacket_by_room_id(group_id, false);
-
 			Self::deposit_event(RawEvent::SendRedPocket(group_id, redpacket_id, amount_u128));
 
 			Ok(())
@@ -1419,9 +1412,6 @@ decl_module! {
 				total_amount += *amount;
 
 			}
-
-			// // 顺便处理过期红包
-			// Self::remove_redpacket_by_room_id(group_id, false);
 
 			Self::deposit_event(RawEvent::GetRedPocket(group_id, redpacket_id, total_amount));
 
@@ -1911,7 +1901,6 @@ impl <T: Config> Module <T> {
 
 		let group_id = room.group_id;
 		// 先解决红包(剩余红包归还给发红包的人)
-		// todo 红包剩余金额如果不是群解散 则自己去领取
 		Self::remove_redpacket_by_room_id(group_id, true);
 
 		/// fixme 更新AllSessionIndex

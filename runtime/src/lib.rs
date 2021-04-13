@@ -435,7 +435,6 @@ parameter_types! {
 	pub const RedPackExpire: BlockNumber = 30 * MINUTES;
 	pub const RewardDuration: BlockNumber = 30 * MINUTES;
 	pub const DisbandDelayTime: BlockNumber = 30 * MINUTES;
-	pub const PledgeRate: Percent = Percent::from_percent(5);
 	pub const ManagerProportion: Percent = Percent::from_percent(1);
 	pub const RoomProportion: Percent = Percent::from_percent(1);
 	pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
@@ -476,7 +475,6 @@ impl listen::Config for Runtime{
 	type RedPacketMinAmount = RedPacketMinAmount;
 	type RedPackExpire = RedPackExpire;
 	type RewardDuration = RewardDuration;
-	type PledgeRate = PledgeRate;
 	type ManagerProportion = ManagerProportion;
 	type RoomProportion = RoomProportion;
 	type ModuleId = TreasuryModuleId;

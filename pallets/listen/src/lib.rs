@@ -498,7 +498,7 @@ decl_module! {
 			let last_block = room_info.last_block_of_get_the_reward.clone();
 			let now = Self::now();
 			let time = now.saturating_sub(last_block);
-			let duration_num = time.checked_div(&T::RewardDuration::get()).ok_or(Error::<T>::DivZero)?;
+			let mut duration_num = time.checked_div(&T::RewardDuration::get()).ok_or(Error::<T>::DivZero)?;
 
 			/// 计算真实的领取奖励的区块
 			let real_this_block = last_block.saturating_add(duration_num * T::RewardDuration::get());
@@ -508,16 +508,22 @@ decl_module! {
 			}
 			else {
 
+				if duration_num > 5u32.saturated_into::<T::BlockNumber>() {
+					duration_num = 5u32.saturated_into::<T::BlockNumber>();
+				}
+
+				let duration_num = duration_num.saturated_into::<u32>();
+
 				// 领取群消费资产产生的利息
 				let consume_total_amount = Self::get_room_consume_amount(room_info.clone());
 
 				// 群主从群资产中拿走部分
-				let manager_proportion_amount = T::ManagerProportion::get() * consume_total_amount;
+				let manager_proportion_amount = T::ManagerProportion::get() * consume_total_amount * duration_num.saturated_into::<BalanceOf<T>>();
 				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, manager_proportion_amount));
 				room_info.total_balances = room_info.total_balances.saturating_sub(manager_proportion_amount);
 
 				// 群资产新增加部分
-				let room_add = T::RoomProportion::get() * consume_total_amount;
+				let room_add = T::RoomProportion::get() * consume_total_amount * duration_num.saturated_into::<BalanceOf<T>>();
 				room_info.total_balances = room_info.total_balances.clone().saturating_add(room_add);
 
 				// 更新群信息
@@ -1223,13 +1229,23 @@ decl_module! {
 			<RedPacketId>::put(now_id);
 			<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket);
 
-			// 顺便处理过期红包
-			Self::remove_redpacket_by_room_id(group_id, false);
+			// // 顺便处理过期红包
+			// Self::remove_redpacket_by_room_id(group_id, false);
 
 			Self::deposit_event(RawEvent::SendRedPocket(group_id, redpacket_id, amount_u128));
 
 			Ok(())
 
+		}
+
+
+		/// 归还过期红包
+		#[weight = 10_000]
+		fn return_expired_redpacket(origin, group_id: u64) {
+			let who = ensure_signed(origin)?;
+			let _ = Self::room_must_exists(group_id)?;
+			Self::remove_redpacket_by_room_id(group_id, false);
+			Self::deposit_event(RawEvent::ReturnExpiredRedpacket(group_id));
 		}
 
 
@@ -1404,8 +1420,8 @@ decl_module! {
 
 			}
 
-			// 顺便处理过期红包
-			Self::remove_redpacket_by_room_id(group_id, false);
+			// // 顺便处理过期红包
+			// Self::remove_redpacket_by_room_id(group_id, false);
 
 			Self::deposit_event(RawEvent::GetRedPocket(group_id, redpacket_id, total_amount));
 
@@ -2030,6 +2046,7 @@ decl_event!(
 		 SetRoomPrivacy(u64, bool),
 		 DisbandRoom(u64, AccountId),
 		 CouncilRejectDisband(u64),
+		 ReturnExpiredRedpacket(u64),
 
 	}
 );

@@ -1,5 +1,6 @@
-# LISTEN Parachain
-listen parachain repo.
+# <center>LISTEN Parachain</center>
+## Introduce
+Listen is a decentralized social platform.
 ***
 ## Getting Started
 Follow these steps to get started with the Parachain Node.

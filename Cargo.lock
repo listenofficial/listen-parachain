@@ -4768,7 +4768,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-dao"
-version = "3.0.0"
+version = "1.0.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5321,7 +5321,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-vesting"
-version = "3.0.0"
+version = "1.0.0"
 dependencies = [
  "enumflags2",
  "frame-benchmarking",
@@ -5373,7 +5373,7 @@ dependencies = [
 
 [[package]]
 name = "pallet_currencies"
-version = "3.0.0"
+version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5440,7 +5440,7 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
- "pallet-vesting 3.0.0",
+ "pallet-vesting 1.0.0",
  "pallet-xcm",
  "pallet_currencies",
  "parachain-info",

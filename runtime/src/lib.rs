@@ -6,9 +6,9 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-pub use listen_primitives::{*, AssetId, Index,
+pub use listen_primitives::{
 	constants::{currency::*, time::*},
-	Amount,
+	Amount, AssetId, Index, *,
 };
 use pallet_currencies::BasicCurrencyAdapter;
 use smallvec::smallvec;

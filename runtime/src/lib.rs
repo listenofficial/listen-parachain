@@ -6,8 +6,10 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use listen_constants::currency::DOLLARS;
-use listen_primitives::Amount;
+use listen_primitives::{
+	constants::{currency::*, time::*},
+	Amount,
+};
 use pallet_currencies::BasicCurrencyAdapter;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -201,33 +203,8 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	transaction_version: 1,
 };
 
-/// This determines the average expected block time that we are targeting.
-/// Blocks will be produced at a minimum duration defined by `SLOT_DURATION`.
-/// `SLOT_DURATION` is picked up by `pallet_timestamp` which is in turn picked
-/// up by `pallet_aura` to implement `fn slot_duration()`.
-///
-/// Change this to adjust the block time.
-pub const MILLISECS_PER_BLOCK: u64 = 12000;
-
-// NOTE: Currently it is not possible to change the slot duration after the chain has started.
-//       Attempting to do so will brick block production.
-pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
-
-// Time is measured by number of blocks.
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
-
-// Unit = the base number of indivisible units for balances
-pub const UNIT: Balance = 1_000_000_000_000;
-pub const MILLIUNIT: Balance = 1_000_000_000;
-pub const MICROUNIT: Balance = 1_000_000;
-
 /// The existential deposit. Set to 1/10 of the Rococo Relay Chain.
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLIUNIT;
-
-// 1 in 4 blocks (on average, not counting collisions) will be primary babe blocks.
-pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
 
 /// We assume that ~5% of the block weight is consumed by `on_initialize` handlers. This is
 /// used to limit the maximal weight of a single extrinsic.
@@ -671,8 +648,8 @@ impl pallet_dao::Config<RoomCollective> for Runtime {
 
 parameter_types! {
 	// 空投奖励 0.99个token
-	pub const AirDropAmount: Balance = 1 * DOLLARS * 99 / 100;
-	pub const RedPacketMinAmount: Balance = 1 * DOLLARS;
+	pub const AirDropAmount: Balance = 1 * UNIT * 99 / 100;
+	pub const RedPacketMinAmount: Balance = 1 * UNIT;
 	pub const VoteExpire: BlockNumber = 1 * DAYS;
 	pub const ProtectTime: BlockNumber = 30 * MINUTES;
 	pub const RedPackExpire: BlockNumber = 1 * DAYS;
@@ -722,9 +699,9 @@ impl pallet_listen::Config for Runtime {
 
 parameter_types! {
 	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
-	pub const DepositBase: Balance = 1 * DOLLARS;
+	pub const DepositBase: Balance = 1 * UNIT;
 	// Additional storage item size of 32 bytes.
-	pub const DepositFactor: Balance = 1 * DOLLARS;
+	pub const DepositFactor: Balance = 1 * UNIT;
 	pub const MaxSignatories: u16 = 100;
 }
 
@@ -756,7 +733,7 @@ impl pallet_currencies::Config for Runtime {
 }
 
 parameter_types! {
-	pub const RoomProposalBondMinimum: Balance = 1 * DOLLARS;
+	pub const RoomProposalBondMinimum: Balance = 1 * UNIT;
 	pub const RoomSpendPeriod: BlockNumber = 20 * MINUTES;
 	pub const RoomProposalBond: Permill = Permill::from_percent(10);
 }

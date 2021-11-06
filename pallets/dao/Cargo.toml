@@ -21,8 +21,10 @@ sp-runtime = { default-features = false, git = 'https://github.com/paritytech/su
 frame-benchmarking = { default-features = false, git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', optional = true }
 frame-support = { default-features = false, git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 frame-system = { default-features = false, git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
-listen-traits = { path = '../../traits', default-features = false, version = '1.0.0' }
 pallet-timestamp = { default-features = false, git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+
+# local
+listen-primitives = { path = "../../primitives", default-features = false }
 
 
 [dev-dependencies]
@@ -40,8 +42,7 @@ std = [
 	"frame-support/std",
 	"sp-runtime/std",
 	"frame-system/std",
-#	"log/std",
-	"listen-traits/std",
+	"listen-primitives/std",
 	"pallet-timestamp/std",
 	"scale-info/std",
 ]

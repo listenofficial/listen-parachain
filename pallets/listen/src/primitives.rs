@@ -5,8 +5,7 @@ use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::{prelude::*, result};
 
-use listen_constants::currency::*;
-use listen_primitives::Balance;
+use listen_primitives::{constants::currency::*, Balance};
 
 pub type SessionIndex = u32;
 pub type RoomId = u64;
@@ -24,11 +23,11 @@ pub struct CreateCost {
 impl Default for CreateCost {
 	fn default() -> Self {
 		Self {
-			Ten: 1 * DOLLARS,
-			Hundred: 10 * DOLLARS,
-			FiveHundred: 30 * DOLLARS,
-			TenThousand: 200 * DOLLARS,
-			NoLimit: 1000 * DOLLARS,
+			Ten: 1 * UNIT,
+			Hundred: 10 * UNIT,
+			FiveHundred: 30 * UNIT,
+			TenThousand: 200 * UNIT,
+			NoLimit: 1000 * UNIT,
 		}
 	}
 }
@@ -224,8 +223,7 @@ pub struct PersonInfo<AllProps, Audio, Balance, RewardStatus> {
 pub mod listen_time {
 
 	pub mod remove {
-		use listen_constants::time::*;
-		use listen_primitives::BlockNumber;
+		use listen_primitives::{constants::time::*, BlockNumber};
 		pub const Ten: BlockNumber = 7 * DAYS;
 		pub const Hundred: BlockNumber = 1 * DAYS;
 		pub const FiveHundred: BlockNumber = 12 * HOURS;
@@ -234,8 +232,7 @@ pub mod listen_time {
 	}
 
 	pub mod disband {
-		use listen_constants::time::*;
-		use listen_primitives::BlockNumber;
+		use listen_primitives::{constants::time::*, BlockNumber};
 		pub const Ten: BlockNumber = 1 * DAYS;
 		pub const FiveHundred: BlockNumber = 15 * DAYS;
 		pub const Hundred: BlockNumber = 7 * DAYS;

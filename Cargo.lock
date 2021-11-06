@@ -3823,10 +3823,64 @@ dependencies = [
 ]
 
 [[package]]
-name = "listen-constants"
-version = "1.0.0"
+name = "listen-parachain-node"
+version = "0.1.0"
 dependencies = [
- "listen-primitives",
+ "cumulus-client-cli",
+ "cumulus-client-collator",
+ "cumulus-client-consensus-aura",
+ "cumulus-client-consensus-common",
+ "cumulus-client-network",
+ "cumulus-client-service",
+ "cumulus-primitives-core",
+ "cumulus-primitives-parachain-inherent",
+ "derive_more",
+ "frame-benchmarking",
+ "frame-benchmarking-cli",
+ "hex-literal",
+ "jsonrpc-core",
+ "log",
+ "pallet-transaction-payment-rpc",
+ "parachain-template-runtime",
+ "parity-scale-codec",
+ "polkadot-cli",
+ "polkadot-parachain",
+ "polkadot-primitives",
+ "polkadot-service",
+ "polkadot-test-service",
+ "sc-basic-authorship",
+ "sc-chain-spec",
+ "sc-cli",
+ "sc-client-api",
+ "sc-consensus",
+ "sc-executor",
+ "sc-keystore",
+ "sc-network",
+ "sc-rpc",
+ "sc-rpc-api",
+ "sc-service",
+ "sc-telemetry",
+ "sc-tracing",
+ "sc-transaction-pool",
+ "sc-transaction-pool-api",
+ "serde",
+ "sp-api",
+ "sp-block-builder",
+ "sp-blockchain",
+ "sp-consensus",
+ "sp-consensus-aura",
+ "sp-core",
+ "sp-inherents",
+ "sp-keystore",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-timestamp",
+ "sp-transaction-pool",
+ "structopt",
+ "substrate-build-script-utils",
+ "substrate-frame-rpc-system",
+ "substrate-prometheus-endpoint",
 ]
 
 [[package]]
@@ -3841,13 +3895,6 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-serializer",
- "sp-std",
-]
-
-[[package]]
-name = "listen-traits"
-version = "1.0.0"
-dependencies = [
  "sp-std",
 ]
 
@@ -4727,7 +4774,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal",
- "listen-traits",
+ "listen-primitives",
  "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -4872,9 +4919,7 @@ version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "listen-constants",
  "listen-primitives",
- "listen-traits",
  "orml-tokens",
  "orml-traits",
  "pallet-multisig",
@@ -5051,7 +5096,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
- "listen-traits",
+ "listen-primitives",
  "pallet-balances",
  "pallet-listen",
  "parity-scale-codec",
@@ -5358,67 +5403,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "parachain-template-node"
-version = "0.1.0"
-dependencies = [
- "cumulus-client-cli",
- "cumulus-client-collator",
- "cumulus-client-consensus-aura",
- "cumulus-client-consensus-common",
- "cumulus-client-network",
- "cumulus-client-service",
- "cumulus-primitives-core",
- "cumulus-primitives-parachain-inherent",
- "derive_more",
- "frame-benchmarking",
- "frame-benchmarking-cli",
- "hex-literal",
- "jsonrpc-core",
- "log",
- "pallet-transaction-payment-rpc",
- "parachain-template-runtime",
- "parity-scale-codec",
- "polkadot-cli",
- "polkadot-parachain",
- "polkadot-primitives",
- "polkadot-service",
- "polkadot-test-service",
- "sc-basic-authorship",
- "sc-chain-spec",
- "sc-cli",
- "sc-client-api",
- "sc-consensus",
- "sc-executor",
- "sc-keystore",
- "sc-network",
- "sc-rpc",
- "sc-rpc-api",
- "sc-service",
- "sc-telemetry",
- "sc-tracing",
- "sc-transaction-pool",
- "sc-transaction-pool-api",
- "serde",
- "sp-api",
- "sp-block-builder",
- "sp-blockchain",
- "sp-consensus",
- "sp-consensus-aura",
- "sp-core",
- "sp-inherents",
- "sp-keystore",
- "sp-offchain",
- "sp-runtime",
- "sp-session",
- "sp-timestamp",
- "sp-transaction-pool",
- "structopt",
- "substrate-build-script-utils",
- "substrate-frame-rpc-system",
- "substrate-prometheus-endpoint",
-]
-
-[[package]]
 name = "parachain-template-runtime"
 version = "0.1.0"
 dependencies = [
@@ -5436,7 +5420,6 @@ dependencies = [
  "frame-system",
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
- "listen-constants",
  "listen-primitives",
  "log",
  "orml-tokens",

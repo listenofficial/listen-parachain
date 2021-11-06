@@ -36,10 +36,12 @@ pub use frame_support::{
 	StorageMap, StorageValue,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
-use listen_constants::{currency::*, time::*};
-use listen_primitives::*;
+use listen_primitives::{
+	constants::{currency::*, time::*},
+	traits::{CollectiveHandler, ListenHandler, RoomTreasuryHandler},
+	*,
+};
 use listen_time::*;
-use listen_traits::{CollectiveHandler, ListenHandler, RoomTreasuryHandler};
 use orml_tokens::{self, BalanceLock};
 use orml_traits::MultiCurrency;
 use pallet_multisig;
@@ -146,14 +148,14 @@ decl_storage! {
 			NoLimit: T::BlockNumber::from(disband::NoLimit),
 		};
 		pub PropsPayment get(fn props_payment): PropsPrice<BalanceOf<T>> = PropsPrice{
-			picture: <BalanceOf<T> as TryFrom::<Balance>>::try_from(Percent::from_percent(3) * DOLLARS).ok().unwrap(),
-			text: <BalanceOf<T> as TryFrom::<Balance>>::try_from(Percent::from_percent(1) * DOLLARS).ok().unwrap(),
-			video: <BalanceOf<T> as TryFrom::<Balance>>::try_from(Percent::from_percent(3) * DOLLARS).ok().unwrap(),
+			picture: <BalanceOf<T> as TryFrom::<Balance>>::try_from(Percent::from_percent(3) * UNIT).ok().unwrap(),
+			text: <BalanceOf<T> as TryFrom::<Balance>>::try_from(Percent::from_percent(1) * UNIT).ok().unwrap(),
+			video: <BalanceOf<T> as TryFrom::<Balance>>::try_from(Percent::from_percent(3) * UNIT).ok().unwrap(),
 		};
 		pub AudioPayment get(fn audio_payment): AudioPrice<BalanceOf<T>> = AudioPrice{
-			ten_seconds: <BalanceOf<T> as TryFrom::<Balance>>::try_from(Percent::from_percent(1) * DOLLARS).ok().unwrap(),
-			thirty_seconds: <BalanceOf<T> as TryFrom::<Balance>>::try_from(Percent::from_percent(2) * DOLLARS).ok().unwrap(),
-			minutes: <BalanceOf<T> as TryFrom::<Balance>>::try_from(Percent::from_percent(2) * DOLLARS).ok().unwrap(),
+			ten_seconds: <BalanceOf<T> as TryFrom::<Balance>>::try_from(Percent::from_percent(1) * UNIT).ok().unwrap(),
+			thirty_seconds: <BalanceOf<T> as TryFrom::<Balance>>::try_from(Percent::from_percent(2) * UNIT).ok().unwrap(),
+			minutes: <BalanceOf<T> as TryFrom::<Balance>>::try_from(Percent::from_percent(2) * UNIT).ok().unwrap(),
 		};
 		pub ServerId get(fn server_id): Option<T::AccountId>;
 		/// The maximum number of sessions a user can get reward.

@@ -32,7 +32,7 @@ use frame_support::{
 	PalletId, StorageDoubleMap,
 };
 use frame_system::ensure_signed;
-use listen_traits::{ListenHandler, RoomTreasuryHandler};
+use listen_primitives::traits::{ListenHandler, RoomTreasuryHandler};
 use pallet_listen;
 use scale_info::TypeInfo;
 #[cfg(feature = "std")]

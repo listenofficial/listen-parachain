@@ -28,7 +28,7 @@ use frame_support::{
 	weights::{DispatchClass, GetDispatchInfo, Pays, Weight},
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
-use listen_traits::{CollectiveHandler, ListenHandler};
+use listen_primitives::traits::{CollectiveHandler, ListenHandler};
 use pallet_timestamp;
 use scale_info::TypeInfo;
 use sp_core::u32_trait::Value as U32;

@@ -29,7 +29,6 @@ pallet-nicks = { path = "../pallets/nicks", default-features = false }
 pallet-room-treasury = { path = "../pallets/room-treasury", default-features = false }
 pallet-vesting = { path = "../pallets/vesting", default-features = false }
 listen-primitives = { path = "../primitives", default-features = false }
-listen-constants = { path = "../constants", default-features = false }
 
 # orml
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false }
@@ -149,7 +148,6 @@ std = [
 	"orml-traits/std",
 	"orml-tokens/std",
 	"listen-primitives/std",
-	"listen-constants/std",
 	"pallet-multisig/std",
 ]
 

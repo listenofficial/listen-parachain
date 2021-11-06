@@ -20,10 +20,6 @@
 #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// #![cfg_attr(not(feature = "std"), no_std)]
-// #![allow(clippy::unnecessary_cast)]
-// #![allow(clippy::upper_case_acronyms)]
-
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
@@ -33,6 +29,9 @@ use sp_runtime::{
 use codec::{Decode, Encode};
 use sp_runtime::RuntimeDebug;
 use sp_std::convert::TryInto;
+
+pub mod constants;
+pub mod traits;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -50,6 +49,8 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 
 /// The type for looking up accounts. We don't expect more than 4 billion of them.
 pub type AccountIndex = u32;
+
+pub type AssetId = u32;
 
 // /// currency_id
 // pub type CurrencyId = u32;
@@ -80,69 +81,3 @@ pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
-
-// /// App-specific crypto used for reporting equivocation/misbehavior in BABE and
-// /// GRANDPA. Any rewards for misbehavior reporting will be paid out to this
-// /// account.
-// pub mod report {
-// 	use super::{Signature, Verify};
-// 	use frame_system::offchain::AppCrypto;
-// 	use sp_core::crypto::{key_types, KeyTypeId};
-//
-// 	/// Key type for the reporting module. Used for reporting BABE and GRANDPA
-// 	/// equivocations.
-// 	// #[cfg(feature = "std")]
-// 	pub const KEY_TYPE: KeyTypeId = key_types::REPORTING;
-//
-// 	mod app {
-// 		// #[cfg(feature = "std")]
-// 		use sp_application_crypto::{app_crypto, sr25519};
-// 		app_crypto!(sr25519, super::KEY_TYPE);
-// 	}
-//
-// 	/// Identity of the equivocation/misbehavior reporter.
-// 	// #[cfg(feature = "std")]
-// 	pub type ReporterId = app::Public;
-//
-// 	/// An `AppCrypto` type to allow submitting signed transactions using the reporting
-// 	/// application key as signer.
-// 	pub struct ReporterAppCrypto;
-//
-// 	impl AppCrypto<<Signature as Verify>::Signer, Signature> for ReporterAppCrypto {
-// 		type RuntimeAppPublic = ReporterId;
-// 		type GenericSignature = sp_core::sr25519::Signature;
-// 		type GenericPublic = sp_core::sr25519::Public;
-// 	}
-// }
-
-// #[derive(PartialEq, Encode, Decode, RuntimeDebug, Clone)]
-// pub enum Tokens {
-// 	LT,
-// 	KSM,
-// 	DOT,
-// 	BTC,
-// 	ACA,
-// 	Other(CurrencyId),
-// }
-//
-// impl Default for Tokens {
-// 	fn default() -> Self {
-// 		Self::LT
-// 	}
-// }
-//
-// impl TryInto<CurrencyId> for Tokens {
-// 	type Error = &'static str;
-//
-// 	fn try_into(self) -> Result<CurrencyId, Self::Error> {
-// 		match self {
-// 			Tokens::LT => Ok(0 as CurrencyId),
-// 			Tokens::BTC => Ok(1 as CurrencyId),
-// 			Tokens::DOT => Ok(2 as CurrencyId),
-// 			Tokens::KSM => Ok(3 as CurrencyId),
-// 			Tokens::ACA => Ok(4 as CurrencyId),
-// 			Tokens::Other(x) => Ok(x as CurrencyId),
-// 			_ => Err("unexpect token"),
-// 	}
-// }
-// }

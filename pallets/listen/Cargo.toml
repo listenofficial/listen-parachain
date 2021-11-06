@@ -21,9 +21,7 @@ pallet-timestamp = { default-features = false,  git = 'https://github.com/parity
 pallet-treasury = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 
 #local
-listen-constants = { path = '../../constants', default-features = false, version = '1.0.0' }
 listen-primitives = { path = '../../primitives', default-features = false, version = '1.0.0' }
-listen-traits = { path = '../../traits', default-features = false, version = '1.0.0' }
 
 #orml
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false }
@@ -46,11 +44,8 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     "codec/std",
-    "listen-constants/std",
     "listen-primitives/std",
     "orml-tokens/std",
-    "orml-traits/std",
-    "listen-traits/std",
 	"scale-info/std",
 
 ]

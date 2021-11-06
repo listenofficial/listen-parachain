@@ -32,7 +32,7 @@ fn load_spec(
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"Parachain Collator Template".into()
+		"Listen Collator".into()
 	}
 
 	fn impl_version() -> String {
@@ -54,7 +54,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn support_url() -> String {
-		"https://github.com/paritytech/cumulus/issues/new".into()
+		"https://github.com/listenofficial/listen-parachain/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
@@ -72,7 +72,7 @@ impl SubstrateCli for Cli {
 
 impl SubstrateCli for RelayChainCli {
 	fn impl_name() -> String {
-		"Parachain Collator Template".into()
+		"Listen Collator".into()
 	}
 
 	fn impl_version() -> String {
@@ -92,7 +92,7 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn support_url() -> String {
-		"https://github.com/paritytech/cumulus/issues/new".into()
+		"https://github.com/listenofficial/listen-parachain/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {

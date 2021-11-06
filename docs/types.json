@@ -1,0 +1,240 @@
+{
+  "AccountInfo": {
+    "nonce": "Index",
+    "consumers": "RefCount",
+    "providers": "RefCount",
+    "sufficients": "RefCount",
+    "data": "SubAccountData"
+  },
+  "RoomIndex": "u64",
+  "CurrencyIdOf": "CurrencyId",
+  "TokenSymbol": {
+    "_enum": [
+      "LT",
+      "DOT",
+      "ACA",
+      "BTC",
+      "KSM",
+      "PHA",
+      "PLM"
+    ]
+  },
+  "AccountData": {
+    "free": "Balance",
+    "reserved": "Balance",
+    "frozen": "Balance"
+  },
+  "SubAccountData": {
+    "free": "Balance",
+    "reserved": "Balance",
+    "misc_frozen": "Balance",
+    "fee_frozen": "Balance"
+  },
+  "EvmAddress": "Hash",
+  "CurrencyId": "u32",
+  "NativeBalanceOf": "Balance",
+  "MultiBalanceOf": "Balance",
+  "Amount": "Balance",
+  "AllProps": {
+    "picture": "u32",
+    "text": "u32",
+    "video": "u32"
+  },
+  "CreateCost": {
+    "Ten": "Balance",
+    "Hundred": "Balance",
+    "FiveHundred": "Balance",
+    "TenThousand": "Balance",
+    "NoLimit": "Balance"
+  },
+  "AssetChangeableParams": {
+    "_enum": {
+      "MintPledge": "Balance",
+      "BurnPledge": "Balance",
+      "MintMinAmount": "Balance",
+      "BurnMinAmount": "Balance",
+      "MintExistsHowLong": "AssetTime",
+      "MintPeriod": "AssetTime",
+      "BurnExistsHowLong": "AssetTime",
+      "MaxLenOfMint": "u32",
+      "MaxLenOfBurn": "u32"
+    }
+  },
+  "MintVote": {
+    "start_block": "BlockNumber",
+    "pass_block": "Option<BlockNumber>",
+    "mint_block": "Option<BlockNumber>",
+    "mint_man": "AccountId",
+    "asset_id": "AssetId",
+    "amount": "Balance",
+    "approve_list": "Vec<AccountId>",
+    "reject_list": "Vec<AccountId>",
+    "technical_reject": "Option<AccountId>"
+  },
+  "AssetVote": {
+    "_enum": [
+      "Approve",
+      "Reject"
+    ]
+  },
+  "BurnInfo": {
+    "start_block": "BlockNumber",
+    "burn_man": "AccountId",
+    "asset_id": "AssetId",
+    "amount": "Balance",
+    "foundation_tag_man": "Option<AccountId>"
+  },
+  "RoomRewardInfo": {
+    "total_person": "u32",
+    "already_get_count": "u32",
+    "total_reward": "Balance",
+    "already_get_reward": "Balance",
+    "per_man_reward": "Balance"
+  },
+  "RedPacket": {
+    "id": "u128",
+    "currency_id": "CurrencyId",
+    "boss": "AccountId",
+    "total": "Balance",
+    "lucky_man_number": "u32",
+    "already_get_man": "BTreeSet<AccountId>",
+    "min_amount_of_per_man": "Balance",
+    "already_get_amount": "Balance",
+    "end_time": "BlockNumber"
+  },
+  "Audio": {
+    "ten_seconds": "u32",
+    "thirty_seconds": "u32",
+    "minutes": "u32"
+  },
+  "DisbandVote": {
+    "approve_man": "BTreeSet<AccountId>",
+    "reject_man": "BTreeSet<AccountId>",
+    "approve_total_amount": "Balance",
+    "reject_total_amount": "Balance"
+  },
+  "GroupMaxMembers": {
+    "_enum": [
+      "Ten",
+      "Hundred",
+      "FiveHundred",
+      "TenThousand",
+      "NoLimit"
+    ]
+  },
+  "ListenVote": {
+    "_enum": [
+      "Approve",
+      "Reject"
+    ]
+  },
+  "RewardStatus": {
+    "_enum": [
+      "Get",
+      "NotGet",
+      "Expire"
+    ]
+  },
+  "ListenDaoVotes": {
+    "index": "u32",
+    "reason": "Option<Vec<u8>>",
+    "threshold": "u32",
+    "ayes": "Vec<AccountId>",
+    "nays": "Vec<AccountId>",
+    "end": "BlockNumber"
+  },
+  "GroupInfo": {
+    "group_id": "u64",
+    "create_payment": "Balance",
+    "last_block_of_get_the_reward": "BlockNumber",
+    "group_manager": "AccountId",
+    "prime": "Option<AccountId>",
+    "max_members": "GroupMaxMembers",
+    "group_type": "Vec<u8>",
+    "join_cost": "Balance",
+    "props": "AllProps",
+    "audio": "Audio",
+    "total_balances": "Balance",
+    "group_manager_balances": "Balance",
+    "now_members_number": "u32",
+    "last_remove_someone_block": "BlockNumber",
+    "disband_vote_end_block": "BlockNumber",
+    "disband_vote": "DisbandVote",
+    "create_time": "Moment",
+    "create_block": "BlockNumber",
+    "consume": "Vec<(AccountId, Balance)>",
+    "council": "Vec<(AccountId, Balance)>",
+    "black_list": "Vec<AccountId>",
+    "is_private": "bool"
+  },
+  "PersonInfo": {
+    "props": "AllProps",
+    "audio": "Audio",
+    "cost": "Balance",
+    "rooms": "Vec<(u64, RewardStatus)>"
+  },
+  "RoomRawOrigin": {
+    "Members": "(u32, u32)",
+    "Member": "(u32, AccountId)"
+  },
+  "AudioPrice": {
+    "ten_seconds": "Balance",
+    "thirty_seconds": "Balance",
+    "minutes": "Balance"
+  },
+  "RoomTreasuryProposal": {
+    "proposer": "AccountId",
+    "value": "Balance",
+    "beneficiary": "AccountId",
+    "bond": "Balance",
+    "start_spend_time": "Option<BlockNumber>"
+  },
+  "PropsPrice": {
+    "picture": "Balance",
+    "text": "Balance",
+    "video": "Balance"
+  },
+  "DisbandTime": {
+    "Ten": "BlockNumber",
+    "Hundred": "BlockNumber",
+    "FiveHundred": "BlockNumber",
+    "TenThousand": "BlockNumber",
+    "NoLimit": "BlockNumber"
+  },
+  "RemoveTime": {
+    "Ten": "BlockNumber",
+    "Hundred": "BlockNumber",
+    "FiveHundred": "BlockNumber",
+    "TenThousand": "BlockNumber",
+    "NoLimit": "BlockNumber"
+  },
+  "VestingInfo": {
+    "locked": "Balance",
+    "unlock_amount_of_per_duration": "Balance",
+    "block_number_of_per_duration": "BlockNumber",
+    "starting_block": "BlockNumber"
+  },
+  "XCurrencyId": {
+    "chain_id": "ChainId",
+    "currency_id": "Vec<u8>"
+  },
+  "ChainId": {
+    "_enum": {
+      "RelayChain": null,
+      "ParaChain": "ParaId"
+    }
+  },
+  "ParaId": "u32",
+  "LookupSource": "MultiAddress",
+  "Address": "MultiAddress",
+  "ListenAssetMetadata": {
+    "name": "Vec<u8>",
+    "symbol": "Vec<u8>",
+    "decimals": "u8"
+  },
+  "ListenAssetInfo": {
+    "owner": "LookupSource",
+    "metadata": "ListenAssetMetadata"
+  }
+
+}

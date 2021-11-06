@@ -1,0 +1,17 @@
+[workspace]
+members = [
+	"node",
+	"runtime",
+	"pallets/currencies",
+	"pallets/nicks",
+	"pallets/vesting",
+	"pallets/room-treasury",
+	"traits",
+	"constants",
+	"primitives",
+	"pallets/listen",
+	"pallets/dao",
+]
+
+[profile.release]
+panic = "unwind"

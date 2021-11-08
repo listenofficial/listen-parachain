@@ -1,3 +1,5 @@
+// Forked from https://github.com/paritytech/substrate/blob/master/frame/nicks/src/lib.rs
+
 // Copyright 2021 LISTEN Developer.
 // This file is part of LISTEN
 
@@ -26,134 +28,99 @@ use scale_info::TypeInfo;
 use sp_runtime::traits::{AccountIdConversion, StaticLookup, Zero};
 use sp_std::prelude::*;
 
-type BalanceOf<T> =
-	<<T as Config>::NicksCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-type NegativeImbalanceOf<T> = <<T as Config>::NicksCurrency as Currency<
-	<T as frame_system::Config>::AccountId,
->>::NegativeImbalance;
+#[frame_support::pallet]
+pub mod pallet {
+	use super::*;
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
 
-pub trait Config: system::Config {
-	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
+	type BalanceOf<T> =
+		<<T as Config>::NicksCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	type NegativeImbalanceOf<T> = <<T as Config>::NicksCurrency as Currency<
+		<T as frame_system::Config>::AccountId,
+	>>::NegativeImbalance;
 
-	/// The currency trait.
-	type NicksCurrency: ReservableCurrency<Self::AccountId>;
+	#[pallet::config]
+	#[pallet::disable_frame_system_supertrait_check]
+	pub trait Config: frame_system::Config {
+		/// The overarching event type.
+		type Event: From<Event<Self>>
+			+ Into<<Self as system::Config>::Event>
+			+ IsType<<Self as frame_system::Config>::Event>;
 
-	type NameFee: Get<BalanceOf<Self>>; // 1 token
+		/// The currency trait.
+		type NicksCurrency: ReservableCurrency<Self::AccountId>;
 
-	/// What to do with slashed funds.
-	type Slashed: OnUnbalanced<NegativeImbalanceOf<Self>>;
+		/// What to do with slashed funds.
+		type Slashed: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
-	/// The origin which may forcibly set or remove a name. Root can always do this.
-	type ForceOrigin: EnsureOrigin<Self::Origin>;
+		/// The origin which may forcibly set or remove a name. Root can always do this.
+		type ForceOrigin: EnsureOrigin<Self::Origin>;
 
-	/// The minimum length a name may be.
-	type MinLength: Get<usize>;
+		#[pallet::constant]
+		type NameFee: Get<BalanceOf<Self>>;
 
-	/// The maximum length a name may be.
-	type MaxLength: Get<usize>;
+		#[pallet::constant]
+		type MinLength: Get<u32>;
 
-	type TreasuryPalletId: Get<PalletId>;
-}
+		#[pallet::constant]
+		type MaxLength: Get<u32>;
 
-decl_storage! {
-	trait Store for Module<T: Config> as Sudo {
-
-		pub NameOf: map hasher(blake2_128_concat) T::AccountId => Option<(Vec<u8>, BalanceOf<T>)>;
-		pub AccountIdOf: map hasher(blake2_128_concat) Vec<u8> => T::AccountId;
+		#[pallet::constant]
+		type TreasuryPalletId: Get<PalletId>;
 	}
-}
 
-decl_error! {
-/// Error for the elections module.
-pub enum Error for Module<T: Config> {
-	NameTooShort,
-	NameTooLong,
-	ExistsName,
-	NotExistsName,
-	BabOrigin,
-	AlreadySetName,
+	#[pallet::pallet]
+	#[pallet::generate_store(pub (super) trait Store)]
+	pub struct Pallet<T>(_);
 
-}
-}
-
-decl_event!(
-	pub enum Event<T>
-	where
-		AccountId = <T as system::Config>::AccountId,
-		Balance = BalanceOf<T>,
-	{
-		/// A name was set.
-		NameSet(AccountId),
-		/// A name was forcibly set.
-		NameForced(AccountId),
-		/// A name was changed.
-		NameChanged(AccountId),
-		/// A name was cleared, and the given balance returned.
-		NameCleared(AccountId, Balance),
-		/// A name was removed and the given balance slashed.
-		NameKilled(AccountId),
-	}
-);
-
-decl_module! {
-	// Simple declaration of the `Module` type. Lets the macro know what it's working on.
-	#[derive(TypeInfo)]
-	pub struct Module<T: Config> for enum Call where origin: T::Origin {
-
-		type Error = Error<T>;
-		fn deposit_event() = default;
-
-		const NameFee: BalanceOf<T> = T::NameFee::get();
-
-		/// The minimum length a name may be.
-		const MinLength: u32 = T::MinLength::get() as u32;
-
-		/// The maximum length a name may be.
-		const MaxLength: u32 = T::MaxLength::get() as u32;
-
-		/// User set their nicks name.
-		///
-		/// Notice: the name cannot be changed after being set.
-		#[weight = 50_000]
-		fn set_name(origin, name: Vec<u8>) {
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		#[pallet::weight(50_000)]
+		pub fn set_name(origin: OriginFor<T>, name: Vec<u8>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-			ensure!(name.len() >= T::MinLength::get(), Error::<T>::NameTooShort);
-			ensure!(name.len() <= T::MaxLength::get(), Error::<T>::NameTooLong);
+			ensure!(name.len() as u32 >= T::MinLength::get(), Error::<T>::NameTooShort);
+			ensure!(name.len() as u32 <= T::MaxLength::get(), Error::<T>::NameTooLong);
 
-			ensure!(!<AccountIdOf<T>>::contains_key(name.clone()),Error::<T>::ExistsName);
+			ensure!(!<AccountIdOf<T>>::contains_key(name.clone()), Error::<T>::ExistsName);
 			ensure!(!<NameOf<T>>::contains_key(&sender), Error::<T>::AlreadySetName);
 
 			let Fee = T::NameFee::get();
-			T::NicksCurrency::transfer(&sender, &Self::treasury_account_id(), Fee.clone(), ExistenceRequirement::KeepAlive)?;
-			Self::deposit_event(RawEvent::NameChanged(sender.clone()));
+			T::NicksCurrency::transfer(
+				&sender,
+				&Self::treasury_account_id(),
+				Fee.clone(),
+				ExistenceRequirement::KeepAlive,
+			)?;
+			Self::deposit_event(Event::NameChanged(sender.clone()));
 
 			<NameOf<T>>::insert(&sender, (name.clone(), Fee));
 			<AccountIdOf<T>>::insert(name.clone(), sender.clone());
+			Ok(())
 		}
 
-
-		/// The council members kill the nicks name of the user.
-		///
-		/// It will return your fee.
-		#[weight = 70_000]
-		fn kill_name(origin, target: <T::Lookup as StaticLookup>::Source) {
+		#[pallet::weight(50_000)]
+		pub fn kill_name(
+			origin: OriginFor<T>,
+			target: <T::Lookup as StaticLookup>::Source,
+		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin)?;
 
 			let target = T::Lookup::lookup(target)?;
 			let account_info = <NameOf<T>>::take(&target).ok_or(Error::<T>::NotExistsName)?;
 			<AccountIdOf<T>>::remove(account_info.0);
 
-			Self::deposit_event(RawEvent::NameKilled(target));
+			Self::deposit_event(Event::NameKilled(target));
+			Ok(())
 		}
 
-
-		/// The council members force set a nicks name for the user.
-		///
-		/// It overrides your previous Settings
-		#[weight = 70_000]
-		fn force_name(origin, target: <T::Lookup as StaticLookup>::Source, name: Vec<u8>) {
+		#[pallet::weight(50_000)]
+		pub fn force_name(
+			origin: OriginFor<T>,
+			target: <T::Lookup as StaticLookup>::Source,
+			name: Vec<u8>,
+		) -> DispatchResult {
 			T::ForceOrigin::ensure_origin(origin)?;
 
 			let target = T::Lookup::lookup(target)?;
@@ -161,27 +128,67 @@ decl_module! {
 			<NameOf<T>>::insert(&target, (name.clone(), deposit));
 
 			if let old_id = <AccountIdOf<T>>::get(name.clone()) {
-					if old_id.clone() != target.clone(){
-						if let Some(account_info) = <NameOf<T>>::get(&old_id){
+				if old_id.clone() != target.clone() {
+					if let Some(account_info) = <NameOf<T>>::get(&old_id) {
 						let old_name = account_info.clone().0;
 						let old_fee = account_info.clone().1;
 						<AccountIdOf<T>>::remove(old_name.clone());
 
-						let _ = T::NicksCurrency::transfer(&Self::treasury_account_id(), &old_id, old_fee.clone(), ExistenceRequirement::KeepAlive);
-						 <NameOf<T>>::remove(&old_id);
-			}
+						let _ = T::NicksCurrency::transfer(
+							&Self::treasury_account_id(),
+							&old_id,
+							old_fee.clone(),
+							ExistenceRequirement::KeepAlive,
+						);
+						<NameOf<T>>::remove(&old_id);
 					}
-
+				}
 			}
 			<AccountIdOf<T>>::insert(name.clone(), target.clone());
 
-			Self::deposit_event(RawEvent::NameForced(target));
+			Self::deposit_event(Event::NameForced(target));
+			Ok(())
 		}
 	}
-}
 
-impl<T: Config> Module<T> {
-	pub fn treasury_account_id() -> T::AccountId {
-		T::TreasuryPalletId::get().into_account()
+	impl<T: Config> Pallet<T> {
+		pub fn treasury_account_id() -> T::AccountId {
+			T::TreasuryPalletId::get().into_account()
+		}
 	}
+
+	#[pallet::error]
+	pub enum Error<T> {
+		NameTooShort,
+		NameTooLong,
+		ExistsName,
+		NotExistsName,
+		BabOrigin,
+		AlreadySetName,
+	}
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		/// A name was set.
+		NameSet(T::AccountId),
+		/// A name was forcibly set.
+		NameForced(T::AccountId),
+		/// A name was changed.
+		NameChanged(T::AccountId),
+		/// A name was cleared, and the given balance returned.
+		NameCleared(T::AccountId, BalanceOf<T>),
+		/// A name was removed and the given balance slashed.
+		NameKilled(T::AccountId),
+	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn name_of)]
+	pub type NameOf<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, (Vec<u8>, BalanceOf<T>), OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn account_id_of)]
+	pub type AccountIdOf<T: Config> =
+		StorageMap<_, Blake2_128Concat, Vec<u8>, T::AccountId, ValueQuery>;
 }

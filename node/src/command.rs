@@ -6,8 +6,8 @@ use crate::{
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
+use listen_runtime::{Block, RuntimeApi};
 use log::info;
-use parachain_template_runtime::{Block, RuntimeApi};
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
@@ -66,7 +66,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		&parachain_template_runtime::VERSION
+		&listen_runtime::VERSION
 	}
 }
 

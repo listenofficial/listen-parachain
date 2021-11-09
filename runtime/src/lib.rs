@@ -67,9 +67,6 @@ use xcm_builder::{
 };
 use xcm_executor::{Config, XcmExecutor};
 
-/// Import the template pallet.
-pub use pallet_template;
-
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
 
@@ -567,11 +564,6 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
-/// Configure the pallet template in pallets/template.
-impl pallet_template::Config for Runtime {
-	type Event = Event;
-}
-
 parameter_type_with_key! {
 	pub ExistentialDeposits: |_currency_id: u32| -> Balance {
 		Zero::zero()
@@ -758,8 +750,7 @@ construct_runtime!(
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 32,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
 
-		// Template
-		TemplatePallet: pallet_template::{Pallet, Call, Storage, Event<T>}  = 40,
+		// local
 		Tokens: orml_tokens::{Pallet, Config<T>, Storage, Event<T>} = 41,
 		Dao: pallet_dao::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>} = 42,
 		Listen: pallet_listen::{Pallet, Storage, Call, Event<T>} = 43,

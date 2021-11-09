@@ -20,7 +20,7 @@ name = "listen-collator"
 path = "src/main.rs"
 
 [features]
-runtime-benchmarks = ["parachain-template-runtime/runtime-benchmarks"]
+runtime-benchmarks = ["listen-runtime/runtime-benchmarks"]
 
 [dependencies]
 derive_more = "0.99.2"
@@ -34,7 +34,7 @@ hex-literal = "0.3.1"
 jsonrpc-core = "18.0.0"
 
 # Local Dependencies
-parachain-template-runtime = { path = "../runtime" }
+listen-runtime = { path = "../runtime" }
 
 # Substrate Dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }

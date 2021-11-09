@@ -3929,12 +3929,12 @@ dependencies = [
  "pallet-multisig",
  "pallet-nicks 1.0.0",
  "pallet-randomness-collective-flip",
- "pallet-room-treasury",
  "pallet-session",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-treasury 1.0.0",
  "pallet-vesting 1.0.0",
  "pallet-xcm",
  "pallet_currencies",
@@ -4785,7 +4785,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
- "pallet-treasury",
+ "pallet-treasury 4.0.0-dev",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
@@ -4989,7 +4989,7 @@ dependencies = [
  "orml-traits",
  "pallet-multisig",
  "pallet-timestamp",
- "pallet-treasury",
+ "pallet-treasury 4.0.0-dev",
  "parity-scale-codec",
  "scale-info",
  "sp-runtime",
@@ -5154,27 +5154,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-room-treasury"
-version = "1.0.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "impl-trait-for-tuples",
- "listen-primitives",
- "pallet-balances",
- "pallet-listen",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "sp-storage",
-]
-
-[[package]]
 name = "pallet-scheduler"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
@@ -5283,7 +5262,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
- "pallet-treasury",
+ "pallet-treasury 4.0.0-dev",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5336,6 +5315,27 @@ dependencies = [
  "parity-scale-codec",
  "sp-api",
  "sp-runtime",
+]
+
+[[package]]
+name = "pallet-treasury"
+version = "1.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "impl-trait-for-tuples",
+ "listen-primitives",
+ "pallet-balances",
+ "pallet-listen",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
 ]
 
 [[package]]
@@ -6582,7 +6582,7 @@ dependencies = [
  "pallet-tips",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
- "pallet-treasury",
+ "pallet-treasury 4.0.0-dev",
  "pallet-utility",
  "pallet-vesting 4.0.0-dev",
  "parity-scale-codec",
@@ -6635,7 +6635,7 @@ dependencies = [
  "pallet-staking",
  "pallet-timestamp",
  "pallet-transaction-payment",
- "pallet-treasury",
+ "pallet-treasury 4.0.0-dev",
  "pallet-vesting 4.0.0-dev",
  "parity-scale-codec",
  "polkadot-primitives",

@@ -706,7 +706,7 @@ parameter_types! {
 	pub const RoomProposalBond: Permill = Permill::from_percent(10);
 }
 
-impl pallet_room_treasury::Config for Runtime {
+impl pallet_treasury::Config for Runtime {
 	type Event = Event;
 	type ApproveOrigin = HalfRoomCouncil;
 	type RejectOrigin = HalfRoomCouncil;
@@ -755,7 +755,7 @@ construct_runtime!(
 		Dao: pallet_dao::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>} = 42,
 		Listen: pallet_listen::{Pallet, Storage, Call, Event<T>} = 43,
 		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage} = 44,
-		RoomTreasury: pallet_room_treasury::{Pallet, Storage, Call, Event<T>} = 45,
+		RoomTreasury: pallet_treasury::{Pallet, Storage, Call, Event<T>} = 45,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 46,
 
 	}

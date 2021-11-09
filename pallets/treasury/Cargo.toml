@@ -1,5 +1,5 @@
 [package]
-name = "pallet-room-treasury"
+name = "pallet-treasury"
 version = "1.0.0"
 authors = ["LISTEN TEAM"]
 edition = "2018"

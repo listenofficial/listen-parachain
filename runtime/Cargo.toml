@@ -25,7 +25,7 @@ pallet_currencies = { path = "../pallets/currencies", default-features = false }
 pallet-dao = { path = "../pallets/dao", default-features = false }
 pallet-listen = { path = "../pallets/listen", default-features = false }
 pallet-nicks = { path = "../pallets/nicks", default-features = false }
-pallet-room-treasury = { path = "../pallets/room-treasury", default-features = false }
+pallet-treasury = { path = "../pallets/treasury", default-features = false }
 pallet-vesting = { path = "../pallets/vesting", default-features = false }
 listen-primitives = { path = "../primitives", default-features = false }
 
@@ -141,7 +141,7 @@ std = [
 	"pallet-dao/std",
 	"pallet-listen/std",
 	"pallet-nicks/std",
-	"pallet-room-treasury/std",
+	"pallet-treasury/std",
 	"pallet-vesting/std",
 	"orml-traits/std",
 	"orml-tokens/std",

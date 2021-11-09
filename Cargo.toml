@@ -5,10 +5,10 @@ members = [
 	"pallets/currencies",
 	"pallets/nicks",
 	"pallets/vesting",
-	"pallets/room-treasury",
 	"primitives",
 	"pallets/listen",
 	"pallets/dao",
+	"pallets/treasury",
 ]
 
 [profile.release]

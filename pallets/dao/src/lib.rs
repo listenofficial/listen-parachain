@@ -18,6 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![recursion_limit = "128"]
 
+pub use crate::pallet::*;
 use frame_support::{
 	codec::{Decode, Encode},
 	decl_error, decl_event, decl_module, decl_storage,
@@ -42,7 +43,6 @@ use sp_std::{
 	prelude::*,
 	result,
 };
-use crate::pallet::*;
 pub use weights::WeightInfo;
 
 pub mod weights;
@@ -108,6 +108,7 @@ impl DefaultVote for MoreThanMajorityThenPrimeDefaultVote {
 
 /// Origin for the collective module.
 #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, TypeInfo)]
+#[scale_info(skip_type_params(I))]
 pub enum RoomRawOrigin<AccountId, I> {
 	/// It has been condoned by a given number of members of the collective from a given total.
 	Members(MemberCount, MemberCount),
@@ -199,6 +200,10 @@ pub mod pallet {
 		Closed(T::Hash, MemberCount, MemberCount),
 	}
 
+	/// Origin for the collective pallet.
+	#[pallet::origin]
+	pub type Origin<T, I = ()> = RoomRawOrigin<<T as frame_system::Config>::AccountId, I>;
+
 	#[pallet::storage]
 	#[pallet::getter(fn proposals)]
 	pub type Proposals<T: Config<I>, I: 'static = ()> =
@@ -253,12 +258,12 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
-
 		#[pallet::weight(50_000)]
-		pub fn execute(origin: OriginFor<T>,
+		pub fn execute(
+			origin: OriginFor<T>,
 			room_id: RoomIndex,
 			proposal: Box<<T as Config<I>>::Proposal>,
-			#[pallet::compact] length_bound: u32
+			#[pallet::compact] length_bound: u32,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -272,19 +277,21 @@ pub mod pallet {
 			let proposal_hash = T::Hashing::hash_of(&proposal);
 			let result = proposal.dispatch(RoomRawOrigin::Member(room_id, who).into());
 
-			Self::deposit_event(
-				Event::MemberExecuted(proposal_hash, result.map(|_| ()).map_err(|e| e.error))
-			);
+			Self::deposit_event(Event::MemberExecuted(
+				proposal_hash,
+				result.map(|_| ()).map_err(|e| e.error),
+			));
 			Ok(())
 		}
 
 		#[pallet::weight(50_000)]
-		pub fn propose(origin: OriginFor<T>,
+		pub fn propose(
+			origin: OriginFor<T>,
 			room_id: RoomIndex,
 			#[pallet::compact] threshold: MemberCount,
 			proposal: Box<<T as Config<I>>::Proposal>,
 			reason: Option<Vec<u8>>,
-			#[pallet::compact] length_bound: u32
+			#[pallet::compact] length_bound: u32,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -295,31 +302,43 @@ pub mod pallet {
 			ensure!(proposal_len <= length_bound as usize, Error::<T, I>::WrongProposalLength);
 
 			let proposal_hash = T::Hashing::hash_of(&proposal);
-			ensure!(!<ProposalOf<T, I>>::contains_key(room_id, proposal_hash), Error::<T, I>::DuplicateProposal);
+			ensure!(
+				!<ProposalOf<T, I>>::contains_key(room_id, proposal_hash),
+				Error::<T, I>::DuplicateProposal
+			);
 
 			if threshold < 2 {
 				let seats = members.len() as MemberCount;
 				let result = proposal.dispatch(RoomRawOrigin::Members(1, seats).into());
-				Self::deposit_event(
-					Event::Executed(proposal_hash, result.map(|_| ()).map_err(|e| e.error))
-				);
+				Self::deposit_event(Event::Executed(
+					proposal_hash,
+					result.map(|_| ()).map_err(|e| e.error),
+				));
 				Ok(())
-
 			} else {
-				let active_proposals =
-					<Proposals<T, I>>::try_mutate(room_id, |proposals| -> Result<usize, DispatchError> {
+				let active_proposals = <Proposals<T, I>>::try_mutate(
+					room_id,
+					|proposals| -> Result<usize, DispatchError> {
 						proposals.push(proposal_hash);
 						ensure!(
 							proposals.len() <= T::MaxProposals::get() as usize,
 							Error::<T, I>::TooManyProposals
 						);
 						Ok(proposals.len())
-					})?;
+					},
+				)?;
 				let index = Self::proposal_count(room_id);
-				ProposalCount::<T, I>::mutate(room_id, |i| { *i += 1 });
+				ProposalCount::<T, I>::mutate(room_id, |i| *i += 1);
 				<ProposalOf<T, I>>::insert(room_id, proposal_hash, *proposal);
 				let end = system::Pallet::<T>::block_number() + T::MotionDuration::get();
-				let votes = ListenDaoVotes { index, reason: reason, threshold, ayes: vec![who.clone()], nays: vec![], end };
+				let votes = ListenDaoVotes {
+					index,
+					reason,
+					threshold,
+					ayes: vec![who.clone()],
+					nays: vec![],
+					end,
+				};
 				<Voting<T, I>>::insert(room_id, proposal_hash, votes);
 
 				Self::deposit_event(Event::Proposed(who, index, proposal_hash, threshold));
@@ -328,12 +347,15 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(50_000)]
-		pub fn disapprove_proposal(origin: OriginFor<T>, room_id: RoomIndex, proposal_hash: T::Hash) -> DispatchResultWithPostInfo {
+		pub fn disapprove_proposal(
+			origin: OriginFor<T>,
+			room_id: RoomIndex,
+			proposal_hash: T::Hash,
+		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 			let proposal_count = Self::do_disapprove_proposal(room_id, proposal_hash);
 			Ok(Some(T::WeightInfo::disapprove_proposal(proposal_count)).into())
 		}
-
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
@@ -406,9 +428,7 @@ pub mod pallet {
 	}
 }
 
-pub struct EnsureMember<AccountId, I: 'static>(
-	sp_std::marker::PhantomData<(AccountId, I)>,
-);
+pub struct EnsureMember<AccountId, I: 'static>(sp_std::marker::PhantomData<(AccountId, I)>);
 impl<
 		O: Into<Result<RoomRawOrigin<AccountId, I>, O>> + From<RoomRawOrigin<AccountId, I>>,
 		AccountId: Default,
@@ -453,11 +473,7 @@ impl<
 	}
 }
 
-pub struct EnsureRoomRoot<
-	T,
-	AccountId,
-	I: 'static,
->(sp_std::marker::PhantomData<(T, AccountId, I)>);
+pub struct EnsureRoomRoot<T, AccountId, I: 'static>(sp_std::marker::PhantomData<(T, AccountId, I)>);
 
 impl<
 		O: Into<Result<RoomRawOrigin<<T as frame_system::Config>::AccountId, I>, O>>

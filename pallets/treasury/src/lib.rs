@@ -23,6 +23,7 @@ mod tests;
 
 pub mod weights;
 
+pub use crate::pallet::*;
 use codec::{Decode, Encode};
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, ensure, print,
@@ -45,7 +46,6 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
-pub use crate::pallet::*;
 
 pub type ProposalIndex = u32;
 pub type RoomIndex = u64;
@@ -66,13 +66,13 @@ pub struct RoomTreasuryProposal<AccountId, Balance, BlockNumber> {
 }
 
 #[frame_support::pallet]
-pub mod pallet{
+pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
 	type BalanceOf<T> = <<T as pallet_listen::Config>::NativeCurrency as Currency<
-	<T as frame_system::Config>::AccountId,
+		<T as frame_system::Config>::AccountId,
 	>>::Balance;
 	pub type NegativeImbalanceOf<T> = <<T as pallet_listen::Config>::NativeCurrency as Currency<
 		<T as frame_system::Config>::AccountId,
@@ -86,7 +86,9 @@ pub mod pallet{
 		/// Origin from which rejections must come.
 		type RejectOrigin: EnsureOrigin<Self::Origin>;
 		/// The overarching event type.
-		type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event> + IsType<<Self as frame_system::Config>::Event>;
+		type Event: From<Event<Self>>
+			+ Into<<Self as frame_system::Config>::Event>
+			+ IsType<<Self as frame_system::Config>::Event>;
 		/// Handler for the unbalanced decrease when slashing for a rejected proposal or bounty.
 		type OnSlash: OnUnbalanced<NegativeImbalanceOf<Self>>;
 		/// Weight information for extrinsics in this pallet.
@@ -101,7 +103,6 @@ pub mod pallet{
 		#[pallet::constant]
 		/// Period between successive spends.
 		type SpendPeriod: Get<Self::BlockNumber>;
-
 	}
 
 	#[pallet::pallet]
@@ -132,16 +133,26 @@ pub mod pallet{
 	/// Number of proposals that have been made.
 	#[pallet::storage]
 	#[pallet::getter(fn proposal_count)]
-	pub type ProposalCount<T: Config> = StorageMap<_, Blake2_128Concat, RoomIndex, ProposalIndex, ValueQuery>;
+	pub type ProposalCount<T: Config> =
+		StorageMap<_, Blake2_128Concat, RoomIndex, ProposalIndex, ValueQuery>;
 
 	/// Proposals that have been made.
 	#[pallet::storage]
 	#[pallet::getter(fn proposals)]
-	pub type Proposals<T: Config> = StorageDoubleMap<_, Blake2_128Concat, RoomIndex, Blake2_128Concat, ProposalIndex, RoomTreasuryProposal<T::AccountId, BalanceOf<T>, T::BlockNumber>, OptionQuery>;
+	pub type Proposals<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		RoomIndex,
+		Blake2_128Concat,
+		ProposalIndex,
+		RoomTreasuryProposal<T::AccountId, BalanceOf<T>, T::BlockNumber>,
+		OptionQuery,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn approvals)]
-	pub type Approvals<T: Config> = StorageMap<_, Blake2_128Concat, RoomIndex, Vec<ProposalIndex>, ValueQuery>;
+	pub type Approvals<T: Config> =
+		StorageMap<_, Blake2_128Concat, RoomIndex, Vec<ProposalIndex>, ValueQuery>;
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -155,14 +166,13 @@ pub mod pallet{
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-
 		/// 提一个消费议案
 		#[pallet::weight(50_000)]
 		pub fn propose_spend(
 			origin: OriginFor<T>,
 			room_id: RoomIndex,
 			#[pallet::compact] value: BalanceOf<T>,
-			beneficiary: <T::Lookup as StaticLookup>::Source
+			beneficiary: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
 			let proposer = ensure_signed(origin)?;
 			let beneficiary = T::Lookup::lookup(beneficiary)?;
@@ -174,7 +184,11 @@ pub mod pallet{
 			let c = Self::proposal_count(room_id);
 			let start_spend_time = None;
 			<ProposalCount<T>>::insert(room_id, c + 1);
-			<Proposals<T>>::insert(room_id, c, RoomTreasuryProposal { proposer, value, beneficiary, bond, start_spend_time });
+			<Proposals<T>>::insert(
+				room_id,
+				c,
+				RoomTreasuryProposal { proposer, value, beneficiary, bond, start_spend_time },
+			);
 
 			Self::deposit_event(Event::Proposed(c));
 			Ok(())
@@ -182,10 +196,15 @@ pub mod pallet{
 
 		/// 拒绝议案
 		#[pallet::weight(50_000)]
-		pub fn reject_proposal(origin: OriginFor<T>, room_id: RoomIndex, #[pallet::compact] proposal_id: ProposalIndex) -> DispatchResult {
+		pub fn reject_proposal(
+			origin: OriginFor<T>,
+			room_id: RoomIndex,
+			#[pallet::compact] proposal_id: ProposalIndex,
+		) -> DispatchResult {
 			T::RejectOrigin::ensure_origin(origin)?;
 
-			let proposal = <Proposals<T>>::take(room_id, &proposal_id).ok_or(Error::<T>::InvalidIndex)?;
+			let proposal =
+				<Proposals<T>>::take(room_id, &proposal_id).ok_or(Error::<T>::InvalidIndex)?;
 			let value = proposal.bond;
 			let imbalance = T::NativeCurrency::slash_reserved(&proposal.proposer, value).0;
 			T::OnSlash::on_unbalanced(imbalance);
@@ -196,18 +215,24 @@ pub mod pallet{
 
 		/// 赞成议案（加入待执行队列)
 		#[pallet::weight(50_000)]
-		pub fn approve_proposal(origin: OriginFor<T>, room_id: RoomIndex, #[pallet::compact] proposal_id: ProposalIndex) -> DispatchResult {
+		pub fn approve_proposal(
+			origin: OriginFor<T>,
+			room_id: RoomIndex,
+			#[pallet::compact] proposal_id: ProposalIndex,
+		) -> DispatchResult {
 			T::ApproveOrigin::ensure_origin(origin)?;
 
 			ensure!(<Proposals<T>>::contains_key(room_id, proposal_id), Error::<T>::InvalidIndex);
 
-			<Proposals<T>>::mutate(room_id, proposal_id, |h| if let Some(p) = h {
-				p.start_spend_time = Some(<pallet_listen::Module<T>>::now() + T::SpendPeriod::get());
+			<Proposals<T>>::mutate(room_id, proposal_id, |h| {
+				if let Some(p) = h {
+					p.start_spend_time =
+						Some(<pallet_listen::Module<T>>::now() + T::SpendPeriod::get());
+				}
 			});
 
 			<Approvals<T>>::mutate(room_id, |h| h.push(proposal_id));
 			Ok(())
-
 		}
 
 		/// 手动获取资金
@@ -216,14 +241,23 @@ pub mod pallet{
 			let who = ensure_signed(origin)?;
 			let mut proposal_ids = <Approvals<T>>::get(room_id);
 			if proposal_ids.len() == 0 {
-				return Err(Error::<T>::RoomHaveNoProposal)?;
+				return Err(Error::<T>::RoomHaveNoProposal)?
 			}
 
 			for proposal_id in proposal_ids.clone().iter() {
-				if let Some(proposal) =  <Proposals<T>>::get(room_id, proposal_id) {
-
-					if proposal.start_spend_time.is_some() && proposal.start_spend_time.unwrap() <= <pallet_listen::Module<T>>::now() && <pallet_listen::Module<T>>::sub_room_free_amount(room_id, proposal.value.saturated_into::<u128>()).is_ok() {
-						T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&proposal.beneficiary, proposal.value));
+				if let Some(proposal) = <Proposals<T>>::get(room_id, proposal_id) {
+					if proposal.start_spend_time.is_some() &&
+						proposal.start_spend_time.unwrap() <= <pallet_listen::Module<T>>::now() &&
+						<pallet_listen::Module<T>>::sub_room_free_amount(
+							room_id,
+							proposal.value.saturated_into::<u128>(),
+						)
+						.is_ok()
+					{
+						T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
+							&proposal.beneficiary,
+							proposal.value,
+						));
 
 						T::NativeCurrency::unreserve(&proposal.proposer, proposal.bond);
 						proposal_ids.retain(|h| h != proposal_id);
@@ -236,17 +270,8 @@ pub mod pallet{
 
 			Self::deposit_event(Event::<T>::SpendFund(who, room_id));
 			Ok(())
-
 		}
-
-
-
-
-
-
-
 	}
-
 
 	impl<T: Config> Pallet<T> {
 		fn calculate_bond(value: BalanceOf<T>) -> BalanceOf<T> {
@@ -260,7 +285,5 @@ pub mod pallet{
 			/// todo 已经同意通过的资金议案 不应该被清除
 			<Approvals<T>>::remove(room_id);
 		}
+	}
 }
-
-}
-

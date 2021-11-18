@@ -1,4 +1,3 @@
-use super::{Config as ListenConfig, Module};
 use codec::{Decode, Encode};
 use frame_system::{self as system};
 use scale_info::TypeInfo;

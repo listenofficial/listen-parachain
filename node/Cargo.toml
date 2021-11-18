@@ -35,6 +35,7 @@ jsonrpc-core = "18.0.0"
 
 # Local Dependencies
 listen-runtime = { path = "../runtime" }
+listen-primitives = {path = "../primitives"}
 
 # Substrate Dependencies
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }

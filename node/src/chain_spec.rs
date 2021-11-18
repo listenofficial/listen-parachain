@@ -1,11 +1,13 @@
 use cumulus_primitives_core::ParaId;
-use listen_runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT};
+use listen_runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT, SudoConfig, CouncilConfig, ElectionsConfig, TechnicalCommitteeConfig};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
+use sp_runtime::AccountId32;
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use listen_primitives::{Balance, constants::currency::UNIT};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<listen_runtime::GenesisConfig, Extensions>;
@@ -181,6 +183,9 @@ fn testnet_genesis(
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 ) -> listen_runtime::GenesisConfig {
+	const ENDOWMENT: Balance = 10_000_000 * UNIT;
+    const STASH: Balance = 100 * UNIT;
+
 	listen_runtime::GenesisConfig {
 		system: listen_runtime::SystemConfig {
 			code: listen_runtime::WASM_BINARY
@@ -189,7 +194,7 @@ fn testnet_genesis(
 			changes_trie_config: Default::default(),
 		},
 		balances: listen_runtime::BalancesConfig {
-			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
+			balances: endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect(),
 		},
 		parachain_info: listen_runtime::ParachainInfoConfig { parachain_id: id },
 		collator_selection: listen_runtime::CollatorSelectionConfig {
@@ -197,6 +202,13 @@ fn testnet_genesis(
 			candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
 			..Default::default()
 		},
+		elections: ElectionsConfig {
+			members: invulnerables.iter().cloned().map(|(a, _)| (a, STASH)).collect(),
+			// phantom: Default::default(),
+		},
+		technical_committee: Default::default(),
+		council: Default::default(),
+		democracy: Default::default(),
 		session: listen_runtime::SessionConfig {
 			keys: invulnerables
 				.iter()
@@ -216,5 +228,6 @@ fn testnet_genesis(
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
 		tokens: Default::default(),
+		sudo: SudoConfig { key: get_account_id_from_seed::<sr25519::Public>("Alice") },
 	}
 }

@@ -1,5 +1,5 @@
 use cumulus_primitives_core::ParaId;
-use listen_runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT, SudoConfig, CouncilConfig, ElectionsConfig, TechnicalCommitteeConfig};
+use listen_runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT, SudoConfig, CouncilConfig, ElectionsConfig, TechnicalCommitteeConfig, VestingConfig};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
@@ -209,6 +209,7 @@ fn testnet_genesis(
 		technical_committee: Default::default(),
 		council: Default::default(),
 		democracy: Default::default(),
+		vesting: Default::default(),
 		session: listen_runtime::SessionConfig {
 			keys: invulnerables
 				.iter()

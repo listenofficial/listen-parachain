@@ -3940,7 +3940,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-treasury 1.0.0",
- "pallet-vesting 1.0.0",
+ "pallet-vesting",
  "pallet-xcm",
  "pallet_currencies",
  "parachain-info",
@@ -5378,26 +5378,6 @@ dependencies = [
 
 [[package]]
 name = "pallet-vesting"
-version = "1.0.0"
-dependencies = [
- "enumflags2",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "sp-storage",
-]
-
-[[package]]
-name = "pallet-vesting"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
 dependencies = [
@@ -6591,7 +6571,7 @@ dependencies = [
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-treasury 4.0.0-dev",
  "pallet-utility",
- "pallet-vesting 4.0.0-dev",
+ "pallet-vesting",
  "parity-scale-codec",
  "polkadot-primitives",
  "polkadot-runtime-common",
@@ -6643,7 +6623,7 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-treasury 4.0.0-dev",
- "pallet-vesting 4.0.0-dev",
+ "pallet-vesting",
  "parity-scale-codec",
  "polkadot-primitives",
  "polkadot-runtime-parachains",
@@ -6682,7 +6662,7 @@ dependencies = [
  "pallet-session",
  "pallet-staking",
  "pallet-timestamp",
- "pallet-vesting 4.0.0-dev",
+ "pallet-vesting",
  "parity-scale-codec",
  "polkadot-primitives",
  "rand 0.8.4",
@@ -6858,7 +6838,7 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
- "pallet-vesting 4.0.0-dev",
+ "pallet-vesting",
  "pallet-xcm",
  "parity-scale-codec",
  "polkadot-parachain",

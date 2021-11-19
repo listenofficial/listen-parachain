@@ -4,7 +4,6 @@ members = [
 	"runtime",
 	"pallets/currencies",
 	"pallets/nicks",
-	"pallets/vesting",
 	"primitives",
 	"pallets/listen",
 	"pallets/dao",

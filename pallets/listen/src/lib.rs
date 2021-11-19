@@ -333,12 +333,13 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		// #[pallet::weight(10_000)]
-		// pub fn test(origin: OriginFor<T>) -> DispatchResult {
-		// 	let _ = ensure_signed(origin)?;
-		// 	Self::deposit_event(Event::ListenTest);
-		// 	Ok(())
-		// }
+
+		#[pallet::weight(10_000)]
+		pub fn test(origin: OriginFor<T>) -> DispatchResult {
+			let _ = ensure_signed(origin)?;
+			Self::deposit_event(Event::ListenTest);
+			Ok(())
+		}
 		/// Set a multi-sign account
 		///
 		/// The Origin must be LISTEN official service account.

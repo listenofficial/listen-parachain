@@ -480,7 +480,7 @@ impl<
 			+ From<RoomRawOrigin<<T as frame_system::Config>::AccountId, I>>,
 		AccountId: Default,
 		T: Config<I>,
-		I,
+		I: 'static
 	> EnsureOrigin<O> for EnsureRoomRoot<T, AccountId, I>
 {
 	type Success = ();

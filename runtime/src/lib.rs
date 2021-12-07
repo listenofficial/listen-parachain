@@ -28,7 +28,7 @@ use static_assertions::const_assert;
 
 use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{Contains, Everything, LockIdentifier, U128CurrencyToVote},
+	traits::{Contains, Everything, LockIdentifier, U128CurrencyToVote, EqualPrivilegeOnly},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
@@ -873,6 +873,7 @@ impl pallet_scheduler::Config for Runtime {
 	type ScheduleOrigin = EnsureRoot<AccountId>;
 	type MaxScheduledPerBlock = MaxScheduledPerBlock;
 	type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
+	type OriginPrivilegeCmp = EqualPrivilegeOnly;
 }
 
 parameter_types! {

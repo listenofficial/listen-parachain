@@ -14,11 +14,11 @@ repository = "https://github.com/listenofficial/listen-parachain.git"
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 
 # substrate fram
-frame-support = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
-frame-system = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
-pallet-multisig = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
-pallet-timestamp = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
-pallet-treasury = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+frame-support = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.13' }
+frame-system = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.13' }
+pallet-multisig = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.13' }
+pallet-timestamp = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.13' }
+pallet-treasury = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.13' }
 
 #local
 listen-primitives = { path = '../../primitives', default-features = false, version = '1.0.0' }
@@ -28,8 +28,8 @@ orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-li
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false }
 
 #[dev-dependencies]
-sp-runtime = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
-sp-std = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+sp-runtime = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.13' }
+sp-std = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.13' }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 
 [features]

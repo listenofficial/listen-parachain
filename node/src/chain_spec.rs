@@ -69,7 +69,7 @@ pub fn template_session_keys(keys: AuraId) -> listen_runtime::SessionKeys {
 	listen_runtime::SessionKeys { aura: keys }
 }
 
-pub fn development_config(id: ParaId) -> ChainSpec {
+pub fn development_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		// Name
 		"Development",
@@ -103,7 +103,7 @@ pub fn development_config(id: ParaId) -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				id,
+				1000u32.into(),
 			)
 		},
 		vec![],
@@ -112,7 +112,7 @@ pub fn development_config(id: ParaId) -> ChainSpec {
 		Some(get_properties()),
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: id.into(),
+			para_id: 1000u32.into(),
 		},
 	)
 }
@@ -125,7 +125,7 @@ fn get_properties() -> Properties {
 	properties
 }
 
-pub fn local_testnet_config(id: ParaId) -> ChainSpec {
+pub fn local_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		// Name
 		"listen testnet",
@@ -159,7 +159,7 @@ pub fn local_testnet_config(id: ParaId) -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				id,
+				1000u32.into(),
 			)
 		},
 		// Bootnodes
@@ -173,7 +173,7 @@ pub fn local_testnet_config(id: ParaId) -> ChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: id.into(),
+			para_id: 1000u32.into(),
 		},
 	)
 }
@@ -191,7 +191,6 @@ fn testnet_genesis(
 			code: listen_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
-			changes_trie_config: Default::default(),
 		},
 		balances: listen_runtime::BalancesConfig {
 			balances: endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect(),

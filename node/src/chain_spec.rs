@@ -20,6 +20,7 @@ pub fn get_pair_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair
 }
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+const PARA_ID: u32 = 1000;
 
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
@@ -103,7 +104,7 @@ pub fn development_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				1000u32.into(),
+				PARA_ID.into(),
 			)
 		},
 		vec![],
@@ -112,7 +113,7 @@ pub fn development_config() -> ChainSpec {
 		Some(get_properties()),
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000u32.into(),
+			para_id: PARA_ID.into(),
 		},
 	)
 }
@@ -159,7 +160,7 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				],
-				1000u32.into(),
+				PARA_ID.into(),
 			)
 		},
 		// Bootnodes
@@ -173,7 +174,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 1000u32.into(),
+			para_id: PARA_ID.into(),
 		},
 	)
 }

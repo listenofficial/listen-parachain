@@ -45,7 +45,6 @@ pub mod time {
 	pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
 
 	pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 10 * MINUTES;
-	/// 一个session的时间
 	pub const EPOCH_DURATION_IN_SLOTS: u64 = {
 		const SLOT_FILL_RATE: f64 = MILLISECS_PER_BLOCK as f64 / SLOT_DURATION as f64;
 
@@ -56,4 +55,40 @@ pub mod time {
 	pub const MINUTES: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 	pub const HOURS: BlockNumber = MINUTES * 60;
 	pub const DAYS: BlockNumber = HOURS * 24;
+}
+
+
+pub mod parachains {
+	/// dico
+	pub mod dico {
+		pub const PARA_ID: u32 = 2001;
+
+		pub mod DICO {
+			pub const AssetId: u32 = 10;
+			pub const TokenSymbol: &[u8] = "DICO".as_bytes();
+		}
+
+	}
+
+	/// listen
+	pub mod native {
+		pub mod LT {
+			pub const AssetId: u32 = 0;
+			pub const TokenSymbol: &[u8] = "LT".as_bytes();
+		}
+
+		pub mod USDT {
+			pub const AssetId: u32 = 5;
+			pub const TokenSymbol: &[u8] = "USDT".as_bytes();
+		}
+	}
+
+	/// kusama
+	pub mod kusama {
+		pub mod KSM {
+			pub const AssetId: u32 = 1;
+			pub const TokenSymbol: &[u8] = "KSM".as_bytes();
+		}
+	}
+
 }

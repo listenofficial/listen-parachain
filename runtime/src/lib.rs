@@ -134,6 +134,10 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				1,
 				X2(Parachain(dico::PARA_ID.into()), GeneralKey(dico::DICO::TokenSymbol.to_vec()))
 			)),
+			kisten::KLT::AssetId => Some(MultiLocation::new(
+				1,
+				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KLT::TokenSymbol.to_vec()))
+			)),
 			_ => None,
 
 		}
@@ -152,6 +156,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			} => {
 				match (para_id, &key[..]) {
 					(dico::PARA_ID, dico::DICO::TokenSymbol) => Some(dico::DICO::AssetId.into()),
+					(kisten::PARA_ID, kisten::KLT::TokenSymbol) => Some(kisten::KLT::AssetId.into()),
 
 					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => {
 						match key {

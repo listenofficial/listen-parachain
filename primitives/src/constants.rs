@@ -70,7 +70,16 @@ pub mod parachains {
 
 	}
 
-	/// listen
+	/// kisten (Test)
+	pub mod kisten {
+		pub const PARA_ID: u32 = 1001;
+		pub mod KLT {
+			pub const AssetId: u32 = 100;
+			pub const TokenSymbol: &[u8] = "KLT".as_bytes();
+		}
+	}
+
+	/// native
 	pub mod native {
 		pub mod LT {
 			pub const AssetId: u32 = 0;

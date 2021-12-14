@@ -1,13 +1,18 @@
 use cumulus_primitives_core::ParaId;
-use listen_runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT, SudoConfig, CouncilConfig, ElectionsConfig, TechnicalCommitteeConfig, VestingConfig};
+use listen_primitives::{constants::currency::UNIT, Balance};
+use listen_runtime::{
+	AccountId, AuraId, CouncilConfig, ElectionsConfig, Signature, SudoConfig,
+	TechnicalCommitteeConfig, VestingConfig, EXISTENTIAL_DEPOSIT,
+};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
-use sp_runtime::AccountId32;
-use sp_runtime::traits::{IdentifyAccount, Verify};
-use listen_primitives::{Balance, constants::currency::UNIT};
+use sp_runtime::{
+	traits::{IdentifyAccount, Verify},
+	AccountId32,
+};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<listen_runtime::GenesisConfig, Extensions>;
@@ -185,7 +190,7 @@ fn testnet_genesis(
 	id: ParaId,
 ) -> listen_runtime::GenesisConfig {
 	const ENDOWMENT: Balance = 10_000_000 * UNIT;
-    const STASH: Balance = 100 * UNIT;
+	const STASH: Balance = 100 * UNIT;
 
 	listen_runtime::GenesisConfig {
 		system: listen_runtime::SystemConfig {

@@ -57,7 +57,6 @@ pub mod time {
 	pub const DAYS: BlockNumber = HOURS * 24;
 }
 
-
 pub mod parachains {
 	/// dico
 	pub mod dico {
@@ -67,7 +66,6 @@ pub mod parachains {
 			pub const AssetId: u32 = 10;
 			pub const TokenSymbol: &[u8] = "DICO".as_bytes();
 		}
-
 	}
 
 	/// kisten (Test)
@@ -99,5 +97,4 @@ pub mod parachains {
 			pub const TokenSymbol: &[u8] = "KSM".as_bytes();
 		}
 	}
-
 }

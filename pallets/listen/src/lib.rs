@@ -333,7 +333,6 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-
 		#[pallet::weight(10_000)]
 		pub fn test(origin: OriginFor<T>) -> DispatchResult {
 			let _ = ensure_signed(origin)?;

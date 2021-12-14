@@ -6,11 +6,11 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-pub use listen_primitives::{
-	constants::{currency::*, time::*, parachains::*},
-	Amount, AssetId, Index, *,
-};
 pub use cumulus_primitives_core::ParaId;
+pub use listen_primitives::{
+	constants::{currency::*, parachains::*, time::*},
+	Amount, CurrencyId, Index, *,
+};
 pub use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
 use pallet_currencies::BasicCurrencyAdapter;
 use smallvec::smallvec;
@@ -22,7 +22,10 @@ use sp_core::{
 };
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify, ConvertInto, Convert, AccountIdConversion},
+	traits::{
+		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
+		IdentifyAccount, Verify,
+	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiSignature, Percent,
 };
@@ -30,7 +33,9 @@ use static_assertions::const_assert;
 
 use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{Contains, Everything, LockIdentifier, U128CurrencyToVote, EqualPrivilegeOnly},
+	traits::{
+		Contains, EqualPrivilegeOnly, Everything, LockIdentifier, Nothing, U128CurrencyToVote,
+	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
@@ -38,7 +43,6 @@ use frame_support::{
 	},
 	PalletId,
 };
-use frame_support::traits::Nothing;
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureOneOf, EnsureRoot,
@@ -63,12 +67,13 @@ use polkadot_runtime_common::{BlockHashCount, RocksDbWeight, SlowAdjustingFeeUpd
 // XCM Imports
 use xcm::latest::prelude::*;
 use xcm_builder::{
-	AllowKnownQueryResponses, AllowSubscriptionsFrom,
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset,
-	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeWeightCredit, UsingComponents, TakeRevenue,
+	FixedRateOfFungible,
+	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
+	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin,
+	FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset, ParentAsSuperuser,
+	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
+	TakeWeightCredit, UsingComponents,
 };
 use xcm_executor::{Config, XcmExecutor};
 
@@ -111,6 +116,39 @@ pub type Executive = frame_executive::Executive<
 	OnRuntimeUpgrade,
 >;
 
+pub fn ksm_per_second() -> u128 {
+	let base_weight = Balance::from(ExtrinsicBaseWeight::get());
+	let base_tx_fee = UNIT / 1000;
+	let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
+	let fee_per_second = base_tx_per_second * base_tx_fee;
+	fee_per_second / 100
+}
+
+/// fixme
+parameter_types! {
+	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
+	pub LTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
+		GeneralKey(native::LT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
+	pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
+		GeneralKey(native::USDT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
+	pub DICOPerSecond: (AssetId, u128) = (MultiLocation::new(
+				1,
+				X2(Parachain(dico::PARA_ID.into()), GeneralKey(dico::DICO::TokenSymbol.to_vec()))
+			).into(), ksm_per_second() * 100);
+	pub KLTPerSecond: (AssetId, u128) = (MultiLocation::new(
+				1,
+				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KLT::TokenSymbol.to_vec()))
+			).into(), ksm_per_second() * 100);
+
+}
+
+pub type Trader = (
+	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
+	FixedRateOfFungible<LTPerSecond, ToTreasury>,
+	FixedRateOfFungible<USDTPerSecond, ToTreasury>,
+	FixedRateOfFungible<DICOPerSecond, ToTreasury>,
+	FixedRateOfFungible<KLTPerSecond, ToTreasury>,
+);
 
 fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
 	let token_symbol = match id {
@@ -118,7 +156,10 @@ fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
 		native::USDT::AssetId => native::USDT::TokenSymbol,
 		_ => return None,
 	};
-	Some(MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(token_symbol.to_vec()))))
+	Some(MultiLocation::new(
+		1,
+		X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(token_symbol.to_vec())),
+	))
 }
 
 pub struct CurrencyIdConvert;
@@ -132,14 +173,16 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 
 			dico::DICO::AssetId => Some(MultiLocation::new(
 				1,
-				X2(Parachain(dico::PARA_ID.into()), GeneralKey(dico::DICO::TokenSymbol.to_vec()))
+				X2(Parachain(dico::PARA_ID.into()), GeneralKey(dico::DICO::TokenSymbol.to_vec())),
 			)),
 			kisten::KLT::AssetId => Some(MultiLocation::new(
 				1,
-				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KLT::TokenSymbol.to_vec()))
+				X2(
+					Parachain(kisten::PARA_ID.into()),
+					GeneralKey(kisten::KLT::TokenSymbol.to_vec()),
+				),
 			)),
 			_ => None,
-
 		}
 	}
 }
@@ -147,31 +190,24 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		if location == MultiLocation::parent() {
-			return Some(kusama::KSM::AssetId.into());
+			return Some(kusama::KSM::AssetId.into())
 		}
 		match location {
-			MultiLocation {
-				parents: 1,
-				interior: X2(Parachain(para_id), GeneralKey(key)),
-			} => {
+			MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } =>
 				match (para_id, &key[..]) {
 					(dico::PARA_ID, dico::DICO::TokenSymbol) => Some(dico::DICO::AssetId.into()),
-					(kisten::PARA_ID, kisten::KLT::TokenSymbol) => Some(kisten::KLT::AssetId.into()),
+					(kisten::PARA_ID, kisten::KLT::TokenSymbol) =>
+						Some(kisten::KLT::AssetId.into()),
 
-					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => {
-						match key {
-							native::LT::TokenSymbol => Some(native::LT::AssetId.into()),
-							native::USDT::TokenSymbol => Some(native::USDT::AssetId.into()),
-							_ => None,
-						}
+					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => match key {
+						native::LT::TokenSymbol => Some(native::LT::AssetId.into()),
+						native::USDT::TokenSymbol => Some(native::USDT::AssetId.into()),
+						_ => None,
 					},
 					_ => None,
-				}
-
-			}
+				},
 			_ => None,
 		}
-
 	}
 }
 
@@ -182,11 +218,7 @@ parameter_types! {
 pub struct ToTreasury;
 impl TakeRevenue for ToTreasury {
 	fn take_revenue(revenue: MultiAsset) {
-		if let MultiAsset {
-			id: Concrete(location),
-			fun: Fungible(amount),
-		} = revenue
-		{
+		if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
 			if let Some(currency_id) = CurrencyIdConvert::convert(location) {
 				// ensure KaruraTreasuryAccount have ed for all of the cross-chain asset.
 				// Ignore the result.
@@ -198,10 +230,7 @@ impl TakeRevenue for ToTreasury {
 
 impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(asset: MultiAsset) -> Option<CurrencyId> {
-		if let MultiAsset {
-			id: Concrete(location), ..
-		} = asset
-		{
+		if let MultiAsset { id: Concrete(location), .. } = asset {
 			Self::convert(location)
 		} else {
 			None
@@ -502,7 +531,6 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
 	// recognised.
 	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
-
 	// Superuser converter for the Relay-chain (Parent) location. This will allow it to issue a
 	// transaction from the Root origin.
 	ParentAsSuperuser<Origin>,
@@ -515,7 +543,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
-	pub UnitWeightCost: Weight = 1_000_000_000;
+	pub UnitWeightCost: Weight = 200_000_000;
 	pub const MaxInstructions: u32 = 100;
 }
 
@@ -525,7 +553,6 @@ match_type! {
 		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
 	};
 }
-
 
 pub type Barrier = (
 	TakeWeightCredit,
@@ -537,7 +564,6 @@ pub type Barrier = (
 	// AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
 	// ^^^ Parent and its exec plurality get free execution
 );
-
 
 /// fixme
 pub struct XcmConfig;
@@ -553,7 +579,7 @@ impl Config for XcmConfig {
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
 	/// fixme
-	type Trader = UsingComponents<IdentityFee<Balance>, RocLocation, AccountId, Balances, ()>;
+	type Trader = Trader;
 	type ResponseHandler = PolkadotXcm;
 	type AssetTrap = PolkadotXcm;
 	type AssetClaims = PolkadotXcm;
@@ -699,7 +725,7 @@ impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = i128;
-	type CurrencyId = AssetId;
+	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
@@ -930,20 +956,26 @@ impl pallet_democracy::Config for Runtime {
 	type VoteLockingPeriod = VoteLockingPeriod;
 	type MinimumDeposit = MinimumDeposit;
 	/// A straight majority of the council can decide what their next motion is.
-	type ExternalOrigin = pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
+	type ExternalOrigin =
+		pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
 	/// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
-	type ExternalMajorityOrigin = pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
+	type ExternalMajorityOrigin =
+		pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
 	/// A unanimous council can have the next scheduled referendum be a straight default-carries
 	/// (NTB) vote.
-	type ExternalDefaultOrigin = pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
+	type ExternalDefaultOrigin =
+		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
 	/// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
 	/// be tabled immediately and with a shorter voting/enactment period.
-	type FastTrackOrigin = pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
-	type InstantOrigin = pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
+	type FastTrackOrigin =
+		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
+	type InstantOrigin =
+		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
 	type InstantAllowed = InstantAllowed;
 	type FastTrackVotingPeriod = FastTrackVotingPeriod;
 	// To cancel a proposal which has been passed, 2/3 of the council must agree to it.
-	type CancellationOrigin = pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+	type CancellationOrigin =
+		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
 	// To cancel a proposal before it has been passed, the technical committee must be unanimous or
 	// Root must agree.
 	type CancelProposalOrigin = EnsureOneOf<
@@ -1017,11 +1049,7 @@ impl orml_xcm::Config for Runtime {
 pub struct AccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
-		X1(AccountId32 {
-			network: NetworkId::Any,
-			id: account.into(),
-		})
-		.into()
+		X1(AccountId32 { network: NetworkId::Any, id: account.into() }).into()
 	}
 }
 
@@ -1040,7 +1068,7 @@ impl orml_xtokens::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
 	type BaseXcmWeight = BaseXcmWeight;
-	type LocationInverter = LocationInverter<Ancestry>;  // fixme Ancestry这个用kusama网络的话需要更改
+	type LocationInverter = LocationInverter<Ancestry>; // fixme Ancestry这个用kusama网络的话需要更改
 }
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(

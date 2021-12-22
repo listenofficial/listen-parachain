@@ -92,7 +92,7 @@ pub mod parachains {
 		pub const PARA_ID: u32 = 2000;
 		pub mod KICO {
 			pub const AssetId: u32 = 10;
-			pub const TokenSymbol: &[u8] = "DICO".as_bytes();
+			pub const TokenSymbol: &[u8] = "KICO".as_bytes();
 		}
 	}
 

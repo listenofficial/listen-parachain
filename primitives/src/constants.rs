@@ -88,6 +88,11 @@ pub mod parachains {
 			pub const AssetId: u32 = 5;
 			pub const TokenSymbol: &[u8] = "USDT".as_bytes();
 		}
+
+		pub mod LTP {
+			pub const AssetId: u32 = 101;
+			pub const TokenSymbol: &[u8] = "LTP".as_bytes();
+		}
 	}
 
 	/// kusama

@@ -129,6 +129,8 @@ parameter_types! {
 	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
 	pub LTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
 		GeneralKey(native::LT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
+	pub LTPPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
+		GeneralKey(native::LTP::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
 	pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
 		GeneralKey(native::USDT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
 	pub DICOPerSecond: (AssetId, u128) = (MultiLocation::new(
@@ -145,6 +147,7 @@ parameter_types! {
 pub type Trader = (
 	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
 	FixedRateOfFungible<LTPerSecond, ToTreasury>,
+	FixedRateOfFungible<LTPPerSecond, ToTreasury>,
 	FixedRateOfFungible<USDTPerSecond, ToTreasury>,
 	FixedRateOfFungible<DICOPerSecond, ToTreasury>,
 	FixedRateOfFungible<KLTPerSecond, ToTreasury>,
@@ -154,6 +157,7 @@ fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
 	let token_symbol = match id {
 		native::LT::AssetId => native::LT::TokenSymbol,
 		native::USDT::AssetId => native::USDT::TokenSymbol,
+		native::LTP::AssetId => native::LTP::TokenSymbol,
 		_ => return None,
 	};
 	Some(MultiLocation::new(
@@ -169,7 +173,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 		match id {
 			kusama::KSM::AssetId => Some(MultiLocation::parent()),
 
-			native::LT::AssetId | native::USDT::AssetId => native_currency_location(id),
+			native::LT::AssetId | native::USDT::AssetId | native::LTP::AssetId => native_currency_location(id),
 
 			dico::DICO::AssetId => Some(MultiLocation::new(
 				1,
@@ -202,6 +206,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => match key {
 						native::LT::TokenSymbol => Some(native::LT::AssetId.into()),
 						native::USDT::TokenSymbol => Some(native::USDT::AssetId.into()),
+						native::LTP::TokenSymbol => Some(native::LTP::AssetId.into()),
 						_ => None,
 					},
 					_ => None,

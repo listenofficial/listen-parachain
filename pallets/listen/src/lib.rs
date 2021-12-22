@@ -609,7 +609,8 @@ pub mod pallet {
 					room_info.now_members_number.clone() + 1,
 				Error::<T>::MembersNumberToMax
 			);
-			ensure!(!(Self::is_in_room(group_id, invitee.clone().unwrap())?), Error::<T>::InRoom);
+
+			ensure!(!(Self::is_in_room(group_id, man)?), Error::<T>::InRoom);
 
 			Self::join_do(inviter.clone(), invitee.clone(), group_id)?;
 

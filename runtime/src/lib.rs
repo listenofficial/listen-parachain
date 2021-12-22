@@ -133,9 +133,9 @@ parameter_types! {
 		GeneralKey(native::LTP::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
 	pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
 		GeneralKey(native::USDT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
-	pub DICOPerSecond: (AssetId, u128) = (MultiLocation::new(
+	pub KICOPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
-				X2(Parachain(dico::PARA_ID.into()), GeneralKey(dico::DICO::TokenSymbol.to_vec()))
+				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec()))
 			).into(), ksm_per_second() * 100);
 	pub KLTPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
@@ -149,7 +149,7 @@ pub type Trader = (
 	FixedRateOfFungible<LTPerSecond, ToTreasury>,
 	FixedRateOfFungible<LTPPerSecond, ToTreasury>,
 	FixedRateOfFungible<USDTPerSecond, ToTreasury>,
-	FixedRateOfFungible<DICOPerSecond, ToTreasury>,
+	FixedRateOfFungible<KICOPerSecond, ToTreasury>,
 	FixedRateOfFungible<KLTPerSecond, ToTreasury>,
 );
 
@@ -175,9 +175,9 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 
 			native::LT::AssetId | native::USDT::AssetId | native::LTP::AssetId => native_currency_location(id),
 
-			dico::DICO::AssetId => Some(MultiLocation::new(
+			kico::KICO::AssetId => Some(MultiLocation::new(
 				1,
-				X2(Parachain(dico::PARA_ID.into()), GeneralKey(dico::DICO::TokenSymbol.to_vec())),
+				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec())),
 			)),
 			kisten::KLT::AssetId => Some(MultiLocation::new(
 				1,
@@ -199,7 +199,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 		match location {
 			MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } =>
 				match (para_id, &key[..]) {
-					(dico::PARA_ID, dico::DICO::TokenSymbol) => Some(dico::DICO::AssetId.into()),
+					(kico::PARA_ID, kico::KICO::TokenSymbol) => Some(kico::KICO::AssetId.into()),
 					(kisten::PARA_ID, kisten::KLT::TokenSymbol) =>
 						Some(kisten::KLT::AssetId.into()),
 

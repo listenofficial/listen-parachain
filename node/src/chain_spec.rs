@@ -117,7 +117,7 @@ pub fn development_config() -> ChainSpec {
 		Some("listen-dev"),
 		Some(get_properties()),
 		Extensions {
-			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
+			relay_chain: "kusama-dev".into(), // You MUST set this to the correct network!
 			para_id: PARA_ID.into(),
 		},
 	)
@@ -178,7 +178,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		Some(get_properties()),
 		// Extensions
 		Extensions {
-			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
+			relay_chain: "kusama-local".into(), // You MUST set this to the correct network!
 			para_id: PARA_ID.into(),
 		},
 	)

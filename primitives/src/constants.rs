@@ -58,24 +58,6 @@ pub mod time {
 }
 
 pub mod parachains {
-	/// dico
-	pub mod dico {
-		pub const PARA_ID: u32 = 2001;
-
-		pub mod DICO {
-			pub const AssetId: u32 = 10;
-			pub const TokenSymbol: &[u8] = "DICO".as_bytes();
-		}
-	}
-
-	/// kisten (Test)
-	pub mod kisten {
-		pub const PARA_ID: u32 = 1001;
-		pub mod KLT {
-			pub const AssetId: u32 = 100;
-			pub const TokenSymbol: &[u8] = "KLT".as_bytes();
-		}
-	}
 
 	/// native
 	pub mod native {
@@ -95,11 +77,31 @@ pub mod parachains {
 		}
 	}
 
+
 	/// kusama
 	pub mod kusama {
 		pub mod KSM {
 			pub const AssetId: u32 = 1;
 			pub const TokenSymbol: &[u8] = "KSM".as_bytes();
+		}
+	}
+
+
+	/// dico
+	pub mod kico {
+		pub const PARA_ID: u32 = 2000;
+		pub mod KICO {
+			pub const AssetId: u32 = 10;
+			pub const TokenSymbol: &[u8] = "DICO".as_bytes();
+		}
+	}
+
+	/// kisten (Test)
+	pub mod kisten {
+		pub const PARA_ID: u32 = 1001;
+		pub mod KLT {
+			pub const AssetId: u32 = 100;
+			pub const TokenSymbol: &[u8] = "KLT".as_bytes();
 		}
 	}
 }

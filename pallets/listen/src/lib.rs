@@ -634,7 +634,7 @@ pub mod pallet {
 				room.is_private = is_private;
 				*r = Some(room.clone());
 				Ok(())
-			});
+			})?;
 
 			Self::deposit_event(Event::SetRoomPrivacy(room_id, is_private));
 			Ok(())
@@ -697,8 +697,9 @@ pub mod pallet {
 		}
 
 		/// Users buy props in the room.
-		/// todo
+		///
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn buy_props_in_room(
 			origin: OriginFor<T>,
 			group_id: u64,
@@ -745,8 +746,6 @@ pub mod pallet {
 			}
 
 			let mut room = <AllRoom<T>>::get(group_id).unwrap();
-			let mut person = <AllListeners<T>>::get(who.clone());
-
 			room.props.picture =
 				room.props.picture.checked_add(props.picture).ok_or(Error::<T>::Overflow)?;
 			room.props.text =
@@ -755,7 +754,9 @@ pub mod pallet {
 				room.props.video.checked_add(props.video).ok_or(Error::<T>::Overflow)?;
 			room.total_balances =
 				room.total_balances.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
+			Self::update_user_consume(&who, &mut room, dollars)?;
 
+			let mut person = <AllListeners<T>>::get(who.clone());
 			person.props.picture =
 				person.props.picture.checked_add(props.picture).ok_or(Error::<T>::Overflow)?;
 			person.props.text =
@@ -763,15 +764,15 @@ pub mod pallet {
 			person.props.video =
 				person.props.video.checked_add(props.video).ok_or(Error::<T>::Overflow)?;
 			person.cost = person.cost.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
+			<AllListeners<T>>::insert(who.clone(), person);
 
 			T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(
 				&who,
-				dollars.clone(),
+				dollars,
 				WithdrawReasons::TRANSFER.into(),
 				KeepAlive,
 			)?);
-			Self::update_user_consume(who.clone(), room, dollars);
-			<AllListeners<T>>::insert(who.clone(), person);
+
 			Self::get_LTP(&who, dollars);
 			Self::deposit_event(Event::BuyProps(who));
 			Ok(())
@@ -779,6 +780,7 @@ pub mod pallet {
 
 		/// Users buy audio in the room.
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn buy_audio_in_room(
 			origin: OriginFor<T>,
 			group_id: u64,
@@ -825,8 +827,6 @@ pub mod pallet {
 			}
 
 			let mut room = <AllRoom<T>>::get(group_id).unwrap();
-			let mut person = <AllListeners<T>>::get(who.clone());
-
 			room.audio.ten_seconds = room
 				.audio
 				.ten_seconds
@@ -841,7 +841,9 @@ pub mod pallet {
 				room.audio.minutes.checked_add(audio.minutes).ok_or(Error::<T>::Overflow)?;
 			room.total_balances =
 				room.total_balances.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
+			Self::update_user_consume(&who, &mut room, dollars)?;
 
+			let mut person = <AllListeners<T>>::get(who.clone());
 			person.audio.ten_seconds = person
 				.audio
 				.ten_seconds
@@ -855,6 +857,7 @@ pub mod pallet {
 			person.audio.minutes =
 				person.audio.minutes.checked_add(audio.minutes).ok_or(Error::<T>::Overflow)?;
 			person.cost = person.cost.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
+			<AllListeners<T>>::insert(who.clone(), person);
 
 			T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(
 				&who,
@@ -862,8 +865,7 @@ pub mod pallet {
 				WithdrawReasons::TRANSFER.into(),
 				KeepAlive,
 			)?);
-			<AllListeners<T>>::insert(who.clone(), person);
-			Self::update_user_consume(who.clone(), room, dollars);
+
 			Self::get_LTP(&who, dollars);
 			Self::deposit_event(Event::BuyAudio(who));
 			Ok(())
@@ -909,16 +911,18 @@ pub mod pallet {
 
 			let who = T::Lookup::lookup(who)?;
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
-			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			let black_list = room.black_list.clone();
 
-			if let Some(pos) = black_list.iter().position(|h| h == &who) {
-				room.black_list.remove(pos);
-			} else {
-				return Err(Error::<T>::NotInBlackList)?
-			}
+			AllRoom::<T>::try_mutate_exists(group_id, |r| -> DispatchResult {
+				let mut room = r.as_mut().take().ok_or(Error::<T>::RoomNotExists)?;
 
-			<AllRoom<T>>::insert(group_id, room);
+				if let Some(pos) = room.black_list.iter().position(|h| h == &who) {
+					room.black_list.remove(pos);
+				} else {
+					return Err(Error::<T>::NotInBlackList)?
+				}
+				*r = Some(room.clone());
+				Ok(())
+			})?;
 
 			Self::deposit_event(Event::RemoveSomeoneFromBlackList(who, group_id));
 			Ok(())
@@ -975,14 +979,14 @@ pub mod pallet {
 			}
 
 			room.black_list.push(who.clone());
-			let room = Self::remove_someone_in_room(who.clone(), room);
-			<AllRoom<T>>::insert(group_id, room);
+			Self::remove_someone_in_room(who.clone(), &mut room);
 
 			Self::deposit_event(Event::Kicked(who.clone(), group_id));
 			Ok(())
 		}
 
 		/// Request dismissal of the room
+		///
 		#[pallet::weight(10_000)]
 		pub fn ask_for_disband_room(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -992,13 +996,16 @@ pub mod pallet {
 			let mut room = <AllRoom<T>>::get(group_id).unwrap();
 			let create_block = room.create_block;
 			let now = Self::now();
+
+			// Groups cannot be dissolved for a period of time after they are created
 			ensure!(
 				now - create_block > T::ProtectedDuration::get(),
 				Error::<T>::InProtectedDuration
 			);
 
+			// If there's ever been a request to dissolve
 			if room.disband_vote_end_block > T::BlockNumber::from(0u32) {
-				let until = now.clone().saturating_sub(room.disband_vote_end_block);
+				let until = now.saturating_sub(room.disband_vote_end_block);
 				match room.max_members {
 					GroupMaxMembers::Ten =>
 						if until <= <DisbandInterval<T>>::get().Ten {
@@ -1026,20 +1033,22 @@ pub mod pallet {
 			}
 
 			ensure!(!(Self::is_voting(room.clone())), Error::<T>::IsVoting);
-			room.disband_vote = DisbandVote::default();
-			let disband_payment = Percent::from_percent(10) * room.create_payment.clone();
+
+			// Those who ask for dissolution will have to deduct some of the amount to the Treasury.
+			let disband_payment = Percent::from_percent(10) * room.create_payment;
 			let to = Self::treasury_id();
 			T::NativeCurrency::transfer(&who, &to, disband_payment, KeepAlive)?;
+
+			room.disband_vote = DisbandVote::default();
 			room.disband_vote_end_block = Self::now() + T::VoteExpire::get();
 			room.disband_vote.approve_man.insert(who.clone());
-			let user_consume_amount = Self::get_user_consume_amount(who.clone(), room.clone());
+			let user_consume_amount = Self::get_user_consume_amount(&who, &room);
 			room.disband_vote.approve_total_amount = room
 				.disband_vote
 				.approve_total_amount
 				.checked_add(&user_consume_amount)
 				.ok_or(Error::<T>::Overflow)?;
-			<AllRoom<T>>::insert(group_id, room.clone());
-			Self::judge(room.clone());
+			Self::judge_and_update_room(&mut room);
 
 			Self::deposit_event(Event::AskForDisband(who.clone(), group_id));
 			Ok(())
@@ -1104,24 +1113,26 @@ pub mod pallet {
 		}
 
 		/// Users vote for disbanding the room.
+		///
+		///
 		#[pallet::weight(10_000)]
 		pub fn vote(origin: OriginFor<T>, group_id: u64, vote: ListenVote) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
 			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
-			let mut room = <AllRoom<T>>::get(group_id).unwrap();
+			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			/// the consume amount should not be zero.
-			let user_consume_amount = Self::get_user_consume_amount(who.clone(), room.clone());
+			let user_consume_amount = Self::get_user_consume_amount(&who, &room);
 			if user_consume_amount == <BalanceOf<T>>::from(0u32) {
 				return Err(Error::<T>::ConsumeAmountIsZero)?
 			}
 
+			// The vote does not exist or is expired
 			if !Self::is_voting(room.clone()) {
 				Self::remove_vote_info(room);
 				return Err(Error::<T>::NotVoting)?
 			}
-			let now = Self::now();
 
 			match vote {
 				ListenVote::Approve => {
@@ -1162,15 +1173,14 @@ pub mod pallet {
 				},
 			}
 
-			<AllRoom<T>>::insert(group_id, room.clone());
-			Self::judge(room.clone());
+			Self::judge_and_update_room(&mut room);
 
 			Self::deposit_event(Event::DisbandVote(who.clone(), group_id));
 			Ok(())
 		}
 
 		/// Users get their reward in disbanded rooms.
-		///
+		/// todo
 		/// the reward status should be NotGet in rooms.
 		#[pallet::weight(10_000)]
 		pub fn pay_out(origin: OriginFor<T>) -> DispatchResult {
@@ -1333,8 +1343,7 @@ pub mod pallet {
 					4u32.saturated_into::<BalanceOf<T>>();
 				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&user, amount));
 				room.total_balances = room.total_balances.saturating_sub(amount);
-				let room = Self::remove_someone_in_room(user.clone(), room.clone());
-				<AllRoom<T>>::insert(group_id, room);
+				Self::remove_someone_in_room(user.clone(), &mut room);
 			} else {
 				let amount = room.total_balances;
 				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&user, amount));
@@ -1724,7 +1733,7 @@ pub mod pallet {
 				room_info.now_members_number = room_info.now_members_number.checked_add(1u32).ok_or(Error::<T>::Overflow)?;
 				*r = Some(room_info.clone());
 				Ok(())
-			});
+			})?;
 
 			Ok(())
 		}
@@ -1755,9 +1764,11 @@ pub mod pallet {
 			));
 		}
 
+		///
+		/// Note: Spending amounts these involve voting, so it's possible that the group will be disbanded
 		fn update_user_consume(
-			who: T::AccountId,
-			room_info: GroupInfo<
+			who: &T::AccountId,
+			room_info: &mut GroupInfo<
 				T::AccountId,
 				BalanceOf<T>,
 				AllProps,
@@ -1768,50 +1779,52 @@ pub mod pallet {
 				T::Moment,
 			>,
 			amount: BalanceOf<T>,
-		) {
-			let mut room = room_info;
-			let group_id = room.group_id;
-			let mut new_who_consume: (T::AccountId, BalanceOf<T>);
-			if let Some(pos) = room.consume.clone().iter().position(|h| h.0 == who.clone()) {
-				let old_who_consume = room.consume.remove(pos);
-				new_who_consume = (old_who_consume.0, old_who_consume.1.saturating_add(amount));
+		) -> DispatchResult {
+			let group_id = room_info.group_id;
+			let new_user_consume: (T::AccountId, BalanceOf<T>);
+			if let Some(pos) = room_info.consume.clone().iter().position(|h| h.0 == who.clone()) {
+				let old_who_consume = room_info.consume.remove(pos);
+				new_user_consume = (old_who_consume.0, old_who_consume.1.checked_add(&amount).ok_or(Error::<T>::Overflow)?);
 			} else {
-				new_who_consume = (who.clone(), amount);
+				new_user_consume = (who.clone(), amount);
 			}
 			let mut index = 0;
-			for per_consume in room.consume.iter() {
-				if per_consume.1 < new_who_consume.1 {
+			for per_consume in room_info.consume.iter() {
+				if per_consume.1 < new_user_consume.1 {
 					break
 				}
 				index += 1;
 			}
-			room.consume.insert(index, new_who_consume.clone());
-			let mut consume = room.consume.clone();
-			room.council = vec![];
+			room_info.consume.insert(index, new_user_consume.clone());
+
+			let mut consume = room_info.consume.clone();
+			room_info.council = vec![];
 			if consume.len() > T::CouncilMaxNumber::get() as usize {
 				consume.split_off(T::CouncilMaxNumber::get() as usize);
-				room.council = consume;
+				room_info.council = consume;
 			} else {
-				room.council = room.consume.clone();
+				room_info.council = room_info.consume.clone();
 			}
-			if Self::is_voting(room.clone()) {
+
+			if Self::is_voting(room_info.clone()) {
 				let mut is_in_vote = false;
-				let disband_vote_info = room.disband_vote.clone();
+				let disband_vote_info = room_info.disband_vote.clone();
 				if disband_vote_info.approve_man.get(&who).is_some() {
-					room.disband_vote.approve_total_amount += amount;
+					room_info.disband_vote.approve_total_amount = room_info.disband_vote.approve_total_amount.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 					is_in_vote = true;
 				}
 				if disband_vote_info.reject_man.get(&who).is_some() {
-					room.disband_vote.reject_total_amount += amount;
+					room_info.disband_vote.reject_total_amount = room_info.disband_vote.reject_total_amount.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 					is_in_vote = true;
 				}
 				if is_in_vote {
-					<AllRoom<T>>::insert(group_id, room.clone());
-					Self::judge(room.clone());
-					return
+					Self::judge_and_update_room(room_info);
+					return Ok(());
 				}
 			}
-			<AllRoom<T>>::insert(group_id, room);
+			<AllRoom<T>>::insert(group_id, room_info);
+
+			Ok(())
 		}
 
 		fn is_voting(
@@ -1834,8 +1847,8 @@ pub mod pallet {
 			false
 		}
 
-		fn judge(
-			room: GroupInfo<
+		fn judge_and_update_room(
+			room: &mut GroupInfo<
 				T::AccountId,
 				BalanceOf<T>,
 				AllProps,
@@ -1846,15 +1859,15 @@ pub mod pallet {
 				T::Moment,
 			>,
 		) {
-			let mut room = room.clone();
 			let group_id = room.group_id;
 			let now = Self::now();
 			let vote_result = Self::is_vote_end(room.clone());
 
 			if vote_result.0 == End {
 				if vote_result.1 == Pass {
+					// The cost is 0. Dismiss immediately
 					if vote_result.2 == <BalanceOf<T>>::from(0u32) {
-						Self::disband(room);
+						Self::disband(room.clone());
 					} else {
 						room.disband_vote_end_block = now;
 						<AllRoom<T>>::insert(group_id, room);
@@ -1862,10 +1875,14 @@ pub mod pallet {
 							h.insert(group_id, now + T::DelayDisbandDuration::get())
 						});
 					}
+
 				} else {
-					Self::remove_vote_info(room);
+					Self::remove_vote_info(room.clone());
 				}
+				return;
 			}
+
+			AllRoom::<T>::insert(group_id, room);
 		}
 
 		fn is_vote_end(
@@ -1887,11 +1904,12 @@ pub mod pallet {
 			if approve_total_amount * <BalanceOf<T>>::from(2u32) >= consume_total_amount ||
 				reject_total_amount * <BalanceOf<T>>::from(2u32) >= consume_total_amount
 			{
-				if approve_total_amount * <BalanceOf<T>>::from(2u32) >= consume_total_amount {
+				if approve_total_amount >= reject_total_amount {
 					(End, Pass, consume_total_amount)
 				} else {
 					(End, NotPass, consume_total_amount)
 				}
+
 			} else {
 				if end_time >= Self::now() {
 					(NotEnd, NotPass, consume_total_amount)
@@ -2011,7 +2029,7 @@ pub mod pallet {
 
 		fn remove_someone_in_room(
 			who: T::AccountId,
-			room: GroupInfo<
+			room: &mut GroupInfo<
 				T::AccountId,
 				BalanceOf<T>,
 				AllProps,
@@ -2021,19 +2039,9 @@ pub mod pallet {
 				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
 				T::Moment,
 			>,
-		) -> GroupInfo<
-			T::AccountId,
-			BalanceOf<T>,
-			AllProps,
-			Audio,
-			T::BlockNumber,
-			GroupMaxMembers,
-			DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
-			T::Moment,
-		> {
-			let mut room = room;
+		) {
 			room.now_members_number = room.now_members_number.saturating_sub(1);
-			let mut room = Self::remove_consumer_info(room, who.clone());
+			Self::remove_consumer_info(room, who.clone());
 			let mut listeners = <ListenersOfRoom<T>>::get(room.group_id.clone());
 			let _ = listeners.take(&who);
 			if room.clone().group_manager == who.clone() {
@@ -2045,12 +2053,11 @@ pub mod pallet {
 				}
 			}
 			<ListenersOfRoom<T>>::insert(room.group_id.clone(), listeners);
-
-			room
+			<AllRoom<T>>::insert(room.group_id, room);
 		}
 
 		fn remove_consumer_info(
-			mut room: GroupInfo<
+			room: &mut GroupInfo<
 				T::AccountId,
 				BalanceOf<T>,
 				AllProps,
@@ -2061,16 +2068,7 @@ pub mod pallet {
 				T::Moment,
 			>,
 			who: T::AccountId,
-		) -> GroupInfo<
-			T::AccountId,
-			BalanceOf<T>,
-			AllProps,
-			Audio,
-			T::BlockNumber,
-			GroupMaxMembers,
-			DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
-			T::Moment,
-		> {
+		) {
 			if let Some(pos) = room.consume.iter().position(|h| h.0 == who.clone()) {
 				room.consume.remove(pos);
 			}
@@ -2082,7 +2080,6 @@ pub mod pallet {
 			} else {
 				room.council = room.consume.clone();
 			}
-			room
 		}
 
 		fn get_LTP(who: &T::AccountId, amount: BalanceOf<T>) {
@@ -2091,8 +2088,8 @@ pub mod pallet {
 		}
 
 		fn get_user_consume_amount(
-			who: T::AccountId,
-			room: GroupInfo<
+			who: &T::AccountId,
+			room: &GroupInfo<
 				T::AccountId,
 				BalanceOf<T>,
 				AllProps,
@@ -2104,7 +2101,7 @@ pub mod pallet {
 			>,
 		) -> BalanceOf<T> {
 			let mut room = room.clone();
-			if let Some(pos) = room.consume.clone().iter().position(|h| h.0 == who) {
+			if let Some(pos) = room.consume.clone().iter().position(|h| &h.0 == who) {
 				let consume = room.consume.remove(pos);
 				return consume.1
 			} else {

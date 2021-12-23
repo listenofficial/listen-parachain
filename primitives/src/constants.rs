@@ -77,7 +77,6 @@ pub mod parachains {
 		}
 	}
 
-
 	/// kusama
 	pub mod kusama {
 		pub mod KSM {
@@ -85,7 +84,6 @@ pub mod parachains {
 			pub const TokenSymbol: &[u8] = "KSM".as_bytes();
 		}
 	}
-
 
 	/// dico
 	pub mod kico {

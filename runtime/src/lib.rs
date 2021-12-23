@@ -67,13 +67,12 @@ use polkadot_runtime_common::{BlockHashCount, RocksDbWeight, SlowAdjustingFeeUpd
 // XCM Imports
 use xcm::latest::prelude::*;
 use xcm_builder::{
-	FixedRateOfFungible,
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin,
-	FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset, ParentAsSuperuser,
-	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
-	TakeWeightCredit, UsingComponents,
+	FixedRateOfFungible, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset,
+	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit, UsingComponents,
 };
 use xcm_executor::{Config, XcmExecutor};
 
@@ -173,7 +172,8 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 		match id {
 			kusama::KSM::AssetId => Some(MultiLocation::parent()),
 
-			native::LT::AssetId | native::USDT::AssetId | native::LTP::AssetId => native_currency_location(id),
+			native::LT::AssetId | native::USDT::AssetId | native::LTP::AssetId =>
+				native_currency_location(id),
 
 			kico::KICO::AssetId => Some(MultiLocation::new(
 				1,
@@ -767,6 +767,7 @@ parameter_types! {
 	pub const RoomProportion: Percent = Percent::from_percent(1);
 	pub const CouncilMaxNumber: u32 = 15;
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+	pub const GetLTPCurrencyId: CurrencyId = 101;
 
 }
 
@@ -793,6 +794,7 @@ impl pallet_listen::Config for Runtime {
 	type PalletId = TreasuryPalletId;
 	type AirDropAmount = AirDropAmount;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type GetLTPCurrencyId = GetLTPCurrencyId;
 	type ProtectedDuration = ProtectTime;
 	type CouncilMaxNumber = CouncilMaxNumber;
 	type CollectiveHandler = Dao;

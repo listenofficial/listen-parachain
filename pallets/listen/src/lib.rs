@@ -25,6 +25,7 @@ use crate::primitives::{
 };
 use codec::{Decode, Encode};
 pub use frame_support::{
+	transactional,
 	debug, decl_error, decl_event, decl_module, decl_storage, ensure,
 	traits::{
 		BalanceStatus as Status, Currency, EnsureOrigin,
@@ -34,6 +35,7 @@ pub use frame_support::{
 	weights::Weight,
 	Blake2_256, IterableStorageDoubleMap, IterableStorageMap, PalletId,
 };
+use sp_runtime::traits::CheckedSub;
 use frame_system::{self as system, ensure_root, ensure_signed};
 use listen_primitives::{
 	constants::{currency::*, time::*},
@@ -124,6 +126,8 @@ pub mod pallet {
 		/// LT currency id in the tokens module
 		#[pallet::constant]
 		type GetNativeCurrencyId: Get<CurrencyIdOf<Self>>;
+		#[pallet::constant]
+		type GetLTPCurrencyId: Get<CurrencyIdOf<Self>>;
 		/// Duration of group protection
 		#[pallet::constant]
 		type ProtectedDuration: Get<Self::BlockNumber>;
@@ -333,12 +337,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(10_000)]
-		pub fn test(origin: OriginFor<T>) -> DispatchResult {
-			let _ = ensure_signed(origin)?;
-			Self::deposit_event(Event::ListenTest);
-			Ok(())
-		}
+
 		/// Set a multi-sign account
 		///
 		/// The Origin must be LISTEN official service account.
@@ -358,9 +357,11 @@ pub mod pallet {
 			ensure!(<ServerId<T>>::get().is_some(), Error::<T>::ServerIdNotExists);
 			ensure!(<ServerId<T>>::get().unwrap() == server_id.clone(), Error::<T>::NotServerId);
 
-			let members = Self::sort_account_id(Self::check_accounts(members)?)?;
+			let mut members = Self::check_accounts(members)?;
+			members.sort();
+
 			let multisig_id =
-				<pallet_multisig::Module<T>>::multi_account_id(&members, threshould.clone());
+				<pallet_multisig::Module<T>>::multi_account_id(&members, threshould);
 			<Multisig<T>>::put((members, threshould, multisig_id));
 
 			Self::deposit_event(Event::SetMultisig);
@@ -378,7 +379,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			let server_id = T::Lookup::lookup(server_id)?;
-			<ServerId<T>>::put(server_id.clone());
+			<ServerId<T>>::put(&server_id);
 
 			Self::deposit_event(Event::SetServerId(server_id));
 			Ok(())
@@ -396,7 +397,7 @@ pub mod pallet {
 
 			let members = Self::check_accounts(members)?;
 			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
-			ensure!(who.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
+			ensure!(who == multisig_id, Error::<T>::NotMultisigId);
 
 			for user in members.iter() {
 				if <AlreadyAirDropList<T>>::get().contains(&user) {
@@ -422,6 +423,7 @@ pub mod pallet {
 		///
 		/// Everyone can do it, and he(she) will be room manager.
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn create_room(
 			origin: OriginFor<T>,
 			max_members: GroupMaxMembers,
@@ -431,26 +433,11 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let create_cost = Self::create_cost();
-			let create_payment: Balance = match max_members.clone() {
-				GroupMaxMembers::Ten => create_cost.Ten,
-				GroupMaxMembers::Hundred => create_cost.Hundred,
-				GroupMaxMembers::FiveHundred => create_cost.FiveHundred,
-				GroupMaxMembers::TenThousand => create_cost.TenThousand,
-				GroupMaxMembers::NoLimit => create_cost.NoLimit,
-				_ => return Err(Error::<T>::UnknownRoomType)?,
-			};
-			let create_payment = <BalanceOf<T> as TryFrom<Balance>>::try_from(create_payment)
-				.map_err(|_| Error::<T>::NumberCanNotConvert)?;
-
-			// let reasons = WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE;
-			// let free_balance = T::NativeCurrency::free_balance(&who);
-			// let new_balance = free_balance.saturating_sub(create_payment);
-			// T::NativeCurrency::ensure_can_withdraw(&who, <BalanceOf<T>>::from(10u32), reasons, new_balance)?;
+			let create_payment = Self::get_create_payment(&max_members)?;
 
 			/// the create cost transfers to the treasury
 			let to = Self::treasury_id();
-			T::NativeCurrency::transfer(&who, &to, create_payment.clone(), KeepAlive)?;
+			T::NativeCurrency::transfer(&who, &to, create_payment, KeepAlive)?;
 			let group_id = <GroupId<T>>::get();
 
 			let group_info = GroupInfo {
@@ -479,62 +466,69 @@ pub mod pallet {
 			};
 
 			<AllRoom<T>>::insert(group_id, group_info);
-			Self::add_listener_info(who.clone(), group_id);
-			<GroupId<T>>::mutate(|h| *h += 1);
+			Self::add_invitee_info(&who, group_id);
+			<GroupId<T>>::try_mutate(|h| -> DispatchResult {
+				*h = h.checked_add(1u64).ok_or(Error::<T>::Overflow)?;
+				Ok(())
+			});
 			Self::deposit_event(Event::CreatedRoom(who, group_id));
 
 			Ok(())
 		}
 
 		/// The room manager get his reward.
-		///
 		/// You should have already created the room.
 		/// Receive rewards for a fixed period of time
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn manager_get_reward(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 
 			let mut room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			let who = room_info.group_manager.clone();
-			let last_block = room_info.last_block_of_get_the_reward.clone();
+			let group_manager = room_info.group_manager.clone();
+			let mut last_block = room_info.last_block_of_get_the_reward.clone();
 			let now = Self::now();
 			let time = now.saturating_sub(last_block);
 			let mut duration_num =
 				time.checked_div(&T::RewardDuration::get()).ok_or(Error::<T>::DivByZero)?;
-			let real_this_block =
-				last_block.saturating_add(duration_num * T::RewardDuration::get());
 
 			if duration_num.is_zero() {
 				return Err(Error::<T>::NotRewardTime)?
 			} else {
-				if duration_num > 5u32.saturated_into::<T::BlockNumber>() {
-					duration_num = 5u32.saturated_into::<T::BlockNumber>();
+				let max_num = T::BlockNumber::from(5u32);
+				if duration_num > max_num {
+					duration_num = max_num;
 				}
-				let duration_num = duration_num.saturated_into::<u32>();
+
 				let consume_total_amount = Self::get_room_consume_amount(room_info.clone());
+				let total_reward = consume_total_amount.checked_mul(&Self::block_convert_balance(duration_num).saturated_into::<BalanceOf<T>>()).ok_or(Error::<T>::Overflow)?;
+
 				let manager_proportion_amount = T::ManagerProportion::get() *
-					consume_total_amount * duration_num
+					total_reward
 					.saturated_into::<BalanceOf<T>>();
 				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
-					&who,
+					&group_manager,
 					manager_proportion_amount,
 				));
-				room_info.total_balances =
-					room_info.total_balances.saturating_sub(manager_proportion_amount);
-				let room_add = T::RoomProportion::get() *
-					consume_total_amount * duration_num.saturated_into::<BalanceOf<T>>();
-				room_info.total_balances =
-					room_info.total_balances.clone().saturating_add(room_add);
 
-				room_info.last_block_of_get_the_reward = real_this_block;
+				room_info.total_balances =
+					room_info.total_balances.checked_sub(&manager_proportion_amount).ok_or(Error::<T>::Overflow)?;
+				let room_add_amount = T::RoomProportion::get() *
+					total_reward.saturated_into::<BalanceOf<T>>();
+				room_info.total_balances =
+					room_info.total_balances.clone().checked_add(&room_add_amount).ok_or(Error::<T>::Overflow)?;
+
+				last_block =
+				last_block.saturating_add(duration_num * T::RewardDuration::get());
+				room_info.last_block_of_get_the_reward = last_block;
+
 				<AllRoom<T>>::insert(group_id, room_info);
 
 				Self::deposit_event(Event::ManagerGetReward(
-					who,
+					group_manager,
 					manager_proportion_amount,
-					room_add,
+					room_add_amount,
 				));
-
 				Ok(())
 			}
 		}
@@ -553,11 +547,12 @@ pub mod pallet {
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
 			let mut room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			ensure!(
-				room_info.join_cost.clone() != join_cost.clone(),
+				room_info.join_cost != join_cost,
 				Error::<T>::AmountShouldDifferent
 			);
-			room_info.join_cost = join_cost.clone();
+			room_info.join_cost = join_cost;
 			<AllRoom<T>>::insert(group_id, room_info);
+
 			Self::deposit_event(Event::JoinCostChanged(group_id, join_cost));
 			Ok(())
 		}
@@ -567,6 +562,7 @@ pub mod pallet {
 		/// If invitee is None, you go into the room by yourself. Otherwise, you invite people in.
 		/// You can not invite yourself.
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn into_room(
 			origin: OriginFor<T>,
 			group_id: u64,
@@ -574,47 +570,48 @@ pub mod pallet {
 		) -> DispatchResult {
 			let inviter = ensure_signed(origin)?;
 
-			let invitee = match invitee {
+			let mut invitee = match invitee {
 				None => None,
 				Some(x) => Some(T::Lookup::lookup(x)?),
 			};
 
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
+
 			let room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 
-			if room_info.is_private.clone() {
+			// Private rooms must be invited by the manager.
+			if room_info.is_private {
 				ensure!(
-					invitee.is_some() && inviter.clone() == room_info.group_manager.clone(),
+					invitee.is_some() && inviter == room_info.group_manager,
 					Error::<T>::PrivateRoom
 				);
 			}
 
-			let mut invitee = invitee.clone();
+			if let Some(x) =  invitee.clone() {
+					ensure!(x != inviter, Error::<T>::ShouldNotYourself);
+					ensure!(Self::is_in_room(group_id, &inviter)?, Error::<T>::NotInRoom);
+				}
 
-			if invitee.is_some() {
-				ensure!(invitee.clone().unwrap() != inviter.clone(), Error::<T>::ShouldNotYourself);
-				/// the inviter must be in this room.
-				ensure!(Self::is_in_room(group_id, inviter.clone())?, Error::<T>::NotInRoom);
-			}
+			// The guy who's gonna be in the group
+			let man = invitee.unwrap_or_else(|| inviter.clone());
 
 			/// people who into the room must be not in blacklist.
 			let black_list = room_info.black_list;
-			let man = invitee.clone().unwrap_or_else(|| inviter.clone());
 			if let Some(pos) = black_list.iter().position(|h| h == &man) {
 				return Err(Error::<T>::InBlackList)?
 			};
 
 			ensure!(
-				room_info.max_members.clone().into_u32()? >=
-					room_info.now_members_number.clone() + 1,
+				room_info.max_members.into_u32()? >=
+					room_info.now_members_number.saturating_add(1u32),
 				Error::<T>::MembersNumberToMax
 			);
 
-			ensure!(!(Self::is_in_room(group_id, man)?), Error::<T>::InRoom);
+			ensure!(!(Self::is_in_room(group_id, &man)?), Error::<T>::InRoom);
 
-			Self::join_do(inviter.clone(), invitee.clone(), group_id)?;
+			Self::join_do(&inviter, &man, group_id)?;
 
-			Self::deposit_event(Event::IntoRoom(invitee, inviter, group_id));
+			Self::deposit_event(Event::IntoRoom(man, inviter, group_id));
 			Ok(())
 		}
 
@@ -630,10 +627,14 @@ pub mod pallet {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 
 			ensure!(!Self::is_in_disbanding(room_id)?, Error::<T>::Disbanding);
-			let mut room = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
-			ensure!(room.is_private.clone() != is_private, Error::<T>::PrivacyNotChange);
-			room.is_private = is_private;
-			<AllRoom<T>>::insert(room_id, room);
+
+			AllRoom::<T>::try_mutate_exists(room_id, |r| -> DispatchResult {
+				let mut room = r.as_mut().take().ok_or(Error::<T>::RoomNotExists)?;
+				ensure!(room.is_private != is_private, Error::<T>::PrivacyNotChange);
+				room.is_private = is_private;
+				*r = Some(room.clone());
+				Ok(())
+			});
 
 			Self::deposit_event(Event::SetRoomPrivacy(room_id, is_private));
 			Ok(())
@@ -656,8 +657,10 @@ pub mod pallet {
 			let now_number = room.now_members_number;
 			let now_max = room.max_members;
 			ensure!(now_max != new_max, Error::<T>::RoomMaxNotDiff);
-			let now_max_number = now_max.into_u32().map_err(|_| Error::<T>::MaxMembersUnknown)?;
+
 			let new_max_number = new_max.into_u32().map_err(|_| Error::<T>::MaxMembersUnknown)?;
+
+			// The value cannot be smaller than the current group size
 			ensure!(now_number <= new_max_number, Error::<T>::RoomMembersToMax);
 
 			let old_amount = match now_max {
@@ -694,6 +697,7 @@ pub mod pallet {
 		}
 
 		/// Users buy props in the room.
+		/// todo
 		#[pallet::weight(10_000)]
 		pub fn buy_props_in_room(
 			origin: OriginFor<T>,
@@ -703,7 +707,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
-			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
+			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
 			let mut dollars = <BalanceOf<T>>::from(0u32);
 			ensure!(
 				props.picture != 0u32 || props.text != 0u32 || props.video != 0u32,
@@ -768,7 +772,7 @@ pub mod pallet {
 			)?);
 			Self::update_user_consume(who.clone(), room, dollars);
 			<AllListeners<T>>::insert(who.clone(), person);
-
+			Self::get_LTP(&who, dollars);
 			Self::deposit_event(Event::BuyProps(who));
 			Ok(())
 		}
@@ -783,7 +787,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
-			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
+			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
 			let mut dollars = <BalanceOf<T>>::from(0u32);
 			ensure!(
 				audio.ten_seconds != 0u32 || audio.thirty_seconds != 0u32 || audio.minutes != 0u32,
@@ -860,7 +864,7 @@ pub mod pallet {
 			)?);
 			<AllListeners<T>>::insert(who.clone(), person);
 			Self::update_user_consume(who.clone(), room, dollars);
-
+			Self::get_LTP(&who, dollars);
 			Self::deposit_event(Event::BuyAudio(who));
 			Ok(())
 		}
@@ -936,7 +940,7 @@ pub mod pallet {
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
 			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			ensure!(room.group_manager != who.clone(), Error::<T>::RoomManager);
-			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
+			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
 			let now = Self::now();
 
 			if T::RoomRootOrigin::try_origin(origin).is_ok() {
@@ -984,7 +988,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			ensure!(!Self::is_can_disband(group_id)?, Error::<T>::Disbanding);
-			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
+			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
 			let mut room = <AllRoom<T>>::get(group_id).unwrap();
 			let create_block = room.create_block;
 			let now = Self::now();
@@ -1105,7 +1109,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
-			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
+			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
 			let mut room = <AllRoom<T>>::get(group_id).unwrap();
 			/// the consume amount should not be zero.
 			let user_consume_amount = Self::get_user_consume_amount(who.clone(), room.clone());
@@ -1259,7 +1263,7 @@ pub mod pallet {
 
 			ensure!(lucky_man_number != 0u32, Error::<T>::ParamIsZero);
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
-			ensure!(Self::is_in_room(group_id, who.clone())?, Error::<T>::NotInRoom);
+			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
 			ensure!(
 				amount >=
 					<BalanceOf<T>>::from(lucky_man_number)
@@ -1318,7 +1322,7 @@ pub mod pallet {
 			let user = ensure_signed(origin)?;
 
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
-			ensure!(Self::is_in_room(group_id, user.clone())?, Error::<T>::NotInRoom);
+			ensure!(Self::is_in_room(group_id, &user)?, Error::<T>::NotInRoom);
 			let mut room = <AllRoom<T>>::get(group_id).unwrap();
 			let number = room.now_members_number;
 			let user_amount = room.total_balances - room.group_manager_balances;
@@ -1414,7 +1418,7 @@ pub mod pallet {
 
 			for (who, amount) in amount_vec {
 				let who = T::Lookup::lookup(who)?;
-				if Self::is_in_room(group_id, who.clone())? == false {
+				if Self::is_in_room(group_id, &who)? == false {
 					continue
 				}
 
@@ -1552,7 +1556,7 @@ pub mod pallet {
 		AirDroped(T::AccountId),
 		CreatedRoom(T::AccountId, u64),
 		Invited(T::AccountId, T::AccountId),
-		IntoRoom(Option<T::AccountId>, T::AccountId, u64),
+		IntoRoom(T::AccountId, T::AccountId, u64),
 		RejectedInvite(T::AccountId, u64),
 		ChangedPermission(T::AccountId, u64),
 		BuyProps(T::AccountId),
@@ -1582,29 +1586,6 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn sort_account_id(
-			who: Vec<T::AccountId>,
-		) -> result::Result<Vec<T::AccountId>, DispatchError> {
-			ensure!(who.clone().len() > 0 as usize, Error::<T>::VecEmpty);
-			let mut new_who = vec![];
-			let who_cp = who.clone();
-			for i in who_cp.iter() {
-				if new_who.len() == 0 as usize {
-					new_who.insert(0, i.clone());
-				} else {
-					let mut index = 0;
-					for j in new_who.iter() {
-						if i >= j {
-							ensure!(i != j, Error::<T>::DuplicateMember);
-							index += 1;
-						}
-					}
-					new_who.insert(index, i.clone());
-				}
-			}
-
-			Ok(new_who)
-		}
 
 		fn check_accounts(
 			members: Vec<<T::Lookup as StaticLookup>::Source>,
@@ -1617,6 +1598,29 @@ pub mod pallet {
 			Ok(new_members)
 		}
 
+		fn u128_convert_balance(amount: Balance) -> result::Result<BalanceOf<T>, DispatchError> {
+			let balances = <BalanceOf<T> as TryFrom<Balance>>::try_from(amount)
+				.map_err(|_| Error::<T>::NumberCanNotConvert)?;
+			Ok(balances)
+		}
+
+		fn block_convert_balance(num: T::BlockNumber) -> BalanceOf<T> {
+			num.saturated_into::<u32>().saturated_into::<BalanceOf<T>>()
+		}
+
+		fn get_create_payment(max_members: &GroupMaxMembers) -> result::Result<BalanceOf<T>, DispatchError> {
+			let create_cost = Self::create_cost();
+			let create_payment: Balance = match max_members{
+				GroupMaxMembers::Ten => create_cost.Ten,
+				GroupMaxMembers::Hundred => create_cost.Hundred,
+				GroupMaxMembers::FiveHundred => create_cost.FiveHundred,
+				GroupMaxMembers::TenThousand => create_cost.TenThousand,
+				GroupMaxMembers::NoLimit => create_cost.NoLimit,
+				_ => return Err(Error::<T>::UnknownRoomType)?,
+			};
+			Ok(Self::u128_convert_balance(create_payment)?)
+		}
+
 		pub fn treasury_id() -> T::AccountId {
 			T::PalletId::get().into_account()
 		}
@@ -1625,7 +1629,7 @@ pub mod pallet {
 			<system::Module<T>>::block_number()
 		}
 
-		fn add_listener_info(yourself: T::AccountId, group_id: u64) {
+		fn add_invitee_info(yourself: &T::AccountId, group_id: u64) {
 			<ListenersOfRoom<T>>::mutate(group_id, |h| h.insert(yourself.clone()));
 			<AllListeners<T>>::mutate(yourself.clone(), |h| {
 				h.rooms.push((group_id, RewardStatus::default()))
@@ -1681,7 +1685,7 @@ pub mod pallet {
 			Ok(room)
 		}
 
-		fn is_in_room(group_id: u64, who: T::AccountId) -> result::Result<bool, DispatchError> {
+		fn is_in_room(group_id: u64, who: &T::AccountId) -> result::Result<bool, DispatchError> {
 			Self::room_must_exists(group_id)?;
 			let listeners = <ListenersOfRoom<T>>::get(group_id);
 			if listeners.clone().len() == 0 {
@@ -1695,40 +1699,32 @@ pub mod pallet {
 		}
 
 		fn join_do(
-			who: T::AccountId,
-			invitee: Option<T::AccountId>,
+			who: &T::AccountId,
+			invitee: &T::AccountId,
 			group_id: u64,
 		) -> DispatchResult {
 			let room_info = <AllRoom<T>>::get(group_id.clone()).unwrap();
 			let join_cost = room_info.join_cost;
 
-			if invitee.clone().is_some() && (invitee.clone().unwrap_or_default() != who.clone()) {
-				if join_cost != <BalanceOf<T>>::from(0u32) {
+			// Inviter pay for group entry.
+			if join_cost != <BalanceOf<T>>::from(0u32) {
 					T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(
 						&who,
-						join_cost.clone(),
-						WithdrawReasons::TRANSFER.into(),
-						KeepAlive,
-					)?);
-					Self::pay_for(group_id.clone(), join_cost);
-				}
-				Self::add_listener_info(invitee.clone().unwrap(), group_id.clone());
-			} else {
-				if join_cost != <BalanceOf<T>>::from(0u32) {
-					T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(
-						&who,
-						join_cost.clone(),
+						join_cost,
 						WithdrawReasons::TRANSFER.into(),
 						KeepAlive,
 					)?);
 					Self::pay_for(group_id, join_cost);
 				}
-				Self::add_listener_info(who.clone(), group_id.clone());
-			}
 
-			let mut room_info = <AllRoom<T>>::get(group_id.clone()).unwrap();
-			room_info.now_members_number += 1;
-			<AllRoom<T>>::insert(group_id.clone(), room_info);
+			Self::add_invitee_info(&invitee, group_id);
+
+			AllRoom::<T>::try_mutate_exists(group_id, |r| -> DispatchResult{
+				let mut room_info = r.as_mut().take().ok_or(Error::<T>::RoomNotExists)?;
+				room_info.now_members_number = room_info.now_members_number.checked_add(1u32).ok_or(Error::<T>::Overflow)?;
+				*r = Some(room_info.clone());
+				Ok(())
+			});
 
 			Ok(())
 		}
@@ -2089,6 +2085,11 @@ pub mod pallet {
 			room
 		}
 
+		fn get_LTP(who: &T::AccountId, amount: BalanceOf<T>) {
+			let mul_amount = amount.saturated_into::<Balance>().saturated_into::<MultiBalanceOf<T>>();
+			T::MultiCurrency::deposit(T::GetLTPCurrencyId::get(), who, mul_amount);
+		}
+
 		fn get_user_consume_amount(
 			who: T::AccountId,
 			room: GroupInfo<
@@ -2211,6 +2212,7 @@ pub mod pallet {
 				return 0u128
 			}
 		}
+
 
 		fn sub_room_free_amount(room_id: u64, amount: u128) -> Result<(), DispatchError> {
 			ensure!(!Self::is_can_disband(room_id)?, Error::<T>::Disbanding);

@@ -1412,7 +1412,7 @@ pub mod pallet {
 		/// Disbanding the room.
 		///
 		/// The vote has been passed.
-		/// todo
+		///
 		/// The Origin can be everyone.
 		#[pallet::weight(10_000)]
 		#[transactional]

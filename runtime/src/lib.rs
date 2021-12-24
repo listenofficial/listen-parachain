@@ -766,7 +766,7 @@ parameter_types! {
 	pub const RoomProportion: Percent = Percent::from_percent(1);
 	pub const CouncilMaxNumber: u32 = 15;
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-	pub const GetLTPCurrencyId: CurrencyId = 101;
+	pub const GetLikeCurrencyId: CurrencyId = 101;
 
 }
 
@@ -780,10 +780,7 @@ type RoomRootOrHalfRoomCouncilOrSomeRoomCouncil =
 
 impl pallet_listen::Config for Runtime {
 	type Event = Event;
-	type Create = ();
-	type NativeCurrency = Balances;
 	type MultiCurrency = Tokens;
-	type ProposalRejection = ();
 	type VoteExpire = VoteExpire;
 	type RedPackExpire = RedPackExpire;
 	type RewardDuration = RewardDuration;
@@ -792,7 +789,7 @@ impl pallet_listen::Config for Runtime {
 	type PalletId = TreasuryPalletId;
 	type AirDropAmount = AirDropAmount;
 	type GetNativeCurrencyId = GetNativeCurrencyId;
-	type GetLTPCurrencyId = GetLTPCurrencyId;
+	type GetLikeCurrencyId = GetLikeCurrencyId;
 	type ProtectedDuration = ProtectTime;
 	type CouncilMaxNumber = CouncilMaxNumber;
 	type CollectiveHandler = Dao;
@@ -848,6 +845,7 @@ parameter_types! {
 
 impl pallet_treasury::Config for Runtime {
 	type Event = Event;
+	type NativeCurrency = Balances;
 	type ApproveOrigin = HalfRoomCouncil;
 	type RejectOrigin = HalfRoomCouncil;
 	type OnSlash = ();
@@ -855,6 +853,7 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBondMinimum = RoomProposalBondMinimum;
 	type SpendPeriod = RoomSpendPeriod;
 	type WeightInfo = ();
+	type ListenHandler = Listen;
 }
 
 impl pallet_sudo::Config for Runtime {

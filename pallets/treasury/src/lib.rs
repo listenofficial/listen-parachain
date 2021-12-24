@@ -71,16 +71,18 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
-	type BalanceOf<T> = <<T as pallet_listen::Config>::NativeCurrency as Currency<
+	type BalanceOf<T> = <<T as Config>::NativeCurrency as Currency<
 		<T as frame_system::Config>::AccountId,
 	>>::Balance;
-	pub type NegativeImbalanceOf<T> = <<T as pallet_listen::Config>::NativeCurrency as Currency<
+	pub type NegativeImbalanceOf<T> = <<T as Config>::NativeCurrency as Currency<
 		<T as frame_system::Config>::AccountId,
 	>>::NegativeImbalance;
 
 	#[pallet::config]
 	#[pallet::disable_frame_system_supertrait_check]
-	pub trait Config: frame_system::Config + pallet_listen::Config {
+	pub trait Config: frame_system::Config {
+		type NativeCurrency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+		type ListenHandler: ListenHandler<u64, Self::AccountId, DispatchError, u128>;
 		/// Origin from which approvals must come.
 		type ApproveOrigin: EnsureOrigin<Self::Origin>;
 		/// Origin from which rejections must come.
@@ -226,8 +228,7 @@ pub mod pallet {
 
 			<Proposals<T>>::mutate(room_id, proposal_id, |h| {
 				if let Some(p) = h {
-					p.start_spend_time =
-						Some(<pallet_listen::Module<T>>::now() + T::SpendPeriod::get());
+					p.start_spend_time = Some(Self::now() + T::SpendPeriod::get());
 				}
 			});
 
@@ -247,17 +248,14 @@ pub mod pallet {
 			for proposal_id in proposal_ids.clone().iter() {
 				if let Some(proposal) = <Proposals<T>>::get(room_id, proposal_id) {
 					if proposal.start_spend_time.is_some() &&
-						proposal.start_spend_time.unwrap() <= <pallet_listen::Module<T>>::now() &&
-						<pallet_listen::Module<T>>::sub_room_free_amount(
+						proposal.start_spend_time.unwrap() <= Self::now() &&
+						T::ListenHandler::sub_room_free_amount(
 							room_id,
 							proposal.value.saturated_into::<u128>(),
 						)
 						.is_ok()
 					{
-						T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
-							&proposal.beneficiary,
-							proposal.value,
-						));
+						T::NativeCurrency::deposit_creating(&proposal.beneficiary, proposal.value);
 
 						T::NativeCurrency::unreserve(&proposal.proposer, proposal.bond);
 						proposal_ids.retain(|h| h != proposal_id);
@@ -276,6 +274,10 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		fn calculate_bond(value: BalanceOf<T>) -> BalanceOf<T> {
 			T::ProposalBondMinimum::get().max(T::ProposalBond::get() * value)
+		}
+
+		pub fn now() -> T::BlockNumber {
+			<frame_system::Module<T>>::block_number()
 		}
 	}
 

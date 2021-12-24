@@ -81,14 +81,6 @@ pub mod pallet {
 	pub(crate) type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 		<T as frame_system::Config>::AccountId,
 	>>::CurrencyId;
-	type BalanceOf<T> =
-		<<T as Config>::NativeCurrency as Currency<<T as system::Config>::AccountId>>::Balance;
-	type PositiveImbalanceOf<T> = <<T as Config>::NativeCurrency as Currency<
-		<T as frame_system::Config>::AccountId,
-	>>::PositiveImbalance;
-	type NegativeImbalanceOf<T> = <<T as Config>::NativeCurrency as Currency<
-		<T as frame_system::Config>::AccountId,
-	>>::NegativeImbalance;
 
 	#[pallet::config]
 	#[pallet::disable_frame_system_supertrait_check]
@@ -96,10 +88,8 @@ pub mod pallet {
 		type Event: From<Event<Self>>
 			+ Into<<Self as system::Config>::Event>
 			+ IsType<<Self as frame_system::Config>::Event>;
-		type Create: OnUnbalanced<PositiveImbalanceOf<Self>>;
-		type NativeCurrency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+		// type NativeCurrency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 		type MultiCurrency: MultiCurrency<Self::AccountId>;
-		type ProposalRejection: OnUnbalanced<NegativeImbalanceOf<Self>>;
 		type CollectiveHandler: CollectiveHandler<u64, Self::BlockNumber, DispatchError>;
 		type RoomRootOrigin: EnsureOrigin<Self::Origin>;
 		type RoomRootOrHalfCouncilOrigin: EnsureOrigin<Self::Origin>;
@@ -120,7 +110,7 @@ pub mod pallet {
 		type PalletId: Get<PalletId>;
 		/// The amount of airdrops each person gets
 		#[pallet::constant]
-		type AirDropAmount: Get<BalanceOf<Self>>;
+		type AirDropAmount: Get<MultiBalanceOf<Self>>;
 		/// LT currency id in the tokens module
 		#[pallet::constant]
 		type GetNativeCurrencyId: Get<CurrencyIdOf<Self>>;
@@ -164,12 +154,12 @@ pub mod pallet {
 		u64,
 		GroupInfo<
 			T::AccountId,
-			BalanceOf<T>,
+			MultiBalanceOf<T>,
 			AllProps,
 			Audio,
 			T::BlockNumber,
 			GroupMaxMembers,
-			DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+			DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 			T::Moment,
 		>,
 	>;
@@ -193,7 +183,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		T::AccountId,
-		PersonInfo<AllProps, Audio, BalanceOf<T>, RewardStatus>,
+		PersonInfo<AllProps, Audio, MultiBalanceOf<T>, RewardStatus>,
 		ValueQuery,
 	>;
 
@@ -206,7 +196,7 @@ pub mod pallet {
 		SessionIndex,
 		Blake2_128Concat,
 		u64,
-		RoomRewardInfo<BalanceOf<T>>,
+		RoomRewardInfo<MultiBalanceOf<T>>,
 		ValueQuery,
 	>;
 
@@ -290,46 +280,54 @@ pub mod pallet {
 		StorageValue<_, DisbandTime<T::BlockNumber>, ValueQuery, DisbandIntervalOnEmpty<T>>;
 
 	#[pallet::type_value]
-	pub fn PropsPaymentOnEmpty<T: Config>() -> PropsPrice<BalanceOf<T>> {
+	pub fn PropsPaymentOnEmpty<T: Config>() -> PropsPrice<MultiBalanceOf<T>> {
 		PropsPrice {
-			picture: <BalanceOf<T> as TryFrom<Balance>>::try_from(Percent::from_percent(3) * UNIT)
-				.ok()
-				.unwrap(),
-			text: <BalanceOf<T> as TryFrom<Balance>>::try_from(Percent::from_percent(1) * UNIT)
-				.ok()
-				.unwrap(),
-			video: <BalanceOf<T> as TryFrom<Balance>>::try_from(Percent::from_percent(3) * UNIT)
-				.ok()
-				.unwrap(),
+			picture: <MultiBalanceOf<T> as TryFrom<Balance>>::try_from(
+				Percent::from_percent(3) * UNIT,
+			)
+			.ok()
+			.unwrap(),
+			text: <MultiBalanceOf<T> as TryFrom<Balance>>::try_from(
+				Percent::from_percent(1) * UNIT,
+			)
+			.ok()
+			.unwrap(),
+			video: <MultiBalanceOf<T> as TryFrom<Balance>>::try_from(
+				Percent::from_percent(3) * UNIT,
+			)
+			.ok()
+			.unwrap(),
 		}
 	}
 	#[pallet::storage]
 	#[pallet::getter(fn props_payment)]
 	pub type PropsPayment<T: Config> =
-		StorageValue<_, PropsPrice<BalanceOf<T>>, ValueQuery, PropsPaymentOnEmpty<T>>;
+		StorageValue<_, PropsPrice<MultiBalanceOf<T>>, ValueQuery, PropsPaymentOnEmpty<T>>;
 
 	#[pallet::type_value]
-	pub fn AudioPaymentOnEmpty<T: Config>() -> AudioPrice<BalanceOf<T>> {
+	pub fn AudioPaymentOnEmpty<T: Config>() -> AudioPrice<MultiBalanceOf<T>> {
 		AudioPrice {
-			ten_seconds: <BalanceOf<T> as TryFrom<Balance>>::try_from(
+			ten_seconds: <MultiBalanceOf<T> as TryFrom<Balance>>::try_from(
 				Percent::from_percent(1) * UNIT,
 			)
 			.ok()
 			.unwrap(),
-			thirty_seconds: <BalanceOf<T> as TryFrom<Balance>>::try_from(
+			thirty_seconds: <MultiBalanceOf<T> as TryFrom<Balance>>::try_from(
 				Percent::from_percent(2) * UNIT,
 			)
 			.ok()
 			.unwrap(),
-			minutes: <BalanceOf<T> as TryFrom<Balance>>::try_from(Percent::from_percent(2) * UNIT)
-				.ok()
-				.unwrap(),
+			minutes: <MultiBalanceOf<T> as TryFrom<Balance>>::try_from(
+				Percent::from_percent(2) * UNIT,
+			)
+			.ok()
+			.unwrap(),
 		}
 	}
 	#[pallet::storage]
 	#[pallet::getter(fn audio_payment)]
 	pub type AudioPayment<T: Config> =
-		StorageValue<_, AudioPrice<BalanceOf<T>>, ValueQuery, AudioPaymentOnEmpty<T>>;
+		StorageValue<_, AudioPrice<MultiBalanceOf<T>>, ValueQuery, AudioPaymentOnEmpty<T>>;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub (super) trait Store)]
@@ -402,13 +400,16 @@ pub mod pallet {
 					continue
 				}
 				/// the account balances should be zero.
-				if T::NativeCurrency::total_balance(&user) != Zero::zero() {
+				if T::MultiCurrency::total_balance(T::GetNativeCurrencyId::get(), &user) !=
+					Zero::zero()
+				{
 					continue
 				}
-				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
+				T::MultiCurrency::deposit(
+					T::GetNativeCurrencyId::get(),
 					&user,
 					T::AirDropAmount::get(),
-				));
+				)?;
 				<AlreadyAirDropList<T>>::mutate(|h| h.insert(user.clone()));
 				<system::Module<T>>::inc_ref(&user);
 			}
@@ -426,7 +427,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			max_members: GroupMaxMembers,
 			group_type: Vec<u8>,
-			join_cost: BalanceOf<T>,
+			join_cost: MultiBalanceOf<T>,
 			is_private: bool,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -435,7 +436,7 @@ pub mod pallet {
 
 			/// the create cost transfers to the treasury
 			let to = Self::treasury_id();
-			T::NativeCurrency::transfer(&who, &to, create_payment, KeepAlive)?;
+			T::MultiCurrency::transfer(T::GetNativeCurrencyId::get(), &who, &to, create_payment)?;
 			let group_id = <GroupId<T>>::get();
 
 			let group_info = GroupInfo {
@@ -449,8 +450,8 @@ pub mod pallet {
 				join_cost,
 				props: AllProps::default(),
 				audio: Audio::default(),
-				total_balances: <BalanceOf<T>>::from(0u32),
-				group_manager_balances: <BalanceOf<T>>::from(0u32),
+				total_balances: <MultiBalanceOf<T>>::from(0u32),
+				group_manager_balances: <MultiBalanceOf<T>>::from(0u32),
 				now_members_number: 1u32,
 				last_remove_someone_block: T::BlockNumber::default(),
 				disband_vote_end_block: T::BlockNumber::default(),
@@ -501,23 +502,26 @@ pub mod pallet {
 				let consume_total_amount = Self::get_room_consume_amount(room_info.clone());
 				let total_reward = consume_total_amount
 					.checked_mul(
-						&Self::block_convert_balance(duration_num).saturated_into::<BalanceOf<T>>(),
+						&Self::block_convert_balance(duration_num)
+							.saturated_into::<MultiBalanceOf<T>>(),
 					)
 					.ok_or(Error::<T>::Overflow)?;
 
-				let manager_proportion_amount =
-					T::ManagerProportion::get() * total_reward.saturated_into::<BalanceOf<T>>();
-				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
+				let manager_proportion_amount = T::ManagerProportion::get() *
+					total_reward.saturated_into::<MultiBalanceOf<T>>();
+
+				T::MultiCurrency::deposit(
+					T::GetNativeCurrencyId::get(),
 					&group_manager,
 					manager_proportion_amount,
-				));
+				)?;
 
 				room_info.total_balances = room_info
 					.total_balances
 					.checked_sub(&manager_proportion_amount)
 					.ok_or(Error::<T>::Overflow)?;
 				let room_add_amount =
-					T::RoomProportion::get() * total_reward.saturated_into::<BalanceOf<T>>();
+					T::RoomProportion::get() * total_reward.saturated_into::<MultiBalanceOf<T>>();
 				room_info.total_balances = room_info
 					.total_balances
 					.clone()
@@ -545,7 +549,7 @@ pub mod pallet {
 		pub fn update_join_cost(
 			origin: OriginFor<T>,
 			group_id: u64,
-			join_cost: BalanceOf<T>,
+			join_cost: MultiBalanceOf<T>,
 		) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 
@@ -686,15 +690,21 @@ pub mod pallet {
 				_ => return Err(Error::<T>::UnknownRoomType)?,
 			};
 
-			let add_amount = new_amount.saturating_sub(old_amount).saturated_into::<BalanceOf<T>>();
+			let add_amount =
+				new_amount.saturating_sub(old_amount).saturated_into::<MultiBalanceOf<T>>();
 			if add_amount != Zero::zero() {
 				/// transfers amount to the treasury.
 				let to = Self::treasury_id();
-				T::NativeCurrency::transfer(&manager, &to, add_amount.clone(), KeepAlive)?;
+				T::MultiCurrency::transfer(
+					T::GetNativeCurrencyId::get(),
+					&manager,
+					&to,
+					add_amount,
+				)?;
 			}
 
 			room.max_members = new_max;
-			room.create_payment = new_amount.saturated_into::<BalanceOf<T>>();
+			room.create_payment = new_amount.saturated_into::<MultiBalanceOf<T>>();
 			<AllRoom<T>>::insert(group_id, room);
 
 			Self::deposit_event(Event::SetMaxNumberOfRoomMembers(manager, new_max_number));
@@ -714,7 +724,7 @@ pub mod pallet {
 
 			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
 			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
-			let mut dollars = <BalanceOf<T>>::from(0u32);
+			let mut dollars = <MultiBalanceOf<T>>::from(0u32);
 			ensure!(
 				props.picture != 0u32 || props.text != 0u32 || props.video != 0u32,
 				Error::<T>::BuyNothing
@@ -724,7 +734,7 @@ pub mod pallet {
 			if props.picture > 0u32 {
 				dollars = props_cost
 					.picture
-					.checked_mul(&<BalanceOf<T>>::from(props.picture))
+					.checked_mul(&<MultiBalanceOf<T>>::from(props.picture))
 					.ok_or(Error::<T>::Overflow)?;
 			}
 
@@ -733,7 +743,7 @@ pub mod pallet {
 					.checked_add(
 						&props_cost
 							.text
-							.checked_mul(&<BalanceOf<T>>::from(props.text))
+							.checked_mul(&<MultiBalanceOf<T>>::from(props.text))
 							.ok_or(Error::<T>::Overflow)?,
 					)
 					.ok_or(Error::<T>::Overflow)?;
@@ -744,7 +754,7 @@ pub mod pallet {
 					.checked_add(
 						&props_cost
 							.video
-							.checked_mul(&<BalanceOf<T>>::from(props.video))
+							.checked_mul(&<MultiBalanceOf<T>>::from(props.video))
 							.ok_or(Error::<T>::Overflow)?,
 					)
 					.ok_or(Error::<T>::Overflow)?;
@@ -770,12 +780,7 @@ pub mod pallet {
 			person.cost = person.cost.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
 			<AllListeners<T>>::insert(who.clone(), person);
 
-			T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(
-				&who,
-				dollars,
-				WithdrawReasons::TRANSFER.into(),
-				KeepAlive,
-			)?);
+			T::MultiCurrency::withdraw(T::GetNativeCurrencyId::get(), &who, dollars)?;
 
 			Self::get_like(&who, dollars);
 			Self::deposit_event(Event::BuyProps(who));
@@ -794,7 +799,7 @@ pub mod pallet {
 
 			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
 			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
-			let mut dollars = <BalanceOf<T>>::from(0u32);
+			let mut dollars = <MultiBalanceOf<T>>::from(0u32);
 			ensure!(
 				audio.ten_seconds != 0u32 || audio.thirty_seconds != 0u32 || audio.minutes != 0u32,
 				Error::<T>::BuyNothing
@@ -804,7 +809,7 @@ pub mod pallet {
 			if audio.ten_seconds > 0u32 {
 				dollars = audio_cost
 					.ten_seconds
-					.checked_mul(&<BalanceOf<T>>::from(audio.ten_seconds))
+					.checked_mul(&<MultiBalanceOf<T>>::from(audio.ten_seconds))
 					.ok_or(Error::<T>::Overflow)?;
 			}
 
@@ -813,7 +818,7 @@ pub mod pallet {
 					.checked_add(
 						&audio_cost
 							.thirty_seconds
-							.checked_mul(&<BalanceOf<T>>::from(audio.thirty_seconds))
+							.checked_mul(&<MultiBalanceOf<T>>::from(audio.thirty_seconds))
 							.ok_or(Error::<T>::Overflow)?,
 					)
 					.ok_or(Error::<T>::Overflow)?;
@@ -824,7 +829,7 @@ pub mod pallet {
 					.checked_add(
 						&audio_cost
 							.minutes
-							.checked_mul(&<BalanceOf<T>>::from(audio.minutes))
+							.checked_mul(&<MultiBalanceOf<T>>::from(audio.minutes))
 							.ok_or(Error::<T>::Overflow)?,
 					)
 					.ok_or(Error::<T>::Overflow)?;
@@ -862,12 +867,7 @@ pub mod pallet {
 			person.cost = person.cost.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
 			<AllListeners<T>>::insert(who.clone(), person);
 
-			T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(
-				&who,
-				dollars.clone(),
-				WithdrawReasons::TRANSFER.into(),
-				KeepAlive,
-			)?);
+			T::MultiCurrency::withdraw(T::GetNativeCurrencyId::get(), &who, dollars)?;
 
 			Self::get_like(&who, dollars);
 			Self::deposit_event(Event::BuyAudio(who));
@@ -1043,7 +1043,7 @@ pub mod pallet {
 			// Those who ask for dissolution will have to deduct some of the amount to the Treasury.
 			let disband_payment = Percent::from_percent(10) * room.create_payment;
 			let to = Self::treasury_id();
-			T::NativeCurrency::transfer(&who, &to, disband_payment, KeepAlive)?;
+			T::MultiCurrency::transfer(T::GetNativeCurrencyId::get(), &who, &to, disband_payment)?;
 
 			room.disband_vote = DisbandVote::default();
 			room.disband_vote_end_block = Self::now() + T::VoteExpire::get();
@@ -1066,7 +1066,7 @@ pub mod pallet {
 		#[pallet::weight(10_000)]
 		pub fn set_audio_price(
 			origin: OriginFor<T>,
-			cost: AudioPrice<BalanceOf<T>>,
+			cost: AudioPrice<MultiBalanceOf<T>>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -1081,7 +1081,7 @@ pub mod pallet {
 		#[pallet::weight(10_000)]
 		pub fn set_props_price(
 			origin: OriginFor<T>,
-			cost: PropsPrice<BalanceOf<T>>,
+			cost: PropsPrice<MultiBalanceOf<T>>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -1130,7 +1130,7 @@ pub mod pallet {
 			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
 			/// the consume amount should not be zero.
 			let user_consume_amount = Self::get_user_consume_amount(&who, &room);
-			if user_consume_amount == <BalanceOf<T>>::from(0u32) {
+			if user_consume_amount == <MultiBalanceOf<T>>::from(0u32) {
 				return Err(Error::<T>::ConsumeAmountIsZero)?
 			}
 
@@ -1203,7 +1203,7 @@ pub mod pallet {
 
 			let rooms = <AllListeners<T>>::get(who.clone()).rooms;
 			let mut rooms_cp = rooms.clone();
-			let mut amount = <BalanceOf<T>>::from(0u32);
+			let mut amount = <MultiBalanceOf<T>>::from(0u32);
 
 			for room in rooms.iter() {
 				// You must be in a NotGet state to receive a reward
@@ -1245,9 +1245,11 @@ pub mod pallet {
 
 								<InfoOfDisbandedRoom<T>>::insert(cur_session, group_id, info);
 
-								T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
-									&who, reward,
-								));
+								T::MultiCurrency::deposit(
+									T::GetNativeCurrencyId::get(),
+									&who,
+									reward,
+								);
 
 								if let Some(pos) = rooms.iter().position(|h| h.0 == group_id) {
 									rooms_cp.remove(pos);
@@ -1386,15 +1388,15 @@ pub mod pallet {
 			if number > 1 {
 				// If you quit halfway, you only get a quarter of the reward.
 				let amount = users_amount /
-					room.now_members_number.saturated_into::<BalanceOf<T>>() /
-					4u32.saturated_into::<BalanceOf<T>>();
-				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&user, amount));
+					room.now_members_number.saturated_into::<MultiBalanceOf<T>>() /
+					4u32.saturated_into::<MultiBalanceOf<T>>();
+				T::MultiCurrency::deposit(T::GetNativeCurrencyId::get(), &user, amount)?;
 				room.total_balances =
 					room.total_balances.checked_sub(&amount).ok_or(Error::<T>::Overflow)?;
 				Self::remove_someone_in_room(user.clone(), &mut room);
 			} else {
 				let amount = room.total_balances;
-				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&user, amount));
+				T::MultiCurrency::deposit(T::GetNativeCurrencyId::get(), &user, amount)?;
 				let listeners = <ListenersOfRoom<T>>::get(group_id);
 				<AllRoom<T>>::remove(group_id);
 				<ListenersOfRoom<T>>::remove(group_id);
@@ -1611,10 +1613,10 @@ pub mod pallet {
 		Kicked(T::AccountId, u64),
 		AskForDisband(T::AccountId, u64),
 		DisbandVote(T::AccountId, u64),
-		Payout(T::AccountId, BalanceOf<T>),
+		Payout(T::AccountId, MultiBalanceOf<T>),
 		SendRedPocket(u64, u128, MultiBalanceOf<T>),
 		GetRedPocket(u64, u128, MultiBalanceOf<T>),
-		JoinCostChanged(u64, BalanceOf<T>),
+		JoinCostChanged(u64, MultiBalanceOf<T>),
 		SetPropsPrice,
 		SetAudioPrice,
 		SetDisbandInterval,
@@ -1622,7 +1624,7 @@ pub mod pallet {
 		SetCreateCost,
 		SetServerId(T::AccountId),
 		Exit(T::AccountId, u64),
-		ManagerGetReward(T::AccountId, BalanceOf<T>, BalanceOf<T>),
+		ManagerGetReward(T::AccountId, MultiBalanceOf<T>, MultiBalanceOf<T>),
 		SetMaxNumberOfRoomMembers(T::AccountId, u32),
 		RemoveSomeoneFromBlackList(T::AccountId, u64),
 		SetRoomPrivacy(u64, bool),
@@ -1645,19 +1647,21 @@ pub mod pallet {
 			Ok(new_members)
 		}
 
-		fn u128_convert_balance(amount: Balance) -> result::Result<BalanceOf<T>, DispatchError> {
-			let balances = <BalanceOf<T> as TryFrom<Balance>>::try_from(amount)
+		fn u128_convert_balance(
+			amount: Balance,
+		) -> result::Result<MultiBalanceOf<T>, DispatchError> {
+			let balances = <MultiBalanceOf<T> as TryFrom<Balance>>::try_from(amount)
 				.map_err(|_| Error::<T>::NumberCanNotConvert)?;
 			Ok(balances)
 		}
 
-		fn block_convert_balance(num: T::BlockNumber) -> BalanceOf<T> {
-			num.saturated_into::<u32>().saturated_into::<BalanceOf<T>>()
+		fn block_convert_balance(num: T::BlockNumber) -> MultiBalanceOf<T> {
+			num.saturated_into::<u32>().saturated_into::<MultiBalanceOf<T>>()
 		}
 
 		fn get_create_payment(
 			max_members: &GroupMaxMembers,
-		) -> result::Result<BalanceOf<T>, DispatchError> {
+		) -> result::Result<MultiBalanceOf<T>, DispatchError> {
 			let create_cost = Self::create_cost();
 			let create_payment: Balance = match max_members {
 				GroupMaxMembers::Ten => create_cost.Ten,
@@ -1688,16 +1692,16 @@ pub mod pallet {
 		fn get_room_consume_amount(
 			room: GroupInfo<
 				T::AccountId,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				AllProps,
 				Audio,
 				T::BlockNumber,
 				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 				T::Moment,
 			>,
-		) -> BalanceOf<T> {
-			let mut consume_total_amount = <BalanceOf<T>>::from(0u32);
+		) -> MultiBalanceOf<T> {
+			let mut consume_total_amount = <MultiBalanceOf<T>>::from(0u32);
 			for (account_id, amount) in room.consume.clone().iter() {
 				consume_total_amount = consume_total_amount.saturating_add(*amount);
 			}
@@ -1720,12 +1724,12 @@ pub mod pallet {
 		) -> result::Result<
 			GroupInfo<
 				T::AccountId,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				AllProps,
 				Audio,
 				T::BlockNumber,
 				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 				T::Moment,
 			>,
 			DispatchError,
@@ -1747,13 +1751,8 @@ pub mod pallet {
 			let join_cost = room_info.join_cost;
 
 			// Inviter pay for group entry.
-			if join_cost != <BalanceOf<T>>::from(0u32) {
-				T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(
-					&who,
-					join_cost,
-					WithdrawReasons::TRANSFER.into(),
-					KeepAlive,
-				)?);
+			if join_cost != <MultiBalanceOf<T>>::from(0u32) {
+				T::MultiCurrency::withdraw(T::GetNativeCurrencyId::get(), &who, join_cost)?;
 				Self::pay_for(group_id, join_cost, room_info)?;
 			}
 
@@ -1772,15 +1771,15 @@ pub mod pallet {
 
 		fn pay_for(
 			group_id: u64,
-			join_cost: BalanceOf<T>,
+			join_cost: MultiBalanceOf<T>,
 			room_info: GroupInfo<
 				T::AccountId,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				AllProps,
 				Audio,
 				T::BlockNumber,
 				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 				T::Moment,
 			>,
 		) -> DispatchResult {
@@ -1802,16 +1801,18 @@ pub mod pallet {
 				.ok_or(Error::<T>::Overflow)?;
 			let group_manager = room_info.group_manager.clone();
 
-			T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
+			T::MultiCurrency::deposit(
+				T::GetNativeCurrencyId::get(),
 				&group_manager,
 				payment_manager_now,
-			));
+			)?;
 
 			let teasury_id = Self::treasury_id();
-			T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
+			T::MultiCurrency::deposit(
+				T::GetNativeCurrencyId::get(),
 				&teasury_id,
 				payment_treasury,
-			));
+			)?;
 
 			<AllRoom<T>>::insert(group_id, room_info);
 
@@ -1824,18 +1825,18 @@ pub mod pallet {
 			who: &T::AccountId,
 			room_info: &mut GroupInfo<
 				T::AccountId,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				AllProps,
 				Audio,
 				T::BlockNumber,
 				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 				T::Moment,
 			>,
-			amount: BalanceOf<T>,
+			amount: MultiBalanceOf<T>,
 		) -> DispatchResult {
 			let group_id = room_info.group_id;
-			let new_user_consume: (T::AccountId, BalanceOf<T>);
+			let new_user_consume: (T::AccountId, MultiBalanceOf<T>);
 			if let Some(pos) = room_info.consume.clone().iter().position(|h| h.0 == who.clone()) {
 				let old_who_consume = room_info.consume.remove(pos);
 				new_user_consume = (
@@ -1895,12 +1896,12 @@ pub mod pallet {
 		fn is_voting(
 			room: &GroupInfo<
 				T::AccountId,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				AllProps,
 				Audio,
 				T::BlockNumber,
 				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 				T::Moment,
 			>,
 		) -> bool {
@@ -1916,12 +1917,12 @@ pub mod pallet {
 		fn judge_vote_and_update_room(
 			room: &mut GroupInfo<
 				T::AccountId,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				AllProps,
 				Audio,
 				T::BlockNumber,
 				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 				T::Moment,
 			>,
 		) {
@@ -1932,7 +1933,7 @@ pub mod pallet {
 			if vote_result.0 == End {
 				if vote_result.1 == Pass {
 					// The cost is 0. Dismiss immediately
-					if vote_result.2 == <BalanceOf<T>>::from(0u32) {
+					if vote_result.2 == <MultiBalanceOf<T>>::from(0u32) {
 						Self::disband(room.clone());
 					} else {
 						room.disband_vote_end_block = now;
@@ -1953,21 +1954,21 @@ pub mod pallet {
 		fn is_vote_end(
 			room_info: GroupInfo<
 				T::AccountId,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				AllProps,
 				Audio,
 				T::BlockNumber,
 				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 				T::Moment,
 			>,
-		) -> (bool, bool, BalanceOf<T>) {
+		) -> (bool, bool, MultiBalanceOf<T>) {
 			let end_time = room_info.disband_vote_end_block.clone();
 			let approve_total_amount = room_info.disband_vote.approve_total_amount.clone();
 			let reject_total_amount = room_info.disband_vote.reject_total_amount.clone();
 			let consume_total_amount = Self::get_room_consume_amount(room_info.clone());
-			if approve_total_amount * <BalanceOf<T>>::from(2u32) >= consume_total_amount ||
-				reject_total_amount * <BalanceOf<T>>::from(2u32) >= consume_total_amount
+			if approve_total_amount * <MultiBalanceOf<T>>::from(2u32) >= consume_total_amount ||
+				reject_total_amount * <MultiBalanceOf<T>>::from(2u32) >= consume_total_amount
 			{
 				if approve_total_amount >= reject_total_amount {
 					(End, Pass, consume_total_amount)
@@ -1986,12 +1987,12 @@ pub mod pallet {
 		fn disband(
 			room: GroupInfo<
 				T::AccountId,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				AllProps,
 				Audio,
 				T::BlockNumber,
 				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 				T::Moment,
 			>,
 		) {
@@ -1999,19 +2000,20 @@ pub mod pallet {
 			Self::remove_redpacket_by_room_id(group_id, true);
 			let total_reward = room.total_balances.clone();
 			let manager_reward = room.group_manager_balances.clone();
-			T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
+			T::MultiCurrency::deposit(
+				T::GetNativeCurrencyId::get(),
 				&room.group_manager,
 				manager_reward,
-			));
+			);
 			let listener_reward = total_reward.clone() - manager_reward.clone();
 			let session_index = Self::get_session_index();
 			let per_man_reward =
-				listener_reward.clone() / <BalanceOf<T>>::from(room.now_members_number);
+				listener_reward.clone() / <MultiBalanceOf<T>>::from(room.now_members_number);
 			let room_rewad_info = RoomRewardInfo {
 				total_person: room.now_members_number.clone(),
 				already_get_count: 0u32,
 				total_reward: listener_reward.clone(),
-				already_get_reward: <BalanceOf<T>>::from(0u32),
+				already_get_reward: <MultiBalanceOf<T>>::from(0u32),
 				per_man_reward: per_man_reward.clone(),
 			};
 
@@ -2026,16 +2028,16 @@ pub mod pallet {
 		fn remove_vote_info(
 			mut room: GroupInfo<
 				T::AccountId,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				AllProps,
 				Audio,
 				T::BlockNumber,
 				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 				T::Moment,
 			>,
 		) {
-			room.disband_vote = <DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>>::default();
+			room.disband_vote = <DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>>::default();
 			let now = Self::now();
 			if room.disband_vote_end_block > now {
 				room.disband_vote_end_block = now;
@@ -2089,12 +2091,12 @@ pub mod pallet {
 			who: T::AccountId,
 			room: &mut GroupInfo<
 				T::AccountId,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				AllProps,
 				Audio,
 				T::BlockNumber,
 				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 				T::Moment,
 			>,
 		) {
@@ -2117,12 +2119,12 @@ pub mod pallet {
 		fn remove_consumer_info(
 			room: &mut GroupInfo<
 				T::AccountId,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				AllProps,
 				Audio,
 				T::BlockNumber,
 				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 				T::Moment,
 			>,
 			who: T::AccountId,
@@ -2140,7 +2142,7 @@ pub mod pallet {
 			}
 		}
 
-		fn get_like(who: &T::AccountId, amount: BalanceOf<T>) {
+		fn get_like(who: &T::AccountId, amount: MultiBalanceOf<T>) {
 			let mul_amount =
 				amount.saturated_into::<Balance>().saturated_into::<MultiBalanceOf<T>>();
 			T::MultiCurrency::deposit(T::GetLikeCurrencyId::get(), who, mul_amount);
@@ -2150,21 +2152,21 @@ pub mod pallet {
 			who: &T::AccountId,
 			room: &GroupInfo<
 				T::AccountId,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				AllProps,
 				Audio,
 				T::BlockNumber,
 				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
 				T::Moment,
 			>,
-		) -> BalanceOf<T> {
+		) -> MultiBalanceOf<T> {
 			let mut room = room.clone();
 			if let Some(pos) = room.consume.clone().iter().position(|h| &h.0 == who) {
 				let consume = room.consume.remove(pos);
 				return consume.1
 			} else {
-				return <BalanceOf<T>>::from(0u32)
+				return <MultiBalanceOf<T>>::from(0u32)
 			}
 		}
 
@@ -2182,7 +2184,7 @@ pub mod pallet {
 		/// Delete information about rooms that have been dismissed
 		fn remove_expire_disband_info() {
 			let mut index: u32;
-			let mut info: Vec<(u64, RoomRewardInfo<BalanceOf<T>>)>;
+			let mut info: Vec<(u64, RoomRewardInfo<MultiBalanceOf<T>>)>;
 
 			let last_session_index = Self::last_session_index();
 			let now_session = Self::get_session_index();
@@ -2212,10 +2214,11 @@ pub mod pallet {
 				let remain_reward =
 					disband_room_info.total_reward - disband_room_info.already_get_reward;
 				let teasury_id = Self::treasury_id();
-				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
+				T::MultiCurrency::deposit(
+					T::GetNativeCurrencyId::get(),
 					&teasury_id,
 					remain_reward,
-				));
+				);
 				<InfoOfDisbandedRoom<T>>::remove(index, group_id);
 			}
 			<LastSessionIndex<T>>::put(index);
@@ -2273,9 +2276,10 @@ pub mod pallet {
 			ensure!(!Self::is_can_disband(room_id)?, Error::<T>::Disbanding);
 			let mut room = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
 			if room.total_balances.saturating_sub(room.group_manager_balances) >=
-				amount.saturated_into::<BalanceOf<T>>()
+				amount.saturated_into::<MultiBalanceOf<T>>()
 			{
-				room.total_balances = room.total_balances - amount.saturated_into::<BalanceOf<T>>();
+				room.total_balances =
+					room.total_balances - amount.saturated_into::<MultiBalanceOf<T>>();
 				<AllRoom<T>>::insert(room_id, room);
 			} else {
 				return Err(Error::<T>::RoomFreeAmountTooLow)?

@@ -125,7 +125,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type GetNativeCurrencyId: Get<CurrencyIdOf<Self>>;
 		#[pallet::constant]
-		type GetLTPCurrencyId: Get<CurrencyIdOf<Self>>;
+		type GetLikeCurrencyId: Get<CurrencyIdOf<Self>>;
 		/// Duration of group protection
 		#[pallet::constant]
 		type ProtectedDuration: Get<Self::BlockNumber>;
@@ -198,8 +198,6 @@ pub mod pallet {
 	>;
 
 	/// Disbanded rooms
-	///
-	/// (如果要查询投票是否还在进行 通过room_info来查，不是在这个存储里查，并且配合投票过期时间)
 	#[pallet::storage]
 	#[pallet::getter(fn info_of_disband_room)]
 	pub type InfoOfDisbandedRoom<T: Config> = StorageDoubleMap<
@@ -239,11 +237,9 @@ pub mod pallet {
 	pub type ServerId<T: Config> = StorageValue<_, T::AccountId>;
 
 	/// Vote on dissolution has been passed by the group
-	///
-	/// (如果要查询投票是否还在进行 通过room_info来查，并且配合投票过期时间)
 	#[pallet::storage]
-	#[pallet::getter(fn disband_rooms)]
-	pub type DisbandingRooms<T: Config> =
+	#[pallet::getter(fn pending_disband_rooms)]
+	pub type PendingDisbandRooms<T: Config> =
 		StorageValue<_, BTreeMap<u64, T::BlockNumber>, ValueQuery>;
 
 	#[pallet::storage]
@@ -553,7 +549,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 
-			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
+			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
 			let mut room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			ensure!(room_info.join_cost != join_cost, Error::<T>::AmountShouldDifferent);
 			room_info.join_cost = join_cost;
@@ -581,9 +577,9 @@ pub mod pallet {
 				Some(x) => Some(T::Lookup::lookup(x)?),
 			};
 
-			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
+			let room_info = AllRoom::<T>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 
-			let room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
 
 			// Private rooms must be invited by the manager.
 			if room_info.is_private {
@@ -595,7 +591,6 @@ pub mod pallet {
 
 			if let Some(x) = invitee.clone() {
 				ensure!(x != inviter, Error::<T>::ShouldNotYourself);
-				ensure!(Self::is_in_room(group_id, &inviter)?, Error::<T>::NotInRoom);
 			}
 
 			// The guy who's gonna be in the group
@@ -613,7 +608,10 @@ pub mod pallet {
 				Error::<T>::MembersNumberToMax
 			);
 
-			ensure!(!(Self::is_in_room(group_id, &man)?), Error::<T>::InRoom);
+			ensure!(
+				Self::room_exists_and_user_in_room(group_id, &man).is_err(),
+				Error::<T>::InRoom
+			);
 
 			Self::join_do(&inviter, &man, group_id)?;
 
@@ -633,7 +631,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 
-			ensure!(!Self::is_in_disbanding(room_id)?, Error::<T>::Disbanding);
+			ensure!(!Self::vote_passed_and_pending_disband(room_id)?, Error::<T>::Disbanding);
 
 			AllRoom::<T>::try_mutate_exists(room_id, |r| -> DispatchResult {
 				let mut room = r.as_mut().take().ok_or(Error::<T>::RoomNotExists)?;
@@ -658,7 +656,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 
-			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
+			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
 			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			let manager = room.group_manager.clone();
 			let now_number = room.now_members_number;
@@ -714,8 +712,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
-			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
+			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
+			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
 			let mut dollars = <BalanceOf<T>>::from(0u32);
 			ensure!(
 				props.picture != 0u32 || props.text != 0u32 || props.video != 0u32,
@@ -752,7 +750,6 @@ pub mod pallet {
 					.ok_or(Error::<T>::Overflow)?;
 			}
 
-			let mut room = <AllRoom<T>>::get(group_id).unwrap();
 			room.props.picture =
 				room.props.picture.checked_add(props.picture).ok_or(Error::<T>::Overflow)?;
 			room.props.text =
@@ -780,7 +777,7 @@ pub mod pallet {
 				KeepAlive,
 			)?);
 
-			Self::get_LTP(&who, dollars);
+			Self::get_like(&who, dollars);
 			Self::deposit_event(Event::BuyProps(who));
 			Ok(())
 		}
@@ -795,8 +792,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
-			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
+			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
+			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
 			let mut dollars = <BalanceOf<T>>::from(0u32);
 			ensure!(
 				audio.ten_seconds != 0u32 || audio.thirty_seconds != 0u32 || audio.minutes != 0u32,
@@ -833,7 +830,6 @@ pub mod pallet {
 					.ok_or(Error::<T>::Overflow)?;
 			}
 
-			let mut room = <AllRoom<T>>::get(group_id).unwrap();
 			room.audio.ten_seconds = room
 				.audio
 				.ten_seconds
@@ -873,7 +869,7 @@ pub mod pallet {
 				KeepAlive,
 			)?);
 
-			Self::get_LTP(&who, dollars);
+			Self::get_like(&who, dollars);
 			Self::deposit_event(Event::BuyAudio(who));
 			Ok(())
 		}
@@ -918,7 +914,7 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::BadOrigin)?;
 
 			let who = T::Lookup::lookup(who)?;
-			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
+			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
 
 			AllRoom::<T>::try_mutate_exists(group_id, |r| -> DispatchResult {
 				let mut room = r.as_mut().take().ok_or(Error::<T>::RoomNotExists)?;
@@ -950,10 +946,11 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::BadOrigin)?;
 
 			let who = T::Lookup::lookup(who)?;
-			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
-			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+
+			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
 			ensure!(room.group_manager != who.clone(), Error::<T>::RoomManager);
-			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
+			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
+
 			let now = Self::now();
 
 			if T::RoomRootOrigin::try_origin(origin).is_ok() {
@@ -1002,8 +999,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			ensure!(!Self::is_can_disband(group_id)?, Error::<T>::Disbanding);
-			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
-			let mut room = <AllRoom<T>>::get(group_id).unwrap();
+			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
 			let create_block = room.create_block;
 			let now = Self::now();
 
@@ -1042,7 +1038,7 @@ pub mod pallet {
 				}
 			}
 
-			ensure!(!(Self::is_voting(room.clone())), Error::<T>::IsVoting);
+			ensure!(!(Self::is_voting(&room)), Error::<T>::IsVoting);
 
 			// Those who ask for dissolution will have to deduct some of the amount to the Treasury.
 			let disband_payment = Percent::from_percent(10) * room.create_payment;
@@ -1058,7 +1054,7 @@ pub mod pallet {
 				.approve_total_amount
 				.checked_add(&user_consume_amount)
 				.ok_or(Error::<T>::Overflow)?;
-			Self::judge_and_update_room(&mut room);
+			Self::judge_vote_and_update_room(&mut room);
 
 			Self::deposit_event(Event::AskForDisband(who.clone(), group_id));
 			Ok(())
@@ -1130,9 +1126,8 @@ pub mod pallet {
 		pub fn vote(origin: OriginFor<T>, group_id: u64, vote: ListenVote) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
-			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
-			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
+			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
 			/// the consume amount should not be zero.
 			let user_consume_amount = Self::get_user_consume_amount(&who, &room);
 			if user_consume_amount == <BalanceOf<T>>::from(0u32) {
@@ -1140,7 +1135,7 @@ pub mod pallet {
 			}
 
 			// The vote does not exist or is expired
-			if !Self::is_voting(room.clone()) {
+			if !Self::is_voting(&room) {
 				Self::remove_vote_info(room);
 				return Err(Error::<T>::NotVoting)?
 			}
@@ -1184,7 +1179,7 @@ pub mod pallet {
 				},
 			}
 
-			Self::judge_and_update_room(&mut room);
+			Self::judge_vote_and_update_room(&mut room);
 
 			Self::deposit_event(Event::DisbandVote(who.clone(), group_id));
 			Ok(())
@@ -1322,9 +1317,12 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			ensure!(lucky_man_number != 0u32, Error::<T>::ParamIsZero);
+
+			let _ = Self::room_exists_and_user_in_room(group_id, &who)?;
+
 			// We dealt with the red envelopes when we disbanded the group.
-			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
-			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
+			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
+
 			ensure!(
 				MinRedPackAmount::<T>::get(currency_id)
 					.checked_mul(&MultiBalanceOf::<T>::from(lucky_man_number))
@@ -1364,7 +1362,7 @@ pub mod pallet {
 		pub fn give_back_expired_redpacket(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let _ = Self::room_must_exists(group_id)?;
+			let _ = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			Self::remove_redpacket_by_room_id(group_id, false);
 			Self::deposit_event(Event::ReturnExpiredRedpacket(group_id));
 			Ok(())
@@ -1377,10 +1375,8 @@ pub mod pallet {
 		pub fn exit(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
 			let user = ensure_signed(origin)?;
 
-			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
-			ensure!(Self::is_in_room(group_id, &user)?, Error::<T>::NotInRoom);
-
-			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::Overflow)?;
+			let mut room = Self::room_exists_and_user_in_room(group_id, &user)?;
+			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
 			let number = room.now_members_number;
 			let users_amount = room
 				.total_balances
@@ -1420,7 +1416,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			ensure!(Self::is_can_disband(group_id)?, Error::<T>::NotDisbanding);
-			let room = Self::room_must_exists(group_id)?;
+			let room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			Self::disband(room);
 			Self::deposit_event(Event::DisbandRoom(group_id, who));
 			Ok(())
@@ -1432,12 +1428,12 @@ pub mod pallet {
 		pub fn council_reject_disband(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
 			T::HalfRoomCouncilOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 
-			let disband_rooms = <DisbandingRooms<T>>::get();
-			let room = Self::room_must_exists(group_id)?;
+			let disband_rooms = <PendingDisbandRooms<T>>::get();
+			let room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			if let Some(disband_time) = disband_rooms.get(&group_id) {
 				/// before the room is disband.
 				if Self::now() <= *disband_time {
-					<DisbandingRooms<T>>::mutate(|h| h.remove(&group_id));
+					<PendingDisbandRooms<T>>::mutate(|h| h.remove(&group_id));
 					Self::remove_vote_info(room);
 				} else {
 					return Err(Error::<T>::Disbanding)?
@@ -1482,8 +1478,7 @@ pub mod pallet {
 			for (who, amount) in info {
 				let who = T::Lookup::lookup(who)?;
 
-				if let Ok(true) = Self::is_in_room(group_id, &who) {
-				} else {
+				if Self::room_exists_and_user_in_room(group_id, &who).is_err() {
 					continue
 				}
 
@@ -1710,18 +1705,18 @@ pub mod pallet {
 			consume_total_amount
 		}
 
-		/// (vote is end)
-		fn is_in_disbanding(group_id: u64) -> result::Result<bool, DispatchError> {
-			Self::room_must_exists(group_id)?;
-			let disband_rooms = <DisbandingRooms<T>>::get();
+		fn vote_passed_and_pending_disband(group_id: u64) -> result::Result<bool, DispatchError> {
+			let _ = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+			let disband_rooms = <PendingDisbandRooms<T>>::get();
 			if let Some(disband_time) = disband_rooms.get(&group_id) {
 				return Ok(true)
 			}
 			Ok(false)
 		}
 
-		pub fn room_must_exists(
+		fn room_exists_and_user_in_room(
 			group_id: u64,
+			who: &T::AccountId,
 		) -> result::Result<
 			GroupInfo<
 				T::AccountId,
@@ -1735,25 +1730,20 @@ pub mod pallet {
 			>,
 			DispatchError,
 		> {
-			let room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			Ok(room)
-		}
-
-		fn is_in_room(group_id: u64, who: &T::AccountId) -> result::Result<bool, DispatchError> {
-			Self::room_must_exists(group_id)?;
+			let room = AllRoom::<T>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			let listeners = <ListenersOfRoom<T>>::get(group_id);
 			if listeners.len() == 0 {
 				return Err(Error::<T>::RoomMembersIsZero)?
 			}
 			if listeners.contains(&who) {
-				Ok(true)
+				Ok(room)
 			} else {
-				Ok(false)
+				Err(Error::<T>::NotInRoom)?
 			}
 		}
 
 		fn join_do(who: &T::AccountId, invitee: &T::AccountId, group_id: u64) -> DispatchResult {
-			let room_info = <AllRoom<T>>::get(group_id.clone()).unwrap();
+			let room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			let join_cost = room_info.join_cost;
 
 			// Inviter pay for group entry.
@@ -1764,7 +1754,7 @@ pub mod pallet {
 					WithdrawReasons::TRANSFER.into(),
 					KeepAlive,
 				)?);
-				Self::pay_for(group_id, join_cost);
+				Self::pay_for(group_id, join_cost, room_info)?;
 			}
 
 			Self::add_invitee_info(&invitee, group_id);
@@ -1780,19 +1770,37 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn pay_for(group_id: u64, join_cost: BalanceOf<T>) {
+		fn pay_for(
+			group_id: u64,
+			join_cost: BalanceOf<T>,
+			room_info: GroupInfo<
+				T::AccountId,
+				BalanceOf<T>,
+				AllProps,
+				Audio,
+				T::BlockNumber,
+				GroupMaxMembers,
+				DisbandVote<BTreeSet<T::AccountId>, BalanceOf<T>>,
+				T::Moment,
+			>,
+		) -> DispatchResult {
 			let payment_manager_now = Percent::from_percent(5) * join_cost;
 			let payment_manager_later = Percent::from_percent(5) * join_cost;
 			let payment_room_later = Percent::from_percent(50) * join_cost;
 			let payment_treasury = Percent::from_percent(40) * join_cost;
-			let mut room_info = <AllRoom<T>>::get(group_id.clone()).unwrap();
 
-			room_info.total_balances += payment_room_later;
-			room_info.total_balances += payment_manager_later;
+			let mut room_info = room_info;
+			room_info.total_balances = payment_room_later
+				.checked_add(&room_info.total_balances)
+				.ok_or(Error::<T>::Overflow)?;
+			room_info.total_balances = payment_manager_later
+				.checked_add(&room_info.total_balances)
+				.ok_or(Error::<T>::Overflow)?;
 
-			room_info.group_manager_balances += payment_manager_later;
+			room_info.group_manager_balances = payment_manager_later
+				.checked_add(&room_info.group_manager_balances)
+				.ok_or(Error::<T>::Overflow)?;
 			let group_manager = room_info.group_manager.clone();
-			<AllRoom<T>>::insert(group_id, room_info);
 
 			T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
 				&group_manager,
@@ -1804,6 +1812,10 @@ pub mod pallet {
 				&teasury_id,
 				payment_treasury,
 			));
+
+			<AllRoom<T>>::insert(group_id, room_info);
+
+			Ok(())
 		}
 
 		///
@@ -1851,7 +1863,7 @@ pub mod pallet {
 				room_info.council = room_info.consume.clone();
 			}
 
-			if Self::is_voting(room_info.clone()) {
+			if Self::is_voting(&room_info) {
 				let mut is_in_vote = false;
 				let disband_vote_info = room_info.disband_vote.clone();
 				if disband_vote_info.approve_man.get(&who).is_some() {
@@ -1871,7 +1883,7 @@ pub mod pallet {
 					is_in_vote = true;
 				}
 				if is_in_vote {
-					Self::judge_and_update_room(room_info);
+					Self::judge_vote_and_update_room(room_info);
 					return Ok(())
 				}
 			}
@@ -1881,7 +1893,7 @@ pub mod pallet {
 		}
 
 		fn is_voting(
-			room: GroupInfo<
+			room: &GroupInfo<
 				T::AccountId,
 				BalanceOf<T>,
 				AllProps,
@@ -1892,15 +1904,16 @@ pub mod pallet {
 				T::Moment,
 			>,
 		) -> bool {
-			if !room.disband_vote_end_block.clone().is_zero() &&
-				(Self::now().saturating_sub(room.disband_vote_end_block.clone()).is_zero())
+			if !room.disband_vote_end_block.is_zero() &&
+				(Self::now().saturating_sub(room.disband_vote_end_block).is_zero()) &&
+				!(Self::vote_passed_and_pending_disband(room.group_id) == Ok(true))
 			{
 				return true
 			}
 			false
 		}
 
-		fn judge_and_update_room(
+		fn judge_vote_and_update_room(
 			room: &mut GroupInfo<
 				T::AccountId,
 				BalanceOf<T>,
@@ -1924,7 +1937,7 @@ pub mod pallet {
 					} else {
 						room.disband_vote_end_block = now;
 						<AllRoom<T>>::insert(group_id, room);
-						<DisbandingRooms<T>>::mutate(|h| {
+						<PendingDisbandRooms<T>>::mutate(|h| {
 							h.insert(group_id, now + T::DelayDisbandDuration::get())
 						});
 					}
@@ -2005,7 +2018,7 @@ pub mod pallet {
 			<InfoOfDisbandedRoom<T>>::insert(session_index, group_id, room_rewad_info);
 			<ListenersOfRoom<T>>::remove(group_id);
 			<AllRoom<T>>::remove(group_id);
-			<DisbandingRooms<T>>::mutate(|h| h.remove(&group_id));
+			<PendingDisbandRooms<T>>::mutate(|h| h.remove(&group_id));
 			T::CollectiveHandler::remove_room_collective_info(group_id);
 			T::RoomTreasuryHandler::remove_room_treasury_info(group_id);
 		}
@@ -2065,9 +2078,9 @@ pub mod pallet {
 			>,
 		) {
 			let who = redpacket.boss.clone();
-			let currency_id = redpacket.currency_id.clone();
-			let remain = redpacket.total.clone() - redpacket.already_get_amount.clone();
-			let redpacket_id = redpacket.id.clone();
+			let currency_id = redpacket.currency_id;
+			let remain = redpacket.total.saturating_sub(redpacket.already_get_amount);
+			let redpacket_id = redpacket.id;
 			T::MultiCurrency::deposit(currency_id, &who, remain);
 			<RedPacketOfRoom<T>>::remove(room_id, redpacket_id);
 		}
@@ -2127,10 +2140,10 @@ pub mod pallet {
 			}
 		}
 
-		fn get_LTP(who: &T::AccountId, amount: BalanceOf<T>) {
+		fn get_like(who: &T::AccountId, amount: BalanceOf<T>) {
 			let mul_amount =
 				amount.saturated_into::<Balance>().saturated_into::<MultiBalanceOf<T>>();
-			T::MultiCurrency::deposit(T::GetLTPCurrencyId::get(), who, mul_amount);
+			T::MultiCurrency::deposit(T::GetLikeCurrencyId::get(), who, mul_amount);
 		}
 
 		fn get_user_consume_amount(
@@ -2156,8 +2169,8 @@ pub mod pallet {
 		}
 
 		pub fn is_can_disband(group_id: u64) -> result::Result<bool, DispatchError> {
-			Self::room_must_exists(group_id)?;
-			let disband_rooms = <DisbandingRooms<T>>::get();
+			let _ = AllRoom::<T>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+			let disband_rooms = <PendingDisbandRooms<T>>::get();
 			if let Some(disband_time) = disband_rooms.get(&group_id) {
 				if Self::now() >= *disband_time {
 					return Ok(true)
@@ -2214,7 +2227,7 @@ pub mod pallet {
 			room_id: u64,
 		) -> Result<Vec<<T as frame_system::Config>::AccountId>, DispatchError> {
 			ensure!(!Self::is_can_disband(room_id)?, Error::<T>::Disbanding);
-			let room_info = Self::room_must_exists(room_id)?;
+			let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
 			let council_and_amount = room_info.council;
 			let mut council = vec![];
 			for i in council_and_amount.iter() {
@@ -2228,21 +2241,21 @@ pub mod pallet {
 			room_id: u64,
 		) -> Result<Option<<T as frame_system::Config>::AccountId>, DispatchError> {
 			ensure!(!Self::is_can_disband(room_id)?, Error::<T>::Disbanding);
-			let room_info = Self::room_must_exists(room_id)?;
+			let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
 			let prime = room_info.prime;
 			Ok(prime)
 		}
 
 		fn get_root(room_id: u64) -> Result<<T as frame_system::Config>::AccountId, DispatchError> {
 			ensure!(!Self::is_can_disband(room_id)?, Error::<T>::Disbanding);
-			let room_info = Self::room_must_exists(room_id)?;
+			let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
 			let root = room_info.group_manager;
 			Ok(root)
 		}
 
 		fn get_room_free_amount(room_id: u64) -> u128 {
 			if let Some(room) = <AllRoom<T>>::get(room_id) {
-				let disband_rooms = <DisbandingRooms<T>>::get();
+				let disband_rooms = <PendingDisbandRooms<T>>::get();
 				if let Some(disband_time) = disband_rooms.get(&room_id) {
 					if Self::now() >= *disband_time {
 						return 0u128
@@ -2258,7 +2271,7 @@ pub mod pallet {
 
 		fn sub_room_free_amount(room_id: u64, amount: u128) -> Result<(), DispatchError> {
 			ensure!(!Self::is_can_disband(room_id)?, Error::<T>::Disbanding);
-			let mut room = Self::room_must_exists(room_id)?;
+			let mut room = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
 			if room.total_balances.saturating_sub(room.group_manager_balances) >=
 				amount.saturated_into::<BalanceOf<T>>()
 			{

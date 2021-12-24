@@ -109,8 +109,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type VoteExpire: Get<Self::BlockNumber>;
 		#[pallet::constant]
-		type RedPacketMinAmount: Get<BalanceOf<Self>>;
-		#[pallet::constant]
 		type RedPackExpire: Get<Self::BlockNumber>;
 		#[pallet::constant]
 		type RewardDuration: Get<Self::BlockNumber>;
@@ -182,6 +180,11 @@ pub mod pallet {
 	pub type ListenersOfRoom<T: Config> =
 		StorageMap<_, Blake2_128Concat, u64, BTreeSet<T::AccountId>, ValueQuery>;
 
+	/// Minimum amount of red packets per person in each currency.
+	#[pallet::storage]
+	#[pallet::getter(fn min_redpack_amount)]
+	pub type MinRedPackAmount<T: Config> = StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, MultiBalanceOf<T>, ValueQuery>;
+
 	/// Specific information about each person's purchase
 	#[pallet::storage]
 	#[pallet::getter(fn all_listeners)]
@@ -220,7 +223,7 @@ pub mod pallet {
 		RedPacket<
 			T::AccountId,
 			BTreeSet<T::AccountId>,
-			BalanceOf<T>,
+			MultiBalanceOf<T>,
 			T::BlockNumber,
 			CurrencyIdOf<T>,
 		>,
@@ -934,6 +937,7 @@ pub mod pallet {
 		///
 		/// The Origin must be RoomCouncil or RoomManager.
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn remove_someone(
 			origin: OriginFor<T>,
 			group_id: u64,
@@ -1001,7 +1005,7 @@ pub mod pallet {
 
 			// Groups cannot be dissolved for a period of time after they are created
 			ensure!(
-				now - create_block > T::ProtectedDuration::get(),
+				now.saturating_sub(create_block) > T::ProtectedDuration::get(),
 				Error::<T>::InProtectedDuration
 			);
 
@@ -1101,7 +1105,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Set the interval at which the group is dismissed
+		/// Set the interval at which the group is dismissed.
 		#[pallet::weight(10_000)]
 		pub fn set_disband_interval(
 			origin: OriginFor<T>,
@@ -1118,6 +1122,7 @@ pub mod pallet {
 		///
 		///
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn vote(origin: OriginFor<T>, group_id: u64, vote: ListenVote) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -1182,13 +1187,15 @@ pub mod pallet {
 		}
 
 		/// Users get their reward in disbanded rooms.
-		/// todo
+		///
 		/// the reward status should be NotGet in rooms.
+		///
+		/// Claim all rooms at once
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn pay_out(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let mut amount = <BalanceOf<T>>::from(0u32);
 			ensure!(
 				<AllListeners<T>>::contains_key(who.clone()) &&
 					!<AllListeners<T>>::get(who.clone()).rooms.is_empty(),
@@ -1196,42 +1203,56 @@ pub mod pallet {
 			);
 
 			let rooms = <AllListeners<T>>::get(who.clone()).rooms;
-			let mut new_rooms = rooms.clone();
+			let mut rooms_cp = rooms.clone();
+			let mut amount = <BalanceOf<T>>::from(0u32);
 
 			for room in rooms.iter() {
+				// You must be in a NotGet state to receive a reward
 				if room.1 == RewardStatus::NotGet {
-					let group_id = room.0.clone();
+					let group_id = room.0;
+
+					// The room information was deleted when the room was disbanded. If it still exists,
+					// the room is not disbanded. No reward
 					if !<AllRoom<T>>::contains_key(group_id) {
 						let session_index = Self::get_session_index();
 						let mut is_get = false;
 
 						for i in 0..Self::depth() as usize {
 							let cur_session = session_index.saturating_sub(i as u32);
+
+							// Reward only for disbanded groups.
 							if <InfoOfDisbandedRoom<T>>::contains_key(cur_session, group_id) {
 								let mut info = <InfoOfDisbandedRoom<T>>::get(cur_session, group_id);
-								info.already_get_count = info.already_get_count.saturating_add(1);
+								info.already_get_count = info
+									.already_get_count
+									.checked_add(1u32)
+									.ok_or(Error::<T>::Overflow)?;
+
+								// Everyone's bonus has been calculated at the time of disbandment.
 								let reward = info.per_man_reward;
 
-								amount = amount.saturating_add(reward.clone());
-								info.already_get_reward =
-									info.already_get_reward.saturating_add(reward.clone());
-								<InfoOfDisbandedRoom<T>>::insert(
-									cur_session,
-									group_id,
-									info.clone(),
-								);
+								// Provided for use only by events
+								amount = amount.saturating_add(reward);
+
+								info.already_get_reward = info
+									.already_get_reward
+									.checked_add(&reward)
+									.ok_or(Error::<T>::Overflow)?;
+								if info.already_get_count == info.total_person {
+									<ListenersOfRoom<T>>::remove(group_id);
+								} else {
+									<ListenersOfRoom<T>>::mutate(group_id, |h| h.remove(&who));
+								}
+
+								<InfoOfDisbandedRoom<T>>::insert(cur_session, group_id, info);
+
 								T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
 									&who, reward,
 								));
 
-								<ListenersOfRoom<T>>::mutate(group_id, |h| h.remove(&who));
-								if info.already_get_count.clone() == info.total_person.clone() {
-									<ListenersOfRoom<T>>::remove(group_id);
-								}
-
 								if let Some(pos) = rooms.iter().position(|h| h.0 == group_id) {
-									new_rooms.remove(pos);
-									new_rooms.insert(pos, (group_id, RewardStatus::Get));
+									rooms_cp.remove(pos);
+									rooms_cp.insert(pos, (group_id, RewardStatus::Get));
 								}
 
 								is_get = true;
@@ -1241,17 +1262,18 @@ pub mod pallet {
 								break
 							}
 						}
+
 						if !is_get {
 							if let Some(pos) = rooms.iter().position(|h| h.0 == group_id) {
-								new_rooms.remove(pos);
-								new_rooms.insert(pos, (group_id, RewardStatus::Expire));
+								rooms_cp.remove(pos);
+								rooms_cp.insert(pos, (group_id, RewardStatus::Expire));
 							}
 						}
 					}
 				}
 			}
 
-			<AllListeners<T>>::mutate(who.clone(), |h| h.rooms = new_rooms);
+			<AllListeners<T>>::mutate(who.clone(), |h| h.rooms = rooms_cp);
 
 			if amount.is_zero() {
 				return Err(Error::<T>::RewardAmountIsZero)?
@@ -1262,58 +1284,58 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Users send red envelopes in the room.
+
+		///
+		/// Set the minimum amount for a person in a red envelope
 		#[pallet::weight(10_000)]
+		pub fn set_redpack_min_amount(origin: OriginFor<T>, currency_id: CurrencyIdOf<T>, min_amount: MultiBalanceOf<T>) -> DispatchResult {
+			ensure_root(origin)?;
+			ensure!(MinRedPackAmount::<T>::get(currency_id) != min_amount, Error::<T>::AmountNotChange);
+			MinRedPackAmount::<T>::insert(currency_id, min_amount);
+			Self::deposit_event(Event::SetRedpackMinAmount(currency_id, min_amount));
+			Ok(())
+		}
+
+		/// Users send red envelopes in the room.
+		///
+		///
+		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn send_redpacket_in_room(
 			origin: OriginFor<T>,
 			group_id: u64,
 			currency_id: CurrencyIdOf<T>,
 			lucky_man_number: u32,
-			amount: BalanceOf<T>,
+			amount: MultiBalanceOf<T>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			ensure!(lucky_man_number != 0u32, Error::<T>::ParamIsZero);
+			// We dealt with the red envelopes when we disbanded the group.
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
 			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
-			ensure!(
-				amount >=
-					<BalanceOf<T>>::from(lucky_man_number)
-						.checked_mul(&T::RedPacketMinAmount::get())
-						.ok_or(Error::<T>::Overflow)?,
-				Error::<T>::AmountTooLow
-			);
+			ensure!(MinRedPackAmount::<T>::get(currency_id).checked_mul(&MultiBalanceOf::<T>::from(lucky_man_number)).ok_or(Error::<T>::Overflow)? <= amount, Error::<T>::AmountTooLow);
 			let redpacket_id = <RedPacketId<T>>::get();
 
 			let redpacket = RedPacket {
 				id: redpacket_id,
 				currency_id,
 				boss: who.clone(),
-				total: amount.clone(),
+				total: amount,
 				lucky_man_number,
 				already_get_man: BTreeSet::<T::AccountId>::default(),
-				min_amount_of_per_man: T::RedPacketMinAmount::get(),
-				already_get_amount: <BalanceOf<T>>::from(0u32),
-				end_time: Self::now() + T::RedPackExpire::get(),
+				min_amount_of_per_man: MinRedPackAmount::<T>::get(currency_id),
+				already_get_amount: MultiBalanceOf::<T>::from(0u32),
+				end_time: Self::now().checked_add(&T::RedPackExpire::get()).ok_or(Error::<T>::Overflow)?,
 			};
 
-			let amount_u128 = amount.saturated_into::<u128>();
-			if currency_id == T::GetNativeCurrencyId::get() {
-				T::ProposalRejection::on_unbalanced(T::NativeCurrency::withdraw(
-					&who,
-					amount.clone(),
-					WithdrawReasons::TRANSFER.into(),
-					KeepAlive,
-				)?);
-			} else {
-				let amount = amount_u128.saturated_into::<MultiBalanceOf<T>>();
-				T::MultiCurrency::withdraw(currency_id, &who, amount)?;
-			}
+			T::MultiCurrency::withdraw(currency_id, &who, amount)?;
+
 			let now_id = redpacket_id.checked_add(1).ok_or(Error::<T>::Overflow)?;
 			<RedPacketId<T>>::put(now_id);
 			<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket);
 
-			Self::deposit_event(Event::SendRedPocket(group_id, redpacket_id, amount_u128));
+			Self::deposit_event(Event::SendRedPocket(group_id, redpacket_id, amount));
 			Ok(())
 		}
 
@@ -1329,6 +1351,7 @@ pub mod pallet {
 		}
 
 		/// Users exit the room
+		/// todo
 		#[pallet::weight(10_000)]
 		pub fn exit(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
 			let user = ensure_signed(origin)?;
@@ -1402,7 +1425,7 @@ pub mod pallet {
 		#[pallet::weight(10_000)]
 		pub fn get_redpacket_in_room(
 			origin: OriginFor<T>,
-			amount_vec: Vec<(<T::Lookup as StaticLookup>::Source, BalanceOf<T>)>,
+			amount_vec: Vec<(<T::Lookup as StaticLookup>::Source, MultiBalanceOf<T>)>,
 			group_id: u64,
 			redpacket_id: u128,
 		) -> DispatchResult {
@@ -1425,7 +1448,7 @@ pub mod pallet {
 				Self::remove_redpacket(group_id, redpacket.clone());
 				return Err(Error::<T>::Expire)?
 			}
-			let mut total_amount = <BalanceOf<T>>::from(0u32);
+			let mut total_amount = <MultiBalanceOf<T>>::from(0u32);
 
 			for (who, amount) in amount_vec {
 				let who = T::Lookup::lookup(who)?;
@@ -1433,7 +1456,7 @@ pub mod pallet {
 					continue
 				}
 
-				//			ensure!(amount >= T::RedPacketMinAmount::get(), Error::<T>::AmountTooLow);
+				// ensure!(amount >= T::RedPacketMinAmount::get(), Error::<T>::AmountTooLow);
 				if amount < redpacket.min_amount_of_per_man.clone() {
 					continue
 				}
@@ -1454,19 +1477,11 @@ pub mod pallet {
 					continue
 				}
 
-				if redpacket.currency_id == T::GetNativeCurrencyId::get() {
-					T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(
-						&who,
-						amount.clone(),
-					));
-				} else {
-					let amount_u128 = amount.clone().saturated_into::<u128>();
-					T::MultiCurrency::deposit(
-						redpacket.currency_id.clone(),
-						&who,
-						amount_u128.saturated_into::<MultiBalanceOf<T>>(),
-					);
-				}
+				T::MultiCurrency::deposit(
+					redpacket.currency_id.clone(),
+					&who,
+					amount,
+				);
 
 				redpacket.already_get_man.insert(who.clone());
 				redpacket.already_get_amount += amount.clone();
@@ -1558,6 +1573,7 @@ pub mod pallet {
 		ParamIsZero,
 		RewardAmountIsZero,
 		BuyNothing,
+		AmountNotChange,
 	}
 
 	#[pallet::event]
@@ -1576,8 +1592,8 @@ pub mod pallet {
 		AskForDisband(T::AccountId, u64),
 		DisbandVote(T::AccountId, u64),
 		Payout(T::AccountId, BalanceOf<T>),
-		SendRedPocket(u64, u128, u128),
-		GetRedPocket(u64, u128, BalanceOf<T>),
+		SendRedPocket(u64, u128, MultiBalanceOf<T>),
+		GetRedPocket(u64, u128, MultiBalanceOf<T>),
 		JoinCostChanged(u64, BalanceOf<T>),
 		SetPropsPrice,
 		SetAudioPrice,
@@ -1593,6 +1609,7 @@ pub mod pallet {
 		DisbandRoom(u64, T::AccountId),
 		CouncilRejectDisband(u64),
 		ReturnExpiredRedpacket(u64),
+		SetRedpackMinAmount(CurrencyIdOf<T>, MultiBalanceOf<T>),
 		ListenTest,
 	}
 
@@ -1700,7 +1717,7 @@ pub mod pallet {
 		fn is_in_room(group_id: u64, who: &T::AccountId) -> result::Result<bool, DispatchError> {
 			Self::room_must_exists(group_id)?;
 			let listeners = <ListenersOfRoom<T>>::get(group_id);
-			if listeners.clone().len() == 0 {
+			if listeners.len() == 0 {
 				return Err(Error::<T>::RoomMembersIsZero)?
 			}
 			if listeners.contains(&who) {
@@ -2017,7 +2034,7 @@ pub mod pallet {
 			redpacket: RedPacket<
 				T::AccountId,
 				BTreeSet<T::AccountId>,
-				BalanceOf<T>,
+				MultiBalanceOf<T>,
 				T::BlockNumber,
 				CurrencyIdOf<T>,
 			>,
@@ -2026,13 +2043,7 @@ pub mod pallet {
 			let currency_id = redpacket.currency_id.clone();
 			let remain = redpacket.total.clone() - redpacket.already_get_amount.clone();
 			let redpacket_id = redpacket.id.clone();
-			let remain_u128 = remain.saturated_into::<u128>();
-			if currency_id == T::GetNativeCurrencyId::get() {
-				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&who, remain));
-			} else {
-				let amount = remain_u128.saturated_into::<MultiBalanceOf<T>>();
-				T::MultiCurrency::deposit(currency_id, &who, amount);
-			}
+			T::MultiCurrency::deposit(currency_id, &who, remain);
 			<RedPacketOfRoom<T>>::remove(room_id, redpacket_id);
 		}
 

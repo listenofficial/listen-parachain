@@ -183,7 +183,8 @@ pub mod pallet {
 	/// Minimum amount of red packets per person in each currency.
 	#[pallet::storage]
 	#[pallet::getter(fn min_redpack_amount)]
-	pub type MinRedPackAmount<T: Config> = StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, MultiBalanceOf<T>, ValueQuery>;
+	pub type MinRedPackAmount<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, MultiBalanceOf<T>, ValueQuery>;
 
 	/// Specific information about each person's purchase
 	#[pallet::storage]
@@ -1284,13 +1285,19 @@ pub mod pallet {
 			Ok(())
 		}
 
-
 		///
 		/// Set the minimum amount for a person in a red envelope
 		#[pallet::weight(10_000)]
-		pub fn set_redpack_min_amount(origin: OriginFor<T>, currency_id: CurrencyIdOf<T>, min_amount: MultiBalanceOf<T>) -> DispatchResult {
+		pub fn set_redpack_min_amount(
+			origin: OriginFor<T>,
+			currency_id: CurrencyIdOf<T>,
+			min_amount: MultiBalanceOf<T>,
+		) -> DispatchResult {
 			ensure_root(origin)?;
-			ensure!(MinRedPackAmount::<T>::get(currency_id) != min_amount, Error::<T>::AmountNotChange);
+			ensure!(
+				MinRedPackAmount::<T>::get(currency_id) != min_amount,
+				Error::<T>::AmountNotChange
+			);
 			MinRedPackAmount::<T>::insert(currency_id, min_amount);
 			Self::deposit_event(Event::SetRedpackMinAmount(currency_id, min_amount));
 			Ok(())
@@ -1314,7 +1321,13 @@ pub mod pallet {
 			// We dealt with the red envelopes when we disbanded the group.
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
 			ensure!(Self::is_in_room(group_id, &who)?, Error::<T>::NotInRoom);
-			ensure!(MinRedPackAmount::<T>::get(currency_id).checked_mul(&MultiBalanceOf::<T>::from(lucky_man_number)).ok_or(Error::<T>::Overflow)? <= amount, Error::<T>::AmountTooLow);
+			ensure!(
+				MinRedPackAmount::<T>::get(currency_id)
+					.checked_mul(&MultiBalanceOf::<T>::from(lucky_man_number))
+					.ok_or(Error::<T>::Overflow)? <=
+					amount,
+				Error::<T>::AmountTooLow
+			);
 			let redpacket_id = <RedPacketId<T>>::get();
 
 			let redpacket = RedPacket {
@@ -1326,7 +1339,9 @@ pub mod pallet {
 				already_get_man: BTreeSet::<T::AccountId>::default(),
 				min_amount_of_per_man: MinRedPackAmount::<T>::get(currency_id),
 				already_get_amount: MultiBalanceOf::<T>::from(0u32),
-				end_time: Self::now().checked_add(&T::RedPackExpire::get()).ok_or(Error::<T>::Overflow)?,
+				end_time: Self::now()
+					.checked_add(&T::RedPackExpire::get())
+					.ok_or(Error::<T>::Overflow)?,
 			};
 
 			T::MultiCurrency::withdraw(currency_id, &who, amount)?;
@@ -1477,11 +1492,7 @@ pub mod pallet {
 					continue
 				}
 
-				T::MultiCurrency::deposit(
-					redpacket.currency_id.clone(),
-					&who,
-					amount,
-				);
+				T::MultiCurrency::deposit(redpacket.currency_id.clone(), &who, amount);
 
 				redpacket.already_get_man.insert(who.clone());
 				redpacket.already_get_amount += amount.clone();

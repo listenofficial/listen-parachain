@@ -757,7 +757,6 @@ impl pallet_dao::Config<RoomCollective> for Runtime {
 
 parameter_types! {
 	pub const AirDropAmount: Balance = 1 * UNIT * 99 / 100;
-	pub const RedPacketMinAmount: Balance = 1 * UNIT;
 	pub const VoteExpire: BlockNumber = 1 * DAYS;
 	pub const ProtectTime: BlockNumber = 30 * MINUTES;
 	pub const RedPackExpire: BlockNumber = 1 * DAYS;
@@ -786,7 +785,6 @@ impl pallet_listen::Config for Runtime {
 	type MultiCurrency = Tokens;
 	type ProposalRejection = ();
 	type VoteExpire = VoteExpire;
-	type RedPacketMinAmount = RedPacketMinAmount;
 	type RedPackExpire = RedPackExpire;
 	type RewardDuration = RewardDuration;
 	type ManagerProportion = ManagerProportion;

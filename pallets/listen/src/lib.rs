@@ -625,6 +625,7 @@ pub mod pallet {
 		///
 		/// The Origin must be room manager.
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn set_room_privacy(
 			origin: OriginFor<T>,
 			room_id: u64,
@@ -907,6 +908,7 @@ pub mod pallet {
 		///
 		/// The Origin must be RoomCouncil or RoomManager.
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn remove_someone_from_blacklist(
 			origin: OriginFor<T>,
 			group_id: u64,
@@ -995,6 +997,7 @@ pub mod pallet {
 		/// Request dismissal of the room
 		///
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn ask_for_disband_room(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -1288,6 +1291,7 @@ pub mod pallet {
 		///
 		/// Set the minimum amount for a person in a red envelope
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn set_redpack_min_amount(
 			origin: OriginFor<T>,
 			currency_id: CurrencyIdOf<T>,
@@ -1356,6 +1360,7 @@ pub mod pallet {
 
 		/// Expired red packets obtained by the owner.
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn give_back_expired_redpacket(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -1366,23 +1371,30 @@ pub mod pallet {
 		}
 
 		/// Users exit the room
-		/// todo
+		///
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn exit(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
 			let user = ensure_signed(origin)?;
 
 			ensure!(!Self::is_in_disbanding(group_id)?, Error::<T>::Disbanding);
 			ensure!(Self::is_in_room(group_id, &user)?, Error::<T>::NotInRoom);
-			let mut room = <AllRoom<T>>::get(group_id).unwrap();
+
+			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::Overflow)?;
 			let number = room.now_members_number;
-			let user_amount = room.total_balances - room.group_manager_balances;
+			let users_amount = room
+				.total_balances
+				.checked_sub(&room.group_manager_balances)
+				.ok_or(Error::<T>::Overflow)?;
 
 			if number > 1 {
-				let amount = user_amount /
+				// If you quit halfway, you only get a quarter of the reward.
+				let amount = users_amount /
 					room.now_members_number.saturated_into::<BalanceOf<T>>() /
 					4u32.saturated_into::<BalanceOf<T>>();
 				T::Create::on_unbalanced(T::NativeCurrency::deposit_creating(&user, amount));
-				room.total_balances = room.total_balances.saturating_sub(amount);
+				room.total_balances =
+					room.total_balances.checked_sub(&amount).ok_or(Error::<T>::Overflow)?;
 				Self::remove_someone_in_room(user.clone(), &mut room);
 			} else {
 				let amount = room.total_balances;
@@ -1400,9 +1412,10 @@ pub mod pallet {
 		/// Disbanding the room.
 		///
 		/// The vote has been passed.
-		///
+		/// todo
 		/// The Origin can be everyone.
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn disband_room(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -1415,6 +1428,7 @@ pub mod pallet {
 
 		/// Council Members reject disband the room.
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn council_reject_disband(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
 			T::HalfRoomCouncilOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 
@@ -1436,79 +1450,79 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Users get redpacket in the room.
+		/// Multi account to help get red packets
 		#[pallet::weight(10_000)]
+		#[transactional]
 		pub fn get_redpacket_in_room(
 			origin: OriginFor<T>,
-			amount_vec: Vec<(<T::Lookup as StaticLookup>::Source, MultiBalanceOf<T>)>,
+			info: Vec<(<T::Lookup as StaticLookup>::Source, MultiBalanceOf<T>)>,
 			group_id: u64,
 			redpacket_id: u128,
 		) -> DispatchResult {
 			let mul = ensure_signed(origin)?;
 
 			let mut members: Vec<<T::Lookup as StaticLookup>::Source> = vec![];
-			for i in amount_vec.clone() {
+			for i in info.clone() {
 				members.push(i.0)
 			}
 			Self::check_accounts(members)?;
 
 			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
-			ensure!(mul.clone() == multisig_id.clone(), Error::<T>::NotMultisigId);
-			ensure!(
-				<RedPacketOfRoom<T>>::contains_key(group_id, redpacket_id),
-				Error::<T>::RedPacketNotExists
-			);
-			let mut redpacket = <RedPacketOfRoom<T>>::get(group_id, redpacket_id).unwrap();
-			if redpacket.end_time.clone() < Self::now() {
-				Self::remove_redpacket(group_id, redpacket.clone());
+			ensure!(mul == multisig_id, Error::<T>::NotMultisigId);
+
+			let mut redpacket = <RedPacketOfRoom<T>>::get(group_id, redpacket_id)
+				.ok_or(Error::<T>::RedPacketNotExists)?;
+			if redpacket.end_time < Self::now() {
+				Self::remove_redpacket(group_id, &redpacket);
 				return Err(Error::<T>::Expire)?
 			}
+
 			let mut total_amount = <MultiBalanceOf<T>>::from(0u32);
 
-			for (who, amount) in amount_vec {
+			for (who, amount) in info {
 				let who = T::Lookup::lookup(who)?;
-				if Self::is_in_room(group_id, &who)? == false {
+
+				if let Ok(true) = Self::is_in_room(group_id, &who) {
+				} else {
 					continue
 				}
 
 				// ensure!(amount >= T::RedPacketMinAmount::get(), Error::<T>::AmountTooLow);
-				if amount < redpacket.min_amount_of_per_man.clone() {
+				if amount < redpacket.min_amount_of_per_man {
 					continue
 				}
 
-				if redpacket.total.clone().saturating_sub(redpacket.already_get_amount.clone()) <
-					amount
-				{
+				if redpacket.total.clone().saturating_sub(redpacket.already_get_amount) < amount {
 					continue
 				}
 
-				if redpacket.lucky_man_number.clone() <=
-					redpacket.already_get_man.clone().len() as u32
-				{
+				if redpacket.lucky_man_number <= redpacket.already_get_man.len() as u32 {
 					break
 				}
 
-				if redpacket.already_get_man.clone().contains(&who) == true {
+				if redpacket.already_get_man.contains(&who) == true {
 					continue
 				}
 
 				T::MultiCurrency::deposit(redpacket.currency_id.clone(), &who, amount);
 
 				redpacket.already_get_man.insert(who.clone());
-				redpacket.already_get_amount += amount.clone();
+				redpacket.already_get_amount = redpacket
+					.already_get_amount
+					.checked_add(&amount)
+					.ok_or(Error::<T>::Overflow)?;
 
-				if redpacket.already_get_man.clone().len() ==
-					(redpacket.lucky_man_number.clone() as usize)
-				{
-					Self::remove_redpacket(group_id, redpacket.clone());
+				if redpacket.already_get_man.len() == (redpacket.lucky_man_number as usize) {
+					Self::remove_redpacket(group_id, &redpacket);
 				} else {
 					<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket.clone());
 				}
 
-				if redpacket.already_get_amount.clone() == redpacket.total {
+				if redpacket.already_get_amount == redpacket.total {
 					<RedPacketOfRoom<T>>::remove(group_id, redpacket_id);
 				}
-				total_amount += amount;
+
+				total_amount.saturating_add(amount);
 			}
 
 			Self::deposit_event(Event::GetRedPocket(group_id, redpacket_id, total_amount));
@@ -2029,12 +2043,12 @@ pub mod pallet {
 
 			if all {
 				for redpacket in redpackets.iter() {
-					Self::remove_redpacket(room_id, redpacket.1.clone());
+					Self::remove_redpacket(room_id, &redpacket.1);
 				}
 			} else {
 				for redpacket in redpackets.iter() {
 					if redpacket.1.end_time < now {
-						Self::remove_redpacket(room_id, redpacket.1.clone());
+						Self::remove_redpacket(room_id, &redpacket.1);
 					}
 				}
 			}
@@ -2042,7 +2056,7 @@ pub mod pallet {
 
 		fn remove_redpacket(
 			room_id: u64,
-			redpacket: RedPacket<
+			redpacket: &RedPacket<
 				T::AccountId,
 				BTreeSet<T::AccountId>,
 				MultiBalanceOf<T>,
@@ -2073,9 +2087,9 @@ pub mod pallet {
 		) {
 			room.now_members_number = room.now_members_number.saturating_sub(1);
 			Self::remove_consumer_info(room, who.clone());
-			let mut listeners = <ListenersOfRoom<T>>::get(room.group_id.clone());
-			let _ = listeners.take(&who);
-			if room.clone().group_manager == who.clone() {
+			let mut listeners = <ListenersOfRoom<T>>::get(room.group_id);
+			listeners.take(&who);
+			if room.group_manager == who {
 				if room.consume.len() > 0 {
 					let mut consume = room.consume.clone();
 					room.group_manager = consume.remove(0).0;

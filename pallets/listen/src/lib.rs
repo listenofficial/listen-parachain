@@ -134,7 +134,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn group_id)]
-	pub type GroupId<T: Config> = StorageValue<_, u64, ValueQuery>;
+	pub type NextGroupId<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	/// The cost of creating a group
 	#[pallet::storage]
@@ -143,7 +143,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn red_packet_id)]
-	pub type RedPacketId<T: Config> = StorageValue<_, u128, ValueQuery>;
+	pub type NextRedPacketId<T: Config> = StorageValue<_, u128, ValueQuery>;
 
 	/// All groups that have been created
 	#[pallet::storage]
@@ -178,8 +178,8 @@ pub mod pallet {
 
 	/// Specific information about each person's purchase
 	#[pallet::storage]
-	#[pallet::getter(fn all_listeners)]
-	pub type AllListeners<T: Config> = StorageMap<
+	#[pallet::getter(fn purchase_summary)]
+	pub type PurchaseSummary<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
 		T::AccountId,
@@ -437,7 +437,7 @@ pub mod pallet {
 			/// the create cost transfers to the treasury
 			let to = Self::treasury_id();
 			T::MultiCurrency::transfer(T::GetNativeCurrencyId::get(), &who, &to, create_payment)?;
-			let group_id = <GroupId<T>>::get();
+			let group_id = <NextGroupId<T>>::get();
 
 			let group_info = GroupInfo {
 				group_id,
@@ -466,7 +466,7 @@ pub mod pallet {
 
 			<AllRoom<T>>::insert(group_id, group_info);
 			Self::add_invitee_info(&who, group_id);
-			<GroupId<T>>::try_mutate(|h| -> DispatchResult {
+			<NextGroupId<T>>::try_mutate(|h| -> DispatchResult {
 				*h = h.checked_add(1u64).ok_or(Error::<T>::Overflow)?;
 				Ok(())
 			});
@@ -770,7 +770,7 @@ pub mod pallet {
 				room.total_balances.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
 			Self::update_user_consume(&who, &mut room, dollars)?;
 
-			let mut person = <AllListeners<T>>::get(who.clone());
+			let mut person = <PurchaseSummary<T>>::get(who.clone());
 			person.props.picture =
 				person.props.picture.checked_add(props.picture).ok_or(Error::<T>::Overflow)?;
 			person.props.text =
@@ -778,7 +778,7 @@ pub mod pallet {
 			person.props.video =
 				person.props.video.checked_add(props.video).ok_or(Error::<T>::Overflow)?;
 			person.cost = person.cost.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
-			<AllListeners<T>>::insert(who.clone(), person);
+			<PurchaseSummary<T>>::insert(who.clone(), person);
 
 			T::MultiCurrency::withdraw(T::GetNativeCurrencyId::get(), &who, dollars)?;
 
@@ -851,7 +851,7 @@ pub mod pallet {
 				room.total_balances.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
 			Self::update_user_consume(&who, &mut room, dollars)?;
 
-			let mut person = <AllListeners<T>>::get(who.clone());
+			let mut person = <PurchaseSummary<T>>::get(who.clone());
 			person.audio.ten_seconds = person
 				.audio
 				.ten_seconds
@@ -865,7 +865,7 @@ pub mod pallet {
 			person.audio.minutes =
 				person.audio.minutes.checked_add(audio.minutes).ok_or(Error::<T>::Overflow)?;
 			person.cost = person.cost.checked_add(&dollars.clone()).ok_or(Error::<T>::Overflow)?;
-			<AllListeners<T>>::insert(who.clone(), person);
+			<PurchaseSummary<T>>::insert(who.clone(), person);
 
 			T::MultiCurrency::withdraw(T::GetNativeCurrencyId::get(), &who, dollars)?;
 
@@ -1196,12 +1196,12 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			ensure!(
-				<AllListeners<T>>::contains_key(who.clone()) &&
-					!<AllListeners<T>>::get(who.clone()).rooms.is_empty(),
+				<PurchaseSummary<T>>::contains_key(who.clone()) &&
+					!<PurchaseSummary<T>>::get(who.clone()).rooms.is_empty(),
 				Error::<T>::NotInAnyRoom
 			);
 
-			let rooms = <AllListeners<T>>::get(who.clone()).rooms;
+			let rooms = <PurchaseSummary<T>>::get(who.clone()).rooms;
 			let mut rooms_cp = rooms.clone();
 			let mut amount = <MultiBalanceOf<T>>::from(0u32);
 
@@ -1274,7 +1274,7 @@ pub mod pallet {
 				}
 			}
 
-			<AllListeners<T>>::mutate(who.clone(), |h| h.rooms = rooms_cp);
+			<PurchaseSummary<T>>::mutate(who.clone(), |h| h.rooms = rooms_cp);
 
 			if amount.is_zero() {
 				return Err(Error::<T>::RewardAmountIsZero)?
@@ -1332,7 +1332,7 @@ pub mod pallet {
 					amount,
 				Error::<T>::AmountTooLow
 			);
-			let redpacket_id = <RedPacketId<T>>::get();
+			let redpacket_id = <NextRedPacketId<T>>::get();
 
 			let redpacket = RedPacket {
 				id: redpacket_id,
@@ -1351,7 +1351,7 @@ pub mod pallet {
 			T::MultiCurrency::withdraw(currency_id, &who, amount)?;
 
 			let now_id = redpacket_id.checked_add(1).ok_or(Error::<T>::Overflow)?;
-			<RedPacketId<T>>::put(now_id);
+			<NextRedPacketId<T>>::put(now_id);
 			<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket);
 
 			Self::deposit_event(Event::SendRedPocket(group_id, redpacket_id, amount));
@@ -1684,7 +1684,7 @@ pub mod pallet {
 
 		fn add_invitee_info(yourself: &T::AccountId, group_id: u64) {
 			<ListenersOfRoom<T>>::mutate(group_id, |h| h.insert(yourself.clone()));
-			<AllListeners<T>>::mutate(yourself.clone(), |h| {
+			<PurchaseSummary<T>>::mutate(yourself.clone(), |h| {
 				h.rooms.push((group_id, RewardStatus::default()))
 			});
 		}

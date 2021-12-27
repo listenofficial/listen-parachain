@@ -3845,6 +3845,7 @@ dependencies = [
  "listen-primitives",
  "listen-runtime",
  "log",
+ "pallet-currencies",
  "pallet-transaction-payment-rpc",
  "parity-scale-codec",
  "polkadot-cli",
@@ -3933,6 +3934,7 @@ dependencies = [
  "pallet-balances",
  "pallet-collator-selection",
  "pallet-collective",
+ "pallet-currencies",
  "pallet-dao",
  "pallet-democracy",
  "pallet-elections-phragmen",
@@ -3949,7 +3951,6 @@ dependencies = [
  "pallet-treasury 1.0.0",
  "pallet-vesting",
  "pallet-xcm",
- "pallet_currencies",
  "parachain-info",
  "parity-scale-codec",
  "polkadot-parachain",
@@ -4917,6 +4918,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-currencies"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "listen-primitives",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-dao"
 version = "1.0.0"
 dependencies = [
@@ -5484,24 +5504,6 @@ dependencies = [
  "sp-std",
  "xcm",
  "xcm-executor",
-]
-
-[[package]]
-name = "pallet_currencies"
-version = "1.0.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]

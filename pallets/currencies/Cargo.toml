@@ -1,5 +1,5 @@
 [package]
-name = "pallet_currencies"
+name = "pallet-currencies"
 version = "1.0.0"
 authors = ["LISTEN TEAM"]
 edition = "2021"
@@ -24,6 +24,9 @@ serde = { version = "1.0.124", optional = true }
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false }
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false }
 
+# local
+listen-primitives = { path = "../../primitives", default-features = false}
+
 
 [dev-dependencies]
 pallet-balances = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.13' }
@@ -43,6 +46,7 @@ std = [
 	"orml-traits/std",
 	"scale-info/std",
 	"orml-tokens/std",
+	"listen-primitives/std",
 
 ]
 try-runtime = ["frame-support/try-runtime"]

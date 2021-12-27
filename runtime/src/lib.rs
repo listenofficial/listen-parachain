@@ -1119,7 +1119,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Config<T>, Storage, Event<T>} = 41,
 		Dao: pallet_dao::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>} = 42,
 		Listen: pallet_listen::{Pallet, Storage, Call, Event<T>} = 43,
-		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage} = 44,
+		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage, Config<T>} = 44,
 		RoomTreasury: pallet_treasury::{Pallet, Storage, Call, Event<T>} = 45,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 46,
 

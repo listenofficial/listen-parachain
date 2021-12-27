@@ -22,7 +22,7 @@ smallvec = "1.6.1"
 static_assertions  = { version = "1.1.0" }
 
 # Local Dependencies
-pallet_currencies = { path = "../pallets/currencies", default-features = false }
+pallet-currencies = { path = "../pallets/currencies", default-features = false }
 pallet-dao = { path = "../pallets/dao", default-features = false }
 pallet-listen = { path = "../pallets/listen", default-features = false }
 pallet-nicks = { path = "../pallets/nicks", default-features = false }
@@ -152,7 +152,7 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
-	"pallet_currencies/std",
+	"pallet-currencies/std",
 	"pallet-dao/std",
 	"pallet-listen/std",
 	"pallet-nicks/std",

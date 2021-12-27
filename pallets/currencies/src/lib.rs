@@ -29,6 +29,7 @@ use frame_support::{
 	weights::Weight,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
+use listen_primitives::CurrencyId;
 pub use module::*;
 use orml_traits::{
 	arithmetic::{Signed, SimpleArithmetic},
@@ -37,6 +38,8 @@ use orml_traits::{
 	MultiLockableCurrency, MultiReservableCurrency,
 };
 use scale_info::TypeInfo;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	traits::{CheckedSub, MaybeSerializeDeserialize, Saturating, StaticLookup, Zero},
 	DispatchError, DispatchResult,
@@ -48,10 +51,10 @@ use sp_std::{
 	vec::Vec,
 };
 pub use weights::WeightInfo;
-
 pub mod currencies_trait;
 mod weights;
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Clone, Encode, Decode, Eq, PartialEq, Default, RuntimeDebug, TypeInfo)]
 pub struct ListenAssetMetadata {
 	/// project name
@@ -62,10 +65,11 @@ pub struct ListenAssetMetadata {
 	pub decimals: u8,
 }
 
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[derive(Clone, Encode, Decode, Eq, PartialEq, Default, RuntimeDebug, TypeInfo)]
 pub struct ListenAssetInfo<AccountId, ListenAssetMetadata> {
-	owner: AccountId,
-	metadata: Option<ListenAssetMetadata>,
+	pub owner: AccountId,
+	pub metadata: Option<ListenAssetMetadata>,
 }
 
 #[frame_support::pallet]
@@ -75,9 +79,9 @@ pub mod module {
 	pub(crate) type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 		<T as frame_system::Config>::AccountId,
 	>>::Balance;
-	pub(crate) type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
-		<T as frame_system::Config>::AccountId,
-	>>::CurrencyId;
+	// pub(crate) type CurrencyId = <<T as Config>::MultiCurrency as MultiCurrency<
+	// 	<T as frame_system::Config>::AccountId,
+	// >>::CurrencyId;
 	pub(crate) type AmountOf<T> = <<T as Config>::MultiCurrency as MultiCurrencyExtended<
 		<T as frame_system::Config>::AccountId,
 	>>::Amount;
@@ -86,7 +90,7 @@ pub mod module {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		type MultiCurrency: MultiCurrency<Self::AccountId>
+		type MultiCurrency: MultiCurrency<CurrencyId = CurrencyId, Self::AccountId>
 			+ MultiCurrencyExtended<Self::AccountId>
 			+ MultiLockableCurrency<Self::AccountId>
 			+ MultiReservableCurrency<Self::AccountId>;
@@ -99,7 +103,7 @@ pub mod module {
 			+ BasicReservableCurrency<Self::AccountId, Balance = BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type GetNativeCurrencyId: Get<CurrencyIdOf<Self>>;
+		type GetNativeCurrencyId: Get<CurrencyId>;
 
 		#[pallet::constant]
 		type AirDropAmount: Get<BalanceOf<Self>>;
@@ -130,16 +134,16 @@ pub mod module {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Currency transfer success. [currency_id, from, to, amount]
-		Transferred(CurrencyIdOf<T>, T::AccountId, T::AccountId, BalanceOf<T>),
+		Transferred(CurrencyId, T::AccountId, T::AccountId, BalanceOf<T>),
 		/// Update balance success. [currency_id, who, amount]
-		BalanceUpdated(CurrencyIdOf<T>, T::AccountId, AmountOf<T>),
+		BalanceUpdated(CurrencyId, T::AccountId, AmountOf<T>),
 		/// Deposit success. [currency_id, who, amount]
-		Deposited(CurrencyIdOf<T>, T::AccountId, BalanceOf<T>),
+		Deposited(CurrencyId, T::AccountId, BalanceOf<T>),
 		/// Withdraw success. [currency_id, who, amount]
-		Withdrawn(CurrencyIdOf<T>, T::AccountId, BalanceOf<T>),
-		CreateAsset(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
-		SetMetadata(T::AccountId, CurrencyIdOf<T>, ListenAssetMetadata),
-		Burn(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
+		Withdrawn(CurrencyId, T::AccountId, BalanceOf<T>),
+		CreateAsset(T::AccountId, CurrencyId, BalanceOf<T>),
+		SetMetadata(T::AccountId, CurrencyId, ListenAssetMetadata),
+		Burn(T::AccountId, CurrencyId, BalanceOf<T>),
 	}
 
 	#[pallet::storage]
@@ -147,8 +151,8 @@ pub mod module {
 	pub(super) type ListenAssetsInfo<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
-		CurrencyIdOf<T>,
-		ListenAssetInfo<<T::Lookup as StaticLookup>::Source, ListenAssetMetadata>,
+		CurrencyId,
+		ListenAssetInfo<T::AccountId, ListenAssetMetadata>,
 	>;
 
 	#[pallet::pallet]
@@ -157,14 +161,36 @@ pub mod module {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub assets: Vec<(CurrencyId, ListenAssetInfo<T::AccountId, ListenAssetMetadata>)>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { assets: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			self.assets.iter().for_each(|asset_info| {
+				ListenAssetsInfo::<T>::insert(asset_info.0, asset_info.1.clone())
+			})
+		}
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Users create the asset.
 		#[pallet::weight(10000)]
 		pub fn create_asset(
 			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
+			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
+			metadata: Option<ListenAssetMetadata>,
 		) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
@@ -176,7 +202,7 @@ pub mod module {
 			T::MultiCurrency::deposit(currency_id, &user, amount)?;
 			ListenAssetsInfo::<T>::insert(
 				currency_id,
-				ListenAssetInfo { owner: T::Lookup::unlookup(user.clone()), metadata: None },
+				ListenAssetInfo { owner: user.clone(), metadata: None },
 			);
 
 			Self::deposit_event(Event::CreateAsset(user.clone(), currency_id, amount));
@@ -189,7 +215,7 @@ pub mod module {
 		#[pallet::weight(10000)]
 		pub fn set_metadata(
 			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
+			currency_id: CurrencyId,
 			metadata: ListenAssetMetadata,
 		) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
@@ -201,25 +227,21 @@ pub mod module {
 					metadata.decimals < 19,
 				Error::<T>::MetadataErr
 			);
-			let mut asset_info =
-				ListenAssetsInfo::<T>::get(currency_id).ok_or(Error::<T>::AssetNotExists)?;
-			ensure!(T::Lookup::unlookup(user.clone()) == asset_info.owner, Error::<T>::NotOwner);
 
-			if asset_info.metadata.is_some() {
-				ensure!(
-					asset_info.clone().metadata.unwrap() != metadata,
-					Error::<T>::MetadataNotChange
-				);
-				ensure!(
-					asset_info.metadata.clone().unwrap().decimals == metadata.decimals,
-					Error::<T>::ShouldNotChangeDecimals
-				);
-			}
+			ListenAssetsInfo::<T>::try_mutate_exists(currency_id, |h| -> DispatchResult {
+				let mut info = h.as_mut().take().ok_or(Error::<T>::AssetNotExists)?;
+				ensure!(info.owner == user, Error::<T>::NotOwner);
+				if let Some(m) = &info.metadata {
+					ensure!(m != &metadata, Error::<T>::MetadataNotChange);
+					ensure!(m.decimals == metadata.decimals, Error::<T>::ShouldNotChangeDecimals);
+				}
 
-			asset_info.metadata = Some(metadata.clone());
-			ListenAssetsInfo::<T>::insert(currency_id, asset_info);
+				info.metadata = Some(metadata.clone());
+				*h = Some(info.clone());
+				Self::deposit_event(Event::SetMetadata(user, currency_id, metadata));
+				Ok(())
+			})?;
 
-			Self::deposit_event(Event::SetMetadata(user, currency_id, metadata));
 			Ok(().into())
 		}
 
@@ -227,7 +249,7 @@ pub mod module {
 		#[pallet::weight(10000)]
 		pub fn burn(
 			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
+			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
@@ -247,7 +269,7 @@ pub mod module {
 		pub fn transfer(
 			origin: OriginFor<T>,
 			dest: <T::Lookup as StaticLookup>::Source,
-			currency_id: CurrencyIdOf<T>,
+			currency_id: CurrencyId,
 			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let from = ensure_signed(origin)?;
@@ -290,7 +312,7 @@ pub mod module {
 		pub fn update_balance(
 			origin: OriginFor<T>,
 			who: <T::Lookup as StaticLookup>::Source,
-			currency_id: CurrencyIdOf<T>,
+			currency_id: CurrencyId,
 			amount: AmountOf<T>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
@@ -306,56 +328,39 @@ pub mod module {
 	}
 }
 
-impl<T: Config> CurrenciesHandler<CurrencyIdOf<T>, ListenAssetMetadata, DispatchError>
-	for Pallet<T>
-{
-	fn get_metadata(currency: CurrencyIdOf<T>) -> Result<ListenAssetMetadata, DispatchError> {
+impl<T: Config> CurrenciesHandler<CurrencyId, ListenAssetMetadata, DispatchError> for Pallet<T> {
+	fn get_metadata(currency: CurrencyId) -> Result<ListenAssetMetadata, DispatchError> {
 		Ok(Self::get_metadata(currency)?)
 	}
 }
 
 impl<T: Config> Pallet<T> {
-	fn is_exists_metadata(currency_id: CurrencyIdOf<T>) -> bool {
+	fn is_exists_metadata(currency_id: CurrencyId) -> bool {
 		if currency_id == T::GetNativeCurrencyId::get() {
 			return true
 		}
 
-		let mut asset_info_opt = ListenAssetsInfo::<T>::get(currency_id);
-		if asset_info_opt.is_some() {
-			let asset_info = asset_info_opt.unwrap();
-			if asset_info.metadata.is_some() {
-				true
-			} else {
-				false
+		if let Some(x) = ListenAssetsInfo::<T>::get(currency_id) {
+			if let Some(m) = x.metadata {
+				return true
 			}
-		} else {
-			false
 		}
+		false
 	}
 
-	fn get_metadata(
-		currency_id: CurrencyIdOf<T>,
-	) -> result::Result<ListenAssetMetadata, DispatchError> {
-		if currency_id == T::GetNativeCurrencyId::get() {
-			return Ok(ListenAssetMetadata {
-				name: "listen".into(),
-				symbol: "LT".into(),
-				decimals: 14u8,
-			})
-			// return Err(Error::<T>::NativeCurrency)?;
-		}
-		let mut asset_info =
-			ListenAssetsInfo::<T>::get(currency_id).ok_or(Error::<T>::AssetNotExists)?;
-		if asset_info.metadata.is_some() {
-			Ok(asset_info.metadata.unwrap())
-		} else {
-			Err(Error::<T>::MetadataNotExists)?
+	fn get_metadata(currency_id: CurrencyId) -> result::Result<ListenAssetMetadata, DispatchError> {
+		match ListenAssetsInfo::<T>::get(currency_id)
+			.ok_or(Error::<T>::AssetNotExists)?
+			.metadata
+		{
+			Some(a) => Ok(a),
+			_ => Err(Error::<T>::MetadataNotExists)?,
 		}
 	}
 }
 
 impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
-	type CurrencyId = CurrencyIdOf<T>;
+	type CurrencyId = CurrencyId;
 	type Balance = BalanceOf<T>;
 
 	fn minimum_balance(currency_id: Self::CurrencyId) -> Self::Balance {
@@ -617,7 +622,7 @@ pub struct Currency<T, GetCurrencyId>(marker::PhantomData<T>, marker::PhantomDat
 impl<T, GetCurrencyId> BasicCurrency<T::AccountId> for Currency<T, GetCurrencyId>
 where
 	T: Config,
-	GetCurrencyId: Get<CurrencyIdOf<T>>,
+	GetCurrencyId: Get<CurrencyId>,
 {
 	type Balance = BalanceOf<T>;
 
@@ -665,7 +670,7 @@ where
 impl<T, GetCurrencyId> BasicCurrencyExtended<T::AccountId> for Currency<T, GetCurrencyId>
 where
 	T: Config,
-	GetCurrencyId: Get<CurrencyIdOf<T>>,
+	GetCurrencyId: Get<CurrencyId>,
 {
 	type Amount = AmountOf<T>;
 
@@ -681,7 +686,7 @@ where
 impl<T, GetCurrencyId> BasicLockableCurrency<T::AccountId> for Currency<T, GetCurrencyId>
 where
 	T: Config,
-	GetCurrencyId: Get<CurrencyIdOf<T>>,
+	GetCurrencyId: Get<CurrencyId>,
 {
 	type Moment = T::BlockNumber;
 
@@ -723,7 +728,7 @@ where
 impl<T, GetCurrencyId> BasicReservableCurrency<T::AccountId> for Currency<T, GetCurrencyId>
 where
 	T: Config,
-	GetCurrencyId: Get<CurrencyIdOf<T>>,
+	GetCurrencyId: Get<CurrencyId>,
 {
 	fn can_reserve(who: &T::AccountId, value: Self::Balance) -> bool {
 		<Pallet<T> as MultiReservableCurrency<T::AccountId>>::can_reserve(

@@ -1,14 +1,15 @@
 use cumulus_primitives_core::ParaId;
 use listen_primitives::{constants::currency::UNIT, Balance};
 use listen_runtime::{
-	AccountId, AuraId, CouncilConfig, ElectionsConfig, Signature, SudoConfig,
+	AccountId, AuraId, CouncilConfig, CurrenciesConfig, ElectionsConfig, Signature, SudoConfig,
 	TechnicalCommitteeConfig, VestingConfig, EXISTENTIAL_DEPOSIT,
 };
+use pallet_currencies::{ListenAssetInfo, ListenAssetMetadata};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
-use sp_core::{sr25519, Pair, Public};
+use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public};
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	AccountId32,
@@ -131,6 +132,10 @@ fn get_properties() -> Properties {
 	properties
 }
 
+fn get_root() -> AccountId {
+	AccountId32::from_string("5FQyoSCbcnodfunhcC7ZpwKkad8JSFxLaZ54aoZyb7HXoX3h").unwrap()
+}
+
 pub fn local_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		// Name
@@ -234,6 +239,32 @@ fn testnet_genesis(
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
 		tokens: Default::default(),
-		sudo: SudoConfig { key: get_account_id_from_seed::<sr25519::Public>("Alice") },
+		sudo: SudoConfig { key: get_root() },
+		currencies: CurrenciesConfig {
+			assets: vec![
+				(
+					0,
+					ListenAssetInfo {
+						owner: get_root(),
+						metadata: Some(ListenAssetMetadata {
+							name: "listen".into(),
+							symbol: "LT".into(),
+							decimals: 12u8,
+						}),
+					},
+				),
+				(
+					101,
+					ListenAssetInfo {
+						owner: get_root(),
+						metadata: Some(ListenAssetMetadata {
+							name: "listen point".into(),
+							symbol: "LTP".into(),
+							decimals: 12u8,
+						}),
+					},
+				),
+			],
+		},
 	}
 }

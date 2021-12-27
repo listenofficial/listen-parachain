@@ -189,14 +189,14 @@ pub fn local_testnet_config() -> ChainSpec {
 	)
 }
 
+pub const ENDOWMENT: Balance = 10_000_000 * UNIT;
+pub const STASH: Balance = 100 * UNIT;
+
 fn testnet_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 ) -> listen_runtime::GenesisConfig {
-	const ENDOWMENT: Balance = 10_000_000 * UNIT;
-	const STASH: Balance = 100 * UNIT;
-
 	listen_runtime::GenesisConfig {
 		system: listen_runtime::SystemConfig {
 			code: listen_runtime::WASM_BINARY
@@ -252,6 +252,7 @@ fn testnet_genesis(
 							decimals: 12u8,
 						}),
 					},
+					ENDOWMENT,
 				),
 				(
 					101,
@@ -263,6 +264,7 @@ fn testnet_genesis(
 							decimals: 12u8,
 						}),
 					},
+					ENDOWMENT,
 				),
 			],
 		},

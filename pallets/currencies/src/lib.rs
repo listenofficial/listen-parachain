@@ -160,7 +160,8 @@ pub mod module {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub assets: Vec<(CurrencyId, ListenAssetInfo<T::AccountId, ListenAssetMetadata>)>,
+		pub assets:
+			Vec<(CurrencyId, ListenAssetInfo<T::AccountId, ListenAssetMetadata>, BalanceOf<T>)>,
 	}
 
 	#[cfg(feature = "std")]
@@ -174,7 +175,8 @@ pub mod module {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			self.assets.iter().for_each(|asset_info| {
-				ListenAssetsInfo::<T>::insert(asset_info.0, asset_info.1.clone())
+				ListenAssetsInfo::<T>::insert(asset_info.0, asset_info.1.clone());
+				T::MultiCurrency::deposit(asset_info.0, &asset_info.1.owner, asset_info.2);
 			})
 		}
 	}
@@ -199,7 +201,7 @@ pub mod module {
 			T::MultiCurrency::deposit(currency_id, &user, amount)?;
 			ListenAssetsInfo::<T>::insert(
 				currency_id,
-				ListenAssetInfo { owner: user.clone(), metadata: None },
+				ListenAssetInfo { owner: user.clone(), metadata },
 			);
 
 			Self::deposit_event(Event::CreateAsset(user.clone(), currency_id, amount));

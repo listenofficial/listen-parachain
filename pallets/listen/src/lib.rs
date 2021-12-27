@@ -352,14 +352,12 @@ pub mod pallet {
 			);
 
 			match <ServerId<T>>::get() {
-				Some(id) => match id {
-					id if id == server_id => {},
-					_ => return Err(Error::<T>::NotServerId)?,
-				},
+				Some(id) =>
+					if id != server_id {
+						return Err(Error::<T>::NotServerId)?
+					},
 				_ => return Err(Error::<T>::ServerIdNotExists)?,
 			}
-			ensure!(<ServerId<T>>::get().is_some(), Error::<T>::ServerIdNotExists);
-			ensure!(<ServerId<T>>::get().unwrap() == server_id.clone(), Error::<T>::NotServerId);
 
 			let mut members = Self::check_accounts(members)?;
 			members.sort();

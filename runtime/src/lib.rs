@@ -780,7 +780,7 @@ type RoomRootOrHalfRoomCouncilOrSomeRoomCouncil =
 
 impl pallet_listen::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Tokens;
+	type MultiCurrency = Currencies;
 	type VoteExpire = VoteExpire;
 	type RedPackExpire = RedPackExpire;
 	type RewardDuration = RewardDuration;
@@ -1112,7 +1112,6 @@ construct_runtime!(
 		// orml
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 60,
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 61,
-		//
 		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 62,
 
 		// local

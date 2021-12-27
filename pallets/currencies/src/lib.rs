@@ -79,9 +79,6 @@ pub mod module {
 	pub(crate) type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 		<T as frame_system::Config>::AccountId,
 	>>::Balance;
-	// pub(crate) type CurrencyId = <<T as Config>::MultiCurrency as MultiCurrency<
-	// 	<T as frame_system::Config>::AccountId,
-	// >>::CurrencyId;
 	pub(crate) type AmountOf<T> = <<T as Config>::MultiCurrency as MultiCurrencyExtended<
 		<T as frame_system::Config>::AccountId,
 	>>::Amount;
@@ -336,10 +333,6 @@ impl<T: Config> CurrenciesHandler<CurrencyId, ListenAssetMetadata, DispatchError
 
 impl<T: Config> Pallet<T> {
 	fn is_exists_metadata(currency_id: CurrencyId) -> bool {
-		if currency_id == T::GetNativeCurrencyId::get() {
-			return true
-		}
-
 		if let Some(x) = ListenAssetsInfo::<T>::get(currency_id) {
 			if let Some(m) = x.metadata {
 				return true

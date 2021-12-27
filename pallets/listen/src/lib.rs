@@ -88,7 +88,6 @@ pub mod pallet {
 		type Event: From<Event<Self>>
 			+ Into<<Self as system::Config>::Event>
 			+ IsType<<Self as frame_system::Config>::Event>;
-		// type NativeCurrency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 		type MultiCurrency: MultiCurrency<Self::AccountId>;
 		type CollectiveHandler: CollectiveHandler<u64, Self::BlockNumber, DispatchError>;
 		type RoomRootOrigin: EnsureOrigin<Self::Origin>;
@@ -351,6 +350,14 @@ pub mod pallet {
 				len > 0 && threshould > 0u16 && threshould <= len as u16,
 				Error::<T>::ThreshouldLenErr
 			);
+
+			match <ServerId<T>>::get() {
+				Some(id) => match id {
+					id if id == server_id => {},
+					_ => return Err(Error::<T>::NotServerId)?,
+				},
+				_ => return Err(Error::<T>::ServerIdNotExists)?,
+			}
 			ensure!(<ServerId<T>>::get().is_some(), Error::<T>::ServerIdNotExists);
 			ensure!(<ServerId<T>>::get().unwrap() == server_id.clone(), Error::<T>::NotServerId);
 

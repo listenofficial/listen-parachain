@@ -59,8 +59,8 @@ pub struct ClassInfo<TokenId, AccountId, Data, ClassMetadataOf> {
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct ClassData<NftLevel, Balance, TokenId> {
 	level: NftLevel,
-	power_threshold: Balance,
-	claim_payment: Balance,
+	like_threshold: Balance,
+	claim_cost: Balance,
 	images_hash: Option<Vec<u8>>,
 	maximum_quantity: TokenId,
 }
@@ -69,8 +69,8 @@ pub struct ClassData<NftLevel, Balance, TokenId> {
 pub struct TokenData<Hash, AccountId, Attribute, Balance, NftStatus, ClassId> {
 	class_id: ClassId,
 	hash: Hash,
-	power_threshold: Balance,
-	claim_payment: Balance,
+	like_threshold: Balance,
+	claim_cost: Balance,
 	attribute: Attribute,
 	image_hash: Vec<u8>,
 	sell_records: Vec<(AccountId, Balance)>,
@@ -504,8 +504,8 @@ impl<T: Config> Pallet<T> {
 			let hash = Self::get_hash(class_id, token_id);
 			data.hash = hash;
 			data.class_id = class_id;
-			data.power_threshold = BalanceOf::<T>::from(0u32);
-			data.claim_payment = BalanceOf::<T>::from(0u32);
+			data.like_threshold = BalanceOf::<T>::from(0u32);
+			data.claim_cost = BalanceOf::<T>::from(0u32);
 			data.attribute = attribute;
 			data.image_hash = image_hash.clone();
 			data.sell_records = vec![];
@@ -572,16 +572,16 @@ impl<T: Config> Pallet<T> {
 			T::MultiCurrency::withdraw(
 				T::GetNativeCurrencyId::get(),
 				&owner,
-				class_info.data.claim_payment,
+				class_info.data.claim_cost,
 			)?;
 			T::MultiCurrency::withdraw(
 				T::GetLikeCurrencyId::get(),
 				&owner,
-				class_info.data.power_threshold,
+				class_info.data.like_threshold,
 			)?;
 			t.owner = Some(owner.clone());
-			t.data.power_threshold = class_info.data.power_threshold;
-			t.data.claim_payment = class_info.data.claim_payment;
+			t.data.like_threshold = class_info.data.like_threshold;
+			t.data.claim_cost = class_info.data.claim_cost;
 			t.data.status =
 				NftStatus { is_claimed: true, is_in_sale: false, is_active_image: false };
 			Self::update_no_owner_tokens_vec(class_id, token_id, true);
@@ -599,12 +599,12 @@ impl<T: Config> Pallet<T> {
 			ensure!(!Self::is_in_sale(token.0, token.1), Error::<T>::InSale);
 			ensure!(!t.data.status.is_active_image, Error::<T>::ActiveNft);
 
-			T::MultiCurrency::deposit(T::GetLikeCurrencyId::get(), &owner, t.data.power_threshold)?;
+			T::MultiCurrency::deposit(T::GetLikeCurrencyId::get(), &owner, t.data.like_threshold)?;
 			Self::remove_token_ownership(owner, token.0, token.1);
 
 			t.owner = None;
-			t.data.power_threshold = BalanceOf::<T>::from(0u32);
-			t.data.claim_payment = BalanceOf::<T>::from(0u32);
+			t.data.like_threshold = BalanceOf::<T>::from(0u32);
+			t.data.claim_cost = BalanceOf::<T>::from(0u32);
 			t.data.sell_records = vec![];
 			t.data.status = NftStatus::default();
 			*token_info = Some(t);

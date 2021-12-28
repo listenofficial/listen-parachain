@@ -8,6 +8,7 @@ members = [
 	"pallets/listen",
 	"pallets/dao",
 	"pallets/treasury",
+	"pallets/nft",
 ]
 
 [profile.release]

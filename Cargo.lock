@@ -3940,6 +3940,7 @@ dependencies = [
  "pallet-elections-phragmen",
  "pallet-listen",
  "pallet-multisig",
+ "pallet-nft",
  "pallet-nicks 1.0.0",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
@@ -5178,6 +5179,22 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-nft"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",

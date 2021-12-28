@@ -803,6 +803,25 @@ impl pallet_listen::Config for Runtime {
 }
 
 parameter_types! {
+	pub const MaxClassMetadata: u32 = 1024;
+	pub const MaxTokenMetadata: u32 = 1024;
+	pub const MaxTokenAttribute: u32 = 1024;
+
+}
+
+impl pallet_nft::Config for Runtime {
+	type Event = Event;
+	type ClassId = u32;
+	type TokenId = u32;
+	type MultiCurrency = Currencies;
+	type MaxClassMetadata = MaxClassMetadata;
+	type MaxTokenMetadata = MaxTokenMetadata;
+	type MaxTokenAttribute = MaxTokenAttribute;
+	type GetLikeCurrencyId = GetLikeCurrencyId;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+}
+
+parameter_types! {
 	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
 	pub const DepositBase: Balance = 1 * UNIT;
 	// Additional storage item size of 32 bytes.
@@ -1121,6 +1140,7 @@ construct_runtime!(
 		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage, Config<T>} = 44,
 		RoomTreasury: pallet_treasury::{Pallet, Storage, Call, Event<T>} = 45,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 46,
+		Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 47,
 
 		// Dao
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} =50,

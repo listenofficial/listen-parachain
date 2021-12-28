@@ -28,6 +28,8 @@ pallet-listen = { path = "../pallets/listen", default-features = false }
 pallet-nicks = { path = "../pallets/nicks", default-features = false }
 pallet-treasury = { path = "../pallets/treasury", default-features = false }
 listen-primitives = { path = "../primitives", default-features = false }
+pallet-nft = { path = "../pallets/nft", default-features = false }
+
 
 # orml
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false }
@@ -171,6 +173,7 @@ std = [
 	"orml-xcm-support/std",
 	"orml-unknown-tokens/std",
 	"orml-xcm/std",
+	"pallet-nft/std",
 ]
 
 runtime-benchmarks = [

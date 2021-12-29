@@ -58,6 +58,8 @@ pub type RoomIndex = u64;
 /// This also serves as a number of voting members, and since for motions, each member may
 /// vote exactly once, therefore also the number of votes for any given motion.
 pub type MemberCount = u32;
+pub type IsEnd = bool;
+pub type IsPass = bool;
 
 /// Default voting strategy when a member is inactive.
 pub trait DefaultVote {
@@ -138,7 +140,13 @@ pub struct ListenDaoVotes<AccountId, BlockNumber> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
+	use frame_support::{
+		pallet_prelude::{
+			Blake2_128Concat, IsType, OptionQuery, PhantomData, StorageDoubleMap, StorageMap,
+			StorageValue, ValueQuery,
+		},
+		traits::Hooks,
+	};
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::config]
@@ -241,6 +249,7 @@ pub mod pallet {
 	pub enum Error<T, I = ()> {
 		/// Account is not a member
 		NotMember,
+		NotRoomOwner,
 		/// Duplicate proposals not allowed
 		DuplicateProposal,
 		/// Proposal must exist
@@ -258,6 +267,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
+		/// Method of direct execution by the group master.
 		#[pallet::weight(50_000)]
 		pub fn execute(
 			origin: OriginFor<T>,
@@ -269,7 +279,9 @@ pub mod pallet {
 
 			let members = T::ListenHandler::get_room_council(room_id)?;
 			let room_owner = T::ListenHandler::get_root(room_id)?;
-			ensure!(members.contains(&who) || room_owner == who.clone(), Error::<T, I>::NotMember);
+
+			ensure!(members.contains(&who), Error::<T, I>::NotMember);
+			ensure!(room_owner == who, Error::<T, I>::NotRoomOwner);
 
 			let proposal_len = proposal.using_encoded(|x| x.len());
 			ensure!(proposal_len <= length_bound as usize, Error::<T, I>::WrongProposalLength);
@@ -284,6 +296,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// A group of members of parliament introduced a motion.
 		#[pallet::weight(50_000)]
 		pub fn propose(
 			origin: OriginFor<T>,
@@ -347,6 +360,56 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(50_000)]
+		pub fn vote(
+			origin: OriginFor<T>,
+			room_id: RoomIndex,
+			proposal: T::Hash,
+			#[pallet::compact] index: ProposalIndex,
+			approve: bool,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			let members = T::ListenHandler::get_room_council(room_id)?;
+			let seats = members.len() as MemberCount;
+			ensure!(members.contains(&who), Error::<T, I>::NotMember);
+
+			let mut voting =
+				Self::voting(room_id, &proposal).ok_or(Error::<T, I>::ProposalMissing)?;
+			ensure!(voting.index == index, Error::<T, I>::WrongIndex);
+
+			let position_yes = voting.ayes.iter().position(|a| a == &who);
+			let position_no = voting.nays.iter().position(|a| a == &who);
+
+			if approve {
+				if position_yes.is_none() {
+					voting.ayes.push(who.clone());
+				} else {
+					Err(Error::<T, I>::DuplicateVote)?
+				}
+				if let Some(pos) = position_no {
+					voting.nays.swap_remove(pos);
+				}
+			} else {
+				if position_no.is_none() {
+					voting.nays.push(who.clone());
+				} else {
+					Err(Error::<T, I>::DuplicateVote)?
+				}
+				if let Some(pos) = position_yes {
+					voting.ayes.swap_remove(pos);
+				}
+			}
+
+			let yes_votes = voting.ayes.len() as MemberCount;
+			let no_votes = voting.nays.len() as MemberCount;
+			Self::deposit_event(Event::Voted(who, proposal, approve, seats, yes_votes, no_votes));
+			Voting::<T, I>::insert(room_id, &proposal, voting.clone());
+
+			Self::normal_close(voting.clone(), room_id, proposal)?;
+			Ok(())
+		}
+
+		#[pallet::weight(50_000)]
 		pub fn disapprove_proposal(
 			origin: OriginFor<T>,
 			room_id: RoomIndex,
@@ -364,24 +427,57 @@ pub mod pallet {
 			room_id: RoomIndex,
 			proposal_hash: T::Hash,
 		) -> DispatchResult {
+			let no_votes = voting.nays.len() as MemberCount;
+			let yes_votes = voting.ayes.len() as MemberCount;
+			let seats = T::ListenHandler::get_room_council(room_id)?.len() as MemberCount;
+
+			let result: (IsEnd, IsPass) = Self::vote_result(&voting, room_id)?;
+
+			if result.0 {
+				if result.1 {
+					let proposal = ProposalOf::<T, I>::get(room_id, proposal_hash)
+						.ok_or(Error::<T, I>::ProposalMissing)?;
+					Self::do_approve_proposal(room_id, seats, voting, proposal_hash, proposal);
+					Self::deposit_event(Event::Closed(proposal_hash, yes_votes, no_votes));
+				} else {
+					Self::do_disapprove_proposal(room_id, proposal_hash);
+					if Self::is_expire(&voting) {
+						return Err(Error::<T, I>::VoteExpire)?
+					}
+					Self::deposit_event(Event::Closed(proposal_hash, yes_votes, no_votes));
+				}
+			}
+
+			Ok(())
+		}
+
+		fn is_expire(voting: &ListenDaoVotes<T::AccountId, T::BlockNumber>) -> bool {
+			if voting.end <= system::Pallet::<T>::block_number() {
+				return true
+			}
+			false
+		}
+
+		fn vote_result(
+			voting: &ListenDaoVotes<T::AccountId, T::BlockNumber>,
+			room_id: RoomIndex,
+		) -> result::Result<(IsEnd, IsPass), DispatchError> {
 			let mut no_votes = voting.nays.len() as MemberCount;
 			let mut yes_votes = voting.ayes.len() as MemberCount;
 			let seats = T::ListenHandler::get_room_council(room_id)?.len() as MemberCount;
 
 			let approved = yes_votes >= voting.threshold;
-			let disapproved = seats.saturating_sub(no_votes) < voting.threshold;
-
-			if approved {
-				let proposal = ProposalOf::<T, I>::get(room_id, proposal_hash)
-					.ok_or(Error::<T, I>::ProposalMissing)?;
-				Self::do_approve_proposal(room_id, seats, voting, proposal_hash, proposal);
-				Self::deposit_event(Event::Closed(proposal_hash, yes_votes, no_votes));
-			} else if disapproved {
-				Self::do_disapprove_proposal(room_id, proposal_hash);
-				Self::deposit_event(Event::Closed(proposal_hash, yes_votes, no_votes));
+			let disapproved =
+				seats.saturating_sub(no_votes) < voting.threshold || Self::is_expire(&voting);
+			if approved || disapproved {
+				if approved {
+					Ok((true, true))
+				} else {
+					Ok((true, false))
+				}
+			} else {
+				Ok((false, false))
 			}
-
-			Ok(())
 		}
 
 		fn do_approve_proposal(

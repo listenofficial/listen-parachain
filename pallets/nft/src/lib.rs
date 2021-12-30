@@ -569,16 +569,28 @@ impl<T: Config> Pallet<T> {
 			ensure!(!Self::is_in_sale(class_id, token_id), Error::<T>::InSale);
 			ensure!(t.owner == None, Error::<T>::OwnerIsExists);
 			let class_info = Classes::<T>::get(class_id).ok_or(Error::<T>::ClassNotFound)?;
-			T::MultiCurrency::withdraw(
-				T::GetNativeCurrencyId::get(),
-				&owner,
-				class_info.data.claim_cost,
-			)?;
+
+			let cost = class_info.data.claim_cost;
+			if !cost.is_zero() {
+				if t.data.sell_records.len() == 0 {
+					let half_cost = cost / BalanceOf::<T>::from(2u32);
+					T::MultiCurrency::transfer(
+						T::GetNativeCurrencyId::get(),
+						&owner,
+						&class_info.issuer,
+						half_cost,
+					)?;
+					T::MultiCurrency::withdraw(T::GetNativeCurrencyId::get(), &owner, half_cost)?;
+				}
+				T::MultiCurrency::withdraw(T::GetNativeCurrencyId::get(), &owner, cost)?;
+			}
+
 			T::MultiCurrency::withdraw(
 				T::GetLikeCurrencyId::get(),
 				&owner,
 				class_info.data.like_threshold,
 			)?;
+
 			t.owner = Some(owner.clone());
 			t.data.like_threshold = class_info.data.like_threshold;
 			t.data.claim_cost = class_info.data.claim_cost;
@@ -605,7 +617,7 @@ impl<T: Config> Pallet<T> {
 			t.owner = None;
 			t.data.like_threshold = BalanceOf::<T>::from(0u32);
 			t.data.claim_cost = BalanceOf::<T>::from(0u32);
-			t.data.sell_records = vec![];
+			// t.data.sell_records = vec![];
 			t.data.status = NftStatus::default();
 			*token_info = Some(t);
 			Self::update_no_owner_tokens_vec(token.0, token.1, false);

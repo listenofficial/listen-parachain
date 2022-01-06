@@ -32,7 +32,6 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const PARA_ID: u32 = 1002;
 
-
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
 #[serde(deny_unknown_fields)]

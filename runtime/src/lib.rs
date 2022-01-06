@@ -566,8 +566,8 @@ pub type Barrier = (
 	AllowKnownQueryResponses<PolkadotXcm>,
 	// Subscriptions for version tracking are OK.
 	AllowSubscriptionsFrom<Everything>,
-	AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
-	// ^^^ Parent and its exec plurality get free execution
+	// AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
+	// // ^^^ Parent and its exec plurality get free execution
 );
 
 /// fixme
@@ -625,6 +625,19 @@ impl pallet_xcm::Config for Runtime {
 
 	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
 	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+}
+
+parameter_types! {
+	pub const IndexDeposit: Balance = 1 * UNIT;
+
+}
+
+impl pallet_indices::Config for Runtime {
+	type AccountIndex = AccountIndex;
+	type Currency = Balances;
+	type Deposit = IndexDeposit;
+	type Event = Event;
+	type WeightInfo = pallet_indices::weights::SubstrateWeight<Runtime>;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -1022,6 +1035,36 @@ impl pallet_democracy::Config for Runtime {
 }
 
 parameter_types! {
+	pub const BasicDeposit: Balance = 10 * UNIT;       // 258 bytes on-chain
+	pub const FieldDeposit: Balance = 250 * MILLIUNIT;        // 66 bytes on-chain
+	pub const SubAccountDeposit: Balance = 2 * UNIT;   // 53 bytes on-chain
+	pub const MaxSubAccounts: u32 = 100;
+	pub const MaxAdditionalFields: u32 = 100;
+	pub const MaxRegistrars: u32 = 20;
+}
+
+type EnsureRootOrHalfCouncil = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>,
+>;
+
+impl pallet_identity::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type BasicDeposit = BasicDeposit;
+	type FieldDeposit = FieldDeposit;
+	type SubAccountDeposit = SubAccountDeposit;
+	type MaxSubAccounts = MaxSubAccounts;
+	type MaxAdditionalFields = MaxAdditionalFields;
+	type MaxRegistrars = MaxRegistrars;
+	type Slashed = ();
+	type ForceOrigin = EnsureRootOrHalfCouncil;
+	type RegistrarOrigin = EnsureRootOrHalfCouncil;
+	type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
 	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
 		RuntimeBlockWeights::get().max_block;
 	pub const MaxScheduledPerBlock: u32 = 50;
@@ -1108,11 +1151,13 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
+		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>},
 
 		// Monetary stuff.
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Config<T>, Event<T>} = 12,
+		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 13,
 
 
 		// Collator support. The order of these 4 are important and shall not change.

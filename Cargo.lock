@@ -3938,6 +3938,8 @@ dependencies = [
  "pallet-dao",
  "pallet-democracy",
  "pallet-elections-phragmen",
+ "pallet-identity",
+ "pallet-indices",
  "pallet-listen",
  "pallet-multisig",
  "pallet-nft",

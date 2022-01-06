@@ -32,6 +32,7 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const PARA_ID: u32 = 1002;
 
+
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
 #[serde(deny_unknown_fields)]
@@ -122,7 +123,7 @@ pub fn development_config() -> ChainSpec {
 		Some("listen-dev"),
 		Some(get_properties()),
 		Extensions {
-			relay_chain: "kusama-dev".into(), // You MUST set this to the correct network!
+			relay_chain: "rococo-dev".into(), // You MUST set this to the correct network!
 			para_id: PARA_ID.into(),
 		},
 	)
@@ -187,7 +188,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		Some(get_properties()),
 		// Extensions
 		Extensions {
-			relay_chain: "kusama-local".into(), // You MUST set this to the correct network!
+			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
 			para_id: PARA_ID.into(),
 		},
 	)

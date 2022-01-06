@@ -80,7 +80,8 @@ pallet-elections-phragmen = { git = 'https://github.com/paritytech/substrate.git
 sp-npos-elections = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.13', default-features = false }
 pallet-scheduler = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.13', default-features = false }
 pallet-vesting = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.13', default-features = false }
-
+pallet-indices = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.13', default-features = false }
+pallet-identity = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.13', default-features = false }
 
 
 
@@ -174,6 +175,8 @@ std = [
 	"orml-unknown-tokens/std",
 	"orml-xcm/std",
 	"pallet-nft/std",
+	"pallet-indices/std",
+	"pallet-identity/std",
 ]
 
 runtime-benchmarks = [

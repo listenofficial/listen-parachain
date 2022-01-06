@@ -168,7 +168,6 @@ pub mod pallet {
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 		type ListenHandler: ListenHandler<RoomIndex, Self::AccountId, DispatchError, u128>;
-		/// fixme 这个应该是每个群自己设置的 不应该系统给出来
 		#[pallet::constant]
 		type MotionDuration: Get<Self::BlockNumber>;
 		/// Maximum number of proposals allowed to be active in parallel.

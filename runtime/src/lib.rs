@@ -566,8 +566,9 @@ pub type Barrier = (
 	AllowKnownQueryResponses<PolkadotXcm>,
 	// Subscriptions for version tracking are OK.
 	AllowSubscriptionsFrom<Everything>,
-	// AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
-	// // ^^^ Parent and its exec plurality get free execution
+
+	AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
+	// ^^^ Parent and its exec plurality get free execution
 );
 
 /// fixme

@@ -17,6 +17,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod primitives;
+#[cfg(feature = "std")]
+use frame_support::traits::GenesisBuild;
 pub use crate::pallet::*;
 use crate::primitives::{
 	vote, AllProps, Audio, AudioPrice, DisbandVote, GroupInfo, GroupMaxMembers, ListenVote,
@@ -72,7 +74,6 @@ pub mod pallet {
 		traits::Hooks,
 	};
 	use frame_system::pallet_prelude::*;
-	use std::cmp::max;
 
 	pub(crate) type MultiBalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 		<T as frame_system::Config>::AccountId,
@@ -307,6 +308,14 @@ pub mod pallet {
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 
+	// todo 服务器id和多签账户
+	// #[pallet::genesis_build]
+	// impl <T: Config> GenesisBuild<T> {
+	// 	fn build(&self) {
+	//
+	// 	}
+	// }
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Set a multi-sign account
@@ -449,7 +458,7 @@ pub mod pallet {
 			<NextGroupId<T>>::try_mutate(|h| -> DispatchResult {
 				*h = h.checked_add(1u64).ok_or(Error::<T>::Overflow)?;
 				Ok(())
-			});
+			})?;
 			Self::deposit_event(Event::CreatedRoom(who, group_id));
 
 			Ok(())
@@ -1035,7 +1044,7 @@ pub mod pallet {
 			<DisbandInterval<T>>::try_mutate(max_members, |h| -> DispatchResult {
 				ensure!(interval != *h, Error::<T>::NotChange);
 				Ok(())
-			});
+			})?;
 
 			Self::deposit_event(Event::SetDisbandInterval);
 			Ok(())

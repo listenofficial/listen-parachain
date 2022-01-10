@@ -19,9 +19,8 @@
 pub mod primitives;
 pub use crate::pallet::*;
 use crate::primitives::{
-	listen_time, vote, AllProps, Audio, AudioPrice, CreateCost, DisbandTime, DisbandVote,
-	GroupInfo, GroupMaxMembers, ListenVote, PersonInfo, PropsPrice, RedPacket, RemoveTime,
-	RewardStatus, RoomId, RoomRewardInfo, SessionIndex,
+	vote, AllProps, Audio, AudioPrice, DisbandVote, GroupInfo, GroupMaxMembers, ListenVote,
+	PersonInfo, PropsPrice, RedPacket, RewardStatus, RoomId, RoomRewardInfo, SessionIndex,
 };
 use codec::{Decode, Encode};
 pub use frame_support::{
@@ -41,7 +40,6 @@ use listen_primitives::{
 	traits::{CollectiveHandler, ListenHandler, RoomTreasuryHandler},
 	*,
 };
-use listen_time::*;
 use orml_tokens::{self, BalanceLock};
 use orml_traits::MultiCurrency;
 use pallet_multisig;
@@ -74,6 +72,7 @@ pub mod pallet {
 		traits::Hooks,
 	};
 	use frame_system::pallet_prelude::*;
+	use std::cmp::max;
 
 	pub(crate) type MultiBalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 		<T as frame_system::Config>::AccountId,
@@ -81,6 +80,15 @@ pub mod pallet {
 	pub(crate) type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 		<T as frame_system::Config>::AccountId,
 	>>::CurrencyId;
+	pub(crate) type RoomInfoOf<T> = GroupInfo<
+		<T as system::Config>::AccountId,
+		MultiBalanceOf<T>,
+		AllProps,
+		Audio,
+		<T as system::Config>::BlockNumber,
+		DisbandVote<BTreeSet<<T as system::Config>::AccountId>, MultiBalanceOf<T>>,
+		<T as timestamp::Config>::Moment,
+	>;
 
 	#[pallet::config]
 	#[pallet::disable_frame_system_supertrait_check]
@@ -138,7 +146,8 @@ pub mod pallet {
 	/// The cost of creating a group
 	#[pallet::storage]
 	#[pallet::getter(fn create_cost)]
-	pub type CreatePayment<T: Config> = StorageValue<_, CreateCost, ValueQuery>;
+	pub type CreatePayment<T: Config> =
+		StorageMap<_, Blake2_128Concat, GroupMaxMembers, MultiBalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn red_packet_id)]
@@ -147,21 +156,7 @@ pub mod pallet {
 	/// All groups that have been created
 	#[pallet::storage]
 	#[pallet::getter(fn all_room)]
-	pub type AllRoom<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		u64,
-		GroupInfo<
-			T::AccountId,
-			MultiBalanceOf<T>,
-			AllProps,
-			Audio,
-			T::BlockNumber,
-			GroupMaxMembers,
-			DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-			T::Moment,
-		>,
-	>;
+	pub type AllRoom<T: Config> = StorageMap<_, Blake2_128Concat, u64, RoomInfoOf<T>>;
 
 	/// Everyone in the room (People who have not yet claimed their reward).
 	#[pallet::storage]
@@ -248,35 +243,15 @@ pub mod pallet {
 	#[pallet::getter(fn depth)]
 	pub type Depth<T: Config> = StorageValue<_, u32, ValueQuery, DepthOnEmpty>;
 
-	#[pallet::type_value]
-	pub fn RemoveIntervalOnEmpty<T: Config>() -> RemoveTime<T::BlockNumber> {
-		RemoveTime {
-			Ten: T::BlockNumber::from(remove::Ten),
-			Hundred: T::BlockNumber::from(remove::Hundred),
-			FiveHundred: T::BlockNumber::from(remove::FiveHundred),
-			TenThousand: T::BlockNumber::from(remove::TenThousand),
-			NoLimit: T::BlockNumber::from(remove::NoLimit),
-		}
-	}
 	#[pallet::storage]
-	#[pallet::getter(fn kick_time_limit)]
+	#[pallet::getter(fn remove_interval)]
 	pub type RemoveInterval<T: Config> =
-		StorageValue<_, RemoveTime<T::BlockNumber>, ValueQuery, RemoveIntervalOnEmpty<T>>;
+		StorageMap<_, Blake2_128Concat, GroupMaxMembers, T::BlockNumber, ValueQuery>;
 
-	#[pallet::type_value]
-	pub fn DisbandIntervalOnEmpty<T: Config>() -> DisbandTime<T::BlockNumber> {
-		DisbandTime {
-			Ten: T::BlockNumber::from(disband::Ten),
-			Hundred: T::BlockNumber::from(disband::Hundred),
-			FiveHundred: T::BlockNumber::from(disband::FiveHundred),
-			TenThousand: T::BlockNumber::from(disband::TenThousand),
-			NoLimit: T::BlockNumber::from(disband::NoLimit),
-		}
-	}
 	#[pallet::storage]
-	#[pallet::getter(fn disband_time_limit)]
+	#[pallet::getter(fn disband_interval)]
 	pub type DisbandInterval<T: Config> =
-		StorageValue<_, DisbandTime<T::BlockNumber>, ValueQuery, DisbandIntervalOnEmpty<T>>;
+		StorageMap<_, Blake2_128Concat, GroupMaxMembers, T::BlockNumber, ValueQuery>;
 
 	#[pallet::type_value]
 	pub fn PropsPaymentOnEmpty<T: Config>() -> PropsPrice<MultiBalanceOf<T>> {
@@ -430,14 +405,14 @@ pub mod pallet {
 		#[transactional]
 		pub fn create_room(
 			origin: OriginFor<T>,
-			max_members: GroupMaxMembers,
+			max_members: u32,
 			group_type: Vec<u8>,
 			join_cost: MultiBalanceOf<T>,
 			is_private: bool,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let create_payment = Self::get_create_payment(&max_members)?;
+			let create_payment = Self::create_cost(&Self::number_convert_type(max_members)?);
 
 			/// the create cost transfers to the treasury
 			let to = Self::treasury_id();
@@ -612,8 +587,7 @@ pub mod pallet {
 			};
 
 			ensure!(
-				room_info.max_members.into_u32()? >=
-					room_info.now_members_number.saturating_add(1u32),
+				room_info.max_members >= room_info.now_members_number.saturating_add(1u32),
 				Error::<T>::MembersNumberToMax
 			);
 
@@ -661,7 +635,7 @@ pub mod pallet {
 		pub fn set_max_number_of_room_members(
 			origin: OriginFor<T>,
 			group_id: u64,
-			new_max: GroupMaxMembers,
+			new_max: u32,
 		) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 
@@ -672,28 +646,11 @@ pub mod pallet {
 			let now_max = room.max_members;
 			ensure!(now_max != new_max, Error::<T>::RoomMaxNotDiff);
 
-			let new_max_number = new_max.into_u32().map_err(|_| Error::<T>::MaxMembersUnknown)?;
-
 			// The value cannot be smaller than the current group size
-			ensure!(now_number <= new_max_number, Error::<T>::RoomMembersToMax);
+			ensure!(now_number <= new_max, Error::<T>::RoomMembersToMax);
 
-			let old_amount = match now_max {
-				GroupMaxMembers::Ten => CreatePayment::<T>::get().Ten,
-				GroupMaxMembers::Hundred => CreatePayment::<T>::get().Hundred,
-				GroupMaxMembers::FiveHundred => CreatePayment::<T>::get().FiveHundred,
-				GroupMaxMembers::TenThousand => CreatePayment::<T>::get().TenThousand,
-				GroupMaxMembers::NoLimit => CreatePayment::<T>::get().NoLimit,
-				_ => return Err(Error::<T>::UnknownRoomType)?,
-			};
-
-			let new_amount = match new_max {
-				GroupMaxMembers::Ten => CreatePayment::<T>::get().Ten,
-				GroupMaxMembers::Hundred => CreatePayment::<T>::get().Hundred,
-				GroupMaxMembers::FiveHundred => CreatePayment::<T>::get().FiveHundred,
-				GroupMaxMembers::TenThousand => CreatePayment::<T>::get().TenThousand,
-				GroupMaxMembers::NoLimit => CreatePayment::<T>::get().NoLimit,
-				_ => return Err(Error::<T>::UnknownRoomType)?,
-			};
+			let old_amount = Self::create_cost(&Self::number_convert_type(now_max)?);
+			let new_amount = Self::create_cost(&Self::number_convert_type(new_max)?);
 
 			let add_amount =
 				new_amount.saturating_sub(old_amount).saturated_into::<MultiBalanceOf<T>>();
@@ -709,10 +666,10 @@ pub mod pallet {
 			}
 
 			room.max_members = new_max;
-			room.create_payment = new_amount.saturated_into::<MultiBalanceOf<T>>();
+			room.create_payment = new_amount;
 			<AllRoom<T>>::insert(group_id, room);
 
-			Self::deposit_event(Event::SetMaxNumberOfRoomMembers(manager, new_max_number));
+			Self::deposit_event(Event::SetMaxNumberOfRoomMembers(manager, new_max));
 			Ok(())
 		}
 
@@ -886,20 +843,15 @@ pub mod pallet {
 		pub fn set_create_cost(
 			origin: OriginFor<T>,
 			max_members: GroupMaxMembers,
-			amount: Balance,
+			amount: MultiBalanceOf<T>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			match max_members {
-				GroupMaxMembers::Ten => CreatePayment::<T>::mutate(|h| h.Ten = amount),
-				GroupMaxMembers::Hundred => CreatePayment::<T>::mutate(|h| h.Hundred = amount),
-				GroupMaxMembers::FiveHundred =>
-					CreatePayment::<T>::mutate(|h| h.FiveHundred = amount),
-				GroupMaxMembers::TenThousand =>
-					CreatePayment::<T>::mutate(|h| h.TenThousand = amount),
-				GroupMaxMembers::NoLimit => CreatePayment::<T>::mutate(|h| h.NoLimit = amount),
-				_ => return Err(Error::<T>::UnknownRoomType)?,
-			}
+			CreatePayment::<T>::try_mutate(max_members, |h| -> DispatchResult {
+				ensure!(amount != *h, Error::<T>::NotChange);
+				*h = amount;
+				Ok(())
+			})?;
 
 			Self::deposit_event(Event::SetCreateCost);
 			Ok(())
@@ -961,30 +913,9 @@ pub mod pallet {
 			if T::RoomRootOrigin::try_origin(origin).is_ok() {
 				if room.last_remove_someone_block > T::BlockNumber::from(0u32) {
 					let until = now.saturating_sub(room.last_remove_someone_block);
-					match room.max_members {
-						GroupMaxMembers::Ten =>
-							if until <= <RemoveInterval<T>>::get().Ten {
-								return Err(Error::<T>::IsNotRemoveTime)?
-							},
-						GroupMaxMembers::Hundred =>
-							if until <= <RemoveInterval<T>>::get().Hundred {
-								return Err(Error::<T>::IsNotRemoveTime)?
-							},
-						GroupMaxMembers::FiveHundred => {
-							if until <= <RemoveInterval<T>>::get().FiveHundred {
-								return Err(Error::<T>::IsNotRemoveTime)?
-							}
-						},
-						GroupMaxMembers::TenThousand => {
-							if until <= <RemoveInterval<T>>::get().TenThousand {
-								return Err(Error::<T>::IsNotRemoveTime)?
-							}
-						},
-						GroupMaxMembers::NoLimit =>
-							if until <= <RemoveInterval<T>>::get().NoLimit {
-								return Err(Error::<T>::IsNotRemoveTime)?
-							},
-					}
+					let interval =
+						Self::remove_interval(Self::number_convert_type(room.max_members)?);
+					ensure!(until > interval, Error::<T>::IsNotRemoveTime);
 				}
 				room.last_remove_someone_block = now;
 			}
@@ -1017,30 +948,8 @@ pub mod pallet {
 			// If there's ever been a request to dissolve
 			if room.disband_vote_end_block > T::BlockNumber::from(0u32) {
 				let until = now.saturating_sub(room.disband_vote_end_block);
-				match room.max_members {
-					GroupMaxMembers::Ten =>
-						if until <= <DisbandInterval<T>>::get().Ten {
-							return Err(Error::<T>::IsNotAskForDisbandTime)?
-						},
-					GroupMaxMembers::Hundred =>
-						if until <= <DisbandInterval<T>>::get().Hundred {
-							return Err(Error::<T>::IsNotAskForDisbandTime)?
-						},
-					GroupMaxMembers::FiveHundred => {
-						if until <= <DisbandInterval<T>>::get().FiveHundred {
-							return Err(Error::<T>::IsNotAskForDisbandTime)?
-						}
-					},
-					GroupMaxMembers::TenThousand => {
-						if until <= <DisbandInterval<T>>::get().TenThousand {
-							return Err(Error::<T>::IsNotAskForDisbandTime)?
-						}
-					},
-					GroupMaxMembers::NoLimit =>
-						if until <= <DisbandInterval<T>>::get().NoLimit {
-							return Err(Error::<T>::IsNotAskForDisbandTime)?
-						},
-				}
+				let interval = Self::disband_interval(Self::number_convert_type(room.max_members)?);
+				ensure!(until > interval, Error::<T>::IsNotAskForDisbandTime);
 			}
 
 			ensure!(!(Self::is_voting(&room)), Error::<T>::IsVoting);
@@ -1101,11 +1010,15 @@ pub mod pallet {
 		#[pallet::weight(10_000)]
 		pub fn set_remove_interval(
 			origin: OriginFor<T>,
-			time: RemoveTime<T::BlockNumber>,
+			max_members: GroupMaxMembers,
+			interval: T::BlockNumber,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			<RemoveInterval<T>>::put(time);
+			<RemoveInterval<T>>::try_mutate(max_members, |h| -> DispatchResult {
+				ensure!(interval != *h, Error::<T>::NotChange);
+				Ok(())
+			})?;
 			Self::deposit_event(Event::SetKickInterval);
 			Ok(())
 		}
@@ -1114,11 +1027,16 @@ pub mod pallet {
 		#[pallet::weight(10_000)]
 		pub fn set_disband_interval(
 			origin: OriginFor<T>,
-			time: DisbandTime<T::BlockNumber>,
+			max_members: GroupMaxMembers,
+			interval: T::BlockNumber,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			<DisbandInterval<T>>::put(time);
+			<DisbandInterval<T>>::try_mutate(max_members, |h| -> DispatchResult {
+				ensure!(interval != *h, Error::<T>::NotChange);
+				Ok(())
+			});
+
 			Self::deposit_event(Event::SetDisbandInterval);
 			Ok(())
 		}
@@ -1601,6 +1519,8 @@ pub mod pallet {
 		RewardAmountIsZero,
 		BuyNothing,
 		AmountNotChange,
+		MemberIsEmpty,
+		NotChange,
 	}
 
 	#[pallet::event]
@@ -1664,21 +1584,6 @@ pub mod pallet {
 			num.saturated_into::<u32>().saturated_into::<MultiBalanceOf<T>>()
 		}
 
-		fn get_create_payment(
-			max_members: &GroupMaxMembers,
-		) -> result::Result<MultiBalanceOf<T>, DispatchError> {
-			let create_cost = Self::create_cost();
-			let create_payment: Balance = match max_members {
-				GroupMaxMembers::Ten => create_cost.Ten,
-				GroupMaxMembers::Hundred => create_cost.Hundred,
-				GroupMaxMembers::FiveHundred => create_cost.FiveHundred,
-				GroupMaxMembers::TenThousand => create_cost.TenThousand,
-				GroupMaxMembers::NoLimit => create_cost.NoLimit,
-				_ => return Err(Error::<T>::UnknownRoomType)?,
-			};
-			Ok(Self::u128_convert_balance(create_payment)?)
-		}
-
 		pub fn treasury_id() -> T::AccountId {
 			T::PalletId::get().into_account()
 		}
@@ -1694,18 +1599,7 @@ pub mod pallet {
 			});
 		}
 
-		fn get_room_consume_amount(
-			room: GroupInfo<
-				T::AccountId,
-				MultiBalanceOf<T>,
-				AllProps,
-				Audio,
-				T::BlockNumber,
-				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-				T::Moment,
-			>,
-		) -> MultiBalanceOf<T> {
+		fn get_room_consume_amount(room: RoomInfoOf<T>) -> MultiBalanceOf<T> {
 			let mut consume_total_amount = <MultiBalanceOf<T>>::from(0u32);
 			for (account_id, amount) in room.consume.clone().iter() {
 				consume_total_amount = consume_total_amount.saturating_add(*amount);
@@ -1726,19 +1620,7 @@ pub mod pallet {
 		fn room_exists_and_user_in_room(
 			group_id: u64,
 			who: &T::AccountId,
-		) -> result::Result<
-			GroupInfo<
-				T::AccountId,
-				MultiBalanceOf<T>,
-				AllProps,
-				Audio,
-				T::BlockNumber,
-				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-				T::Moment,
-			>,
-			DispatchError,
-		> {
+		) -> result::Result<RoomInfoOf<T>, DispatchError> {
 			let room = AllRoom::<T>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			let listeners = <ListenersOfRoom<T>>::get(group_id);
 			if listeners.len() == 0 {
@@ -1777,16 +1659,7 @@ pub mod pallet {
 		fn pay_for(
 			group_id: u64,
 			join_cost: MultiBalanceOf<T>,
-			room_info: GroupInfo<
-				T::AccountId,
-				MultiBalanceOf<T>,
-				AllProps,
-				Audio,
-				T::BlockNumber,
-				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-				T::Moment,
-			>,
+			room_info: RoomInfoOf<T>,
 		) -> DispatchResult {
 			let payment_manager_now = Percent::from_percent(5) * join_cost;
 			let payment_manager_later = Percent::from_percent(5) * join_cost;
@@ -1828,16 +1701,7 @@ pub mod pallet {
 		/// Note: Spending amounts these involve voting, so it's possible that the group will be disbanded
 		fn update_user_consume(
 			who: &T::AccountId,
-			room_info: &mut GroupInfo<
-				T::AccountId,
-				MultiBalanceOf<T>,
-				AllProps,
-				Audio,
-				T::BlockNumber,
-				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-				T::Moment,
-			>,
+			room_info: &mut RoomInfoOf<T>,
 			amount: MultiBalanceOf<T>,
 		) -> DispatchResult {
 			let group_id = room_info.group_id;
@@ -1898,18 +1762,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn is_voting(
-			room: &GroupInfo<
-				T::AccountId,
-				MultiBalanceOf<T>,
-				AllProps,
-				Audio,
-				T::BlockNumber,
-				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-				T::Moment,
-			>,
-		) -> bool {
+		fn is_voting(room: &RoomInfoOf<T>) -> bool {
 			if !room.disband_vote_end_block.is_zero() &&
 				(Self::now().saturating_sub(room.disband_vote_end_block).is_zero()) &&
 				!(Self::vote_passed_and_pending_disband(room.group_id) == Ok(true))
@@ -1919,18 +1772,7 @@ pub mod pallet {
 			false
 		}
 
-		fn judge_vote_and_update_room(
-			room: &mut GroupInfo<
-				T::AccountId,
-				MultiBalanceOf<T>,
-				AllProps,
-				Audio,
-				T::BlockNumber,
-				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-				T::Moment,
-			>,
-		) {
+		fn judge_vote_and_update_room(room: &mut RoomInfoOf<T>) {
 			let group_id = room.group_id;
 			let now = Self::now();
 			let vote_result = Self::is_vote_end(room.clone());
@@ -1956,18 +1798,7 @@ pub mod pallet {
 			AllRoom::<T>::insert(group_id, room);
 		}
 
-		fn is_vote_end(
-			room_info: GroupInfo<
-				T::AccountId,
-				MultiBalanceOf<T>,
-				AllProps,
-				Audio,
-				T::BlockNumber,
-				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-				T::Moment,
-			>,
-		) -> (bool, bool, MultiBalanceOf<T>) {
+		fn is_vote_end(room_info: RoomInfoOf<T>) -> (bool, bool, MultiBalanceOf<T>) {
 			let end_time = room_info.disband_vote_end_block.clone();
 			let approve_total_amount = room_info.disband_vote.approve_total_amount.clone();
 			let reject_total_amount = room_info.disband_vote.reject_total_amount.clone();
@@ -1989,18 +1820,7 @@ pub mod pallet {
 			}
 		}
 
-		fn disband(
-			room: GroupInfo<
-				T::AccountId,
-				MultiBalanceOf<T>,
-				AllProps,
-				Audio,
-				T::BlockNumber,
-				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-				T::Moment,
-			>,
-		) {
+		fn disband(room: RoomInfoOf<T>) {
 			let group_id = room.group_id;
 			Self::remove_redpacket_by_room_id(group_id, true);
 			let total_reward = room.total_balances.clone();
@@ -2030,18 +1850,7 @@ pub mod pallet {
 			T::RoomTreasuryHandler::remove_room_treasury_info(group_id);
 		}
 
-		fn remove_vote_info(
-			mut room: GroupInfo<
-				T::AccountId,
-				MultiBalanceOf<T>,
-				AllProps,
-				Audio,
-				T::BlockNumber,
-				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-				T::Moment,
-			>,
-		) {
+		fn remove_vote_info(mut room: RoomInfoOf<T>) {
 			room.disband_vote = <DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>>::default();
 			let now = Self::now();
 			if room.disband_vote_end_block > now {
@@ -2092,19 +1901,7 @@ pub mod pallet {
 			<RedPacketOfRoom<T>>::remove(room_id, redpacket_id);
 		}
 
-		fn remove_someone_in_room(
-			who: T::AccountId,
-			room: &mut GroupInfo<
-				T::AccountId,
-				MultiBalanceOf<T>,
-				AllProps,
-				Audio,
-				T::BlockNumber,
-				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-				T::Moment,
-			>,
-		) {
+		fn remove_someone_in_room(who: T::AccountId, room: &mut RoomInfoOf<T>) {
 			room.now_members_number = room.now_members_number.saturating_sub(1);
 			Self::remove_consumer_info(room, who.clone());
 			let mut listeners = <ListenersOfRoom<T>>::get(room.group_id);
@@ -2121,19 +1918,7 @@ pub mod pallet {
 			<AllRoom<T>>::insert(room.group_id, room);
 		}
 
-		fn remove_consumer_info(
-			room: &mut GroupInfo<
-				T::AccountId,
-				MultiBalanceOf<T>,
-				AllProps,
-				Audio,
-				T::BlockNumber,
-				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-				T::Moment,
-			>,
-			who: T::AccountId,
-		) {
+		fn remove_consumer_info(room: &mut RoomInfoOf<T>, who: T::AccountId) {
 			if let Some(pos) = room.consume.iter().position(|h| h.0 == who.clone()) {
 				room.consume.remove(pos);
 			}
@@ -2153,19 +1938,7 @@ pub mod pallet {
 			T::MultiCurrency::deposit(T::GetLikeCurrencyId::get(), who, mul_amount);
 		}
 
-		fn get_user_consume_amount(
-			who: &T::AccountId,
-			room: &GroupInfo<
-				T::AccountId,
-				MultiBalanceOf<T>,
-				AllProps,
-				Audio,
-				T::BlockNumber,
-				GroupMaxMembers,
-				DisbandVote<BTreeSet<T::AccountId>, MultiBalanceOf<T>>,
-				T::Moment,
-			>,
-		) -> MultiBalanceOf<T> {
+		fn get_user_consume_amount(who: &T::AccountId, room: &RoomInfoOf<T>) -> MultiBalanceOf<T> {
 			let mut room = room.clone();
 			if let Some(pos) = room.consume.clone().iter().position(|h| &h.0 == who) {
 				let consume = room.consume.remove(pos);
@@ -2227,6 +2000,17 @@ pub mod pallet {
 				<InfoOfDisbandedRoom<T>>::remove(index, group_id);
 			}
 			<LastSessionIndex<T>>::put(index);
+		}
+
+		fn number_convert_type(num: u32) -> result::Result<GroupMaxMembers, DispatchError> {
+			match num {
+				0 => return Err(Error::<T>::MemberIsEmpty)?,
+				1..=10 => Ok(GroupMaxMembers::Ten),
+				11..=100 => Ok(GroupMaxMembers::Hundred),
+				101..=500 => Ok(GroupMaxMembers::FiveHundred),
+				501..=10000 => Ok(GroupMaxMembers::TenThousand),
+				_ => Ok(GroupMaxMembers::NoLimit),
+			}
 		}
 	}
 

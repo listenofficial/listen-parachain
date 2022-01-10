@@ -9,46 +9,46 @@ use listen_primitives::{constants::currency::*, Balance};
 pub type SessionIndex = u32;
 pub type RoomId = u64;
 
-/// The cost of creating a group
-#[derive(PartialEq, Encode, Decode, RuntimeDebug, Clone, TypeInfo)]
-pub struct CreateCost {
-	pub Ten: Balance,
-	pub Hundred: Balance,
-	pub FiveHundred: Balance,
-	pub TenThousand: Balance,
-	pub NoLimit: Balance,
-}
+// /// The cost of creating a group
+// #[derive(PartialEq, Encode, Decode, RuntimeDebug, Clone, TypeInfo)]
+// pub struct CreateCost {
+// 	pub Ten: Balance,
+// 	pub Hundred: Balance,
+// 	pub FiveHundred: Balance,
+// 	pub TenThousand: Balance,
+// 	pub NoLimit: Balance,
+// }
+//
+// impl Default for CreateCost {
+// 	fn default() -> Self {
+// 		Self {
+// 			Ten: 1 * UNIT,
+// 			Hundred: 10 * UNIT,
+// 			FiveHundred: 30 * UNIT,
+// 			TenThousand: 200 * UNIT,
+// 			NoLimit: 1000 * UNIT,
+// 		}
+// 	}
+// }
 
-impl Default for CreateCost {
-	fn default() -> Self {
-		Self {
-			Ten: 1 * UNIT,
-			Hundred: 10 * UNIT,
-			FiveHundred: 30 * UNIT,
-			TenThousand: 200 * UNIT,
-			NoLimit: 1000 * UNIT,
-		}
-	}
-}
-
-/// Time interval limits on dissolving the room.
-#[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone, TypeInfo)]
-pub struct DisbandTime<BlockNumber> {
-	pub Ten: BlockNumber,
-	pub Hundred: BlockNumber,
-	pub FiveHundred: BlockNumber,
-	pub TenThousand: BlockNumber,
-	pub NoLimit: BlockNumber,
-}
-
-#[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone, TypeInfo)]
-pub struct RemoveTime<BlockNumber> {
-	pub Ten: BlockNumber,
-	pub Hundred: BlockNumber,
-	pub FiveHundred: BlockNumber,
-	pub TenThousand: BlockNumber,
-	pub NoLimit: BlockNumber,
-}
+// /// Time interval limits on dissolving the room.
+// #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone, TypeInfo)]
+// pub struct DisbandTime<BlockNumber> {
+// 	pub Ten: BlockNumber,
+// 	pub Hundred: BlockNumber,
+// 	pub FiveHundred: BlockNumber,
+// 	pub TenThousand: BlockNumber,
+// 	pub NoLimit: BlockNumber,
+// }
+//
+// #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone, TypeInfo)]
+// pub struct RemoveTime<BlockNumber> {
+// 	pub Ten: BlockNumber,
+// 	pub Hundred: BlockNumber,
+// 	pub FiveHundred: BlockNumber,
+// 	pub TenThousand: BlockNumber,
+// 	pub NoLimit: BlockNumber,
+// }
 
 #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone, TypeInfo)]
 pub struct PropsPrice<BalanceOf> {
@@ -106,21 +106,8 @@ pub enum GroupMaxMembers {
 	Ten,         // 10
 	Hundred,     // 100
 	FiveHundred, // 500
-	TenThousand, // 1000010
+	TenThousand, // 10000
 	NoLimit,     //
-}
-
-impl GroupMaxMembers {
-	pub fn into_u32(&self) -> result::Result<u32, &'static str> {
-		match self {
-			GroupMaxMembers::Ten => Ok(10u32),
-			GroupMaxMembers::Hundred => Ok(100u32),
-			GroupMaxMembers::FiveHundred => Ok(500u32),
-			GroupMaxMembers::TenThousand => Ok(10_0000u32),
-			GroupMaxMembers::NoLimit => Ok(u32::max_value()),
-			_ => Err("There is no such room type"),
-		}
-	}
 }
 
 impl Default for GroupMaxMembers {
@@ -162,23 +149,14 @@ impl Default for ListenVote {
 }
 
 #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone, TypeInfo)]
-pub struct GroupInfo<
-	AccountId,
-	Balance,
-	AllProps,
-	Audio,
-	BlockNumber,
-	GroupMaxMembers,
-	DisbandVote,
-	Moment,
-> {
+pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, DisbandVote, Moment> {
 	pub group_id: u64,
 	pub create_payment: Balance,
 	pub last_block_of_get_the_reward: BlockNumber,
 
 	pub group_manager: AccountId,
 	pub prime: Option<AccountId>,
-	pub max_members: GroupMaxMembers,
+	pub max_members: u32,
 
 	pub group_type: Vec<u8>,
 	pub join_cost: Balance,
@@ -217,27 +195,6 @@ pub struct PersonInfo<AllProps, Audio, Balance, RewardStatus> {
 	pub audio: Audio,
 	pub cost: Balance,
 	pub rooms: Vec<(RoomId, RewardStatus)>,
-}
-
-pub mod listen_time {
-
-	pub mod remove {
-		use listen_primitives::{constants::time::*, BlockNumber};
-		pub const Ten: BlockNumber = 7 * DAYS;
-		pub const Hundred: BlockNumber = 1 * DAYS;
-		pub const FiveHundred: BlockNumber = 12 * HOURS;
-		pub const TenThousand: BlockNumber = 8 * HOURS;
-		pub const NoLimit: BlockNumber = 6 * HOURS;
-	}
-
-	pub mod disband {
-		use listen_primitives::{constants::time::*, BlockNumber};
-		pub const Ten: BlockNumber = 1 * DAYS;
-		pub const FiveHundred: BlockNumber = 15 * DAYS;
-		pub const Hundred: BlockNumber = 7 * DAYS;
-		pub const TenThousand: BlockNumber = 30 * DAYS;
-		pub const NoLimit: BlockNumber = 60 * DAYS;
-	}
 }
 
 pub mod vote {

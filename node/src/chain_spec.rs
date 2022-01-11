@@ -1,8 +1,8 @@
 use cumulus_primitives_core::ParaId;
 use listen_primitives::{constants::currency::UNIT, Balance};
 use listen_runtime::{
-	AccountId, AuraId, CouncilConfig, CurrenciesConfig, ElectionsConfig, Signature, SudoConfig,
-	TechnicalCommitteeConfig, VestingConfig, EXISTENTIAL_DEPOSIT,
+	AccountId, AuraId, CouncilConfig, CurrenciesConfig, ElectionsConfig, ListenConfig, Signature,
+	SudoConfig, TechnicalCommitteeConfig, VestingConfig, EXISTENTIAL_DEPOSIT,
 };
 use pallet_currencies::{ListenAssetInfo, ListenAssetMetadata};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -244,6 +244,14 @@ fn testnet_genesis(
 		parachain_system: Default::default(),
 		tokens: Default::default(),
 		sudo: SudoConfig { key: get_root() },
+		listen: ListenConfig {
+			server_id: get_root(),
+			multisig_members: vec![
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				get_account_id_from_seed::<sr25519::Public>("Bob"),
+				get_account_id_from_seed::<sr25519::Public>("Charlie"),
+			],
+		},
 		currencies: CurrenciesConfig {
 			assets: vec![
 				(

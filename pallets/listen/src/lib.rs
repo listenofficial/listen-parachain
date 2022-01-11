@@ -17,14 +17,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod primitives;
-#[cfg(feature = "std")]
-use frame_support::traits::GenesisBuild;
 pub use crate::pallet::*;
 use crate::primitives::{
 	vote, AllProps, Audio, AudioPrice, DisbandVote, GroupInfo, GroupMaxMembers, ListenVote,
 	PersonInfo, PropsPrice, RedPacket, RewardStatus, RoomId, RoomRewardInfo, SessionIndex,
 };
 use codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use frame_support::traits::GenesisBuild;
 pub use frame_support::{
 	debug, decl_error, decl_event, decl_module, decl_storage, ensure,
 	traits::{
@@ -308,13 +308,101 @@ pub mod pallet {
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 
-	// todo 服务器id和多签账户
-	// #[pallet::genesis_build]
-	// impl <T: Config> GenesisBuild<T> {
-	// 	fn build(&self) {
-	//
-	// 	}
-	// }
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub server_id: T::AccountId,
+		pub multisig_members: Vec<T::AccountId>,
+	}
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { server_id: Default::default(), multisig_members: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			/// set server id
+			ServerId::<T>::put(&self.server_id);
+
+			/// set multisig id
+			if self.multisig_members.len() >= 2 {
+				let mut members = self.multisig_members.clone();
+				members.sort();
+				let threshould = 1u16;
+				let multisig_id =
+					<pallet_multisig::Module<T>>::multi_account_id(&members, threshould);
+				<Multisig<T>>::put((members, threshould, multisig_id));
+			}
+
+			/// set the create room payment.
+			{
+				CreatePayment::<T>::insert(
+					GroupMaxMembers::Ten,
+					UNIT.saturated_into::<MultiBalanceOf<T>>(),
+				);
+				CreatePayment::<T>::insert(
+					GroupMaxMembers::Hundred,
+					(10 * UNIT).saturated_into::<MultiBalanceOf<T>>(),
+				);
+				CreatePayment::<T>::insert(
+					GroupMaxMembers::FiveHundred,
+					(30 * UNIT).saturated_into::<MultiBalanceOf<T>>(),
+				);
+				CreatePayment::<T>::insert(
+					GroupMaxMembers::TenThousand,
+					(200 * UNIT).saturated_into::<MultiBalanceOf<T>>(),
+				);
+				CreatePayment::<T>::insert(
+					GroupMaxMembers::NoLimit,
+					(1000 * UNIT).saturated_into::<MultiBalanceOf<T>>(),
+				);
+			}
+
+			/// set remove interval
+			{
+				RemoveInterval::<T>::insert(GroupMaxMembers::Ten, T::BlockNumber::from(7 * DAYS));
+				RemoveInterval::<T>::insert(
+					GroupMaxMembers::Hundred,
+					T::BlockNumber::from(1 * DAYS),
+				);
+				RemoveInterval::<T>::insert(
+					GroupMaxMembers::FiveHundred,
+					T::BlockNumber::from(12 * HOURS),
+				);
+				RemoveInterval::<T>::insert(
+					GroupMaxMembers::TenThousand,
+					T::BlockNumber::from(8 * HOURS),
+				);
+				RemoveInterval::<T>::insert(
+					GroupMaxMembers::NoLimit,
+					T::BlockNumber::from(4 * HOURS),
+				);
+			}
+
+			/// set disband interval
+			{
+				DisbandInterval::<T>::insert(GroupMaxMembers::Ten, T::BlockNumber::from(1 * DAYS));
+				DisbandInterval::<T>::insert(
+					GroupMaxMembers::Hundred,
+					T::BlockNumber::from(7 * DAYS),
+				);
+				DisbandInterval::<T>::insert(
+					GroupMaxMembers::FiveHundred,
+					T::BlockNumber::from(15 * DAYS),
+				);
+				DisbandInterval::<T>::insert(
+					GroupMaxMembers::TenThousand,
+					T::BlockNumber::from(30 * DAYS),
+				);
+				DisbandInterval::<T>::insert(
+					GroupMaxMembers::NoLimit,
+					T::BlockNumber::from(60 * DAYS),
+				);
+			}
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

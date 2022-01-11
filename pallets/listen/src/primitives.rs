@@ -9,28 +9,6 @@ use listen_primitives::{constants::currency::*, Balance};
 pub type SessionIndex = u32;
 pub type RoomId = u64;
 
-// /// The cost of creating a group
-// #[derive(PartialEq, Encode, Decode, RuntimeDebug, Clone, TypeInfo)]
-// pub struct CreateCost {
-// 	pub Ten: Balance,
-// 	pub Hundred: Balance,
-// 	pub FiveHundred: Balance,
-// 	pub TenThousand: Balance,
-// 	pub NoLimit: Balance,
-// }
-//
-// impl Default for CreateCost {
-// 	fn default() -> Self {
-// 		Self {
-// 			Ten: 1 * UNIT,
-// 			Hundred: 10 * UNIT,
-// 			FiveHundred: 30 * UNIT,
-// 			TenThousand: 200 * UNIT,
-// 			NoLimit: 1000 * UNIT,
-// 		}
-// 	}
-// }
-
 // /// Time interval limits on dissolving the room.
 // #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone, TypeInfo)]
 // pub struct DisbandTime<BlockNumber> {

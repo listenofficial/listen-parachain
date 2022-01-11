@@ -9,25 +9,6 @@ use listen_primitives::{constants::currency::*, Balance};
 pub type SessionIndex = u32;
 pub type RoomId = u64;
 
-// /// Time interval limits on dissolving the room.
-// #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone, TypeInfo)]
-// pub struct DisbandTime<BlockNumber> {
-// 	pub Ten: BlockNumber,
-// 	pub Hundred: BlockNumber,
-// 	pub FiveHundred: BlockNumber,
-// 	pub TenThousand: BlockNumber,
-// 	pub NoLimit: BlockNumber,
-// }
-//
-// #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone, TypeInfo)]
-// pub struct RemoveTime<BlockNumber> {
-// 	pub Ten: BlockNumber,
-// 	pub Hundred: BlockNumber,
-// 	pub FiveHundred: BlockNumber,
-// 	pub TenThousand: BlockNumber,
-// 	pub NoLimit: BlockNumber,
-// }
-
 #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone, TypeInfo)]
 pub struct PropsPrice<BalanceOf> {
 	pub picture: BalanceOf,

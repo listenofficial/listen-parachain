@@ -419,7 +419,7 @@ pub mod pallet {
 
 			let len = members.len();
 			ensure!(
-				len > 0 && threshould > 0u16 && threshould <= len as u16,
+				len > 1 && threshould > 0u16 && threshould <= len as u16,
 				Error::<T>::ThreshouldLenErr
 			);
 

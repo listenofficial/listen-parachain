@@ -5096,8 +5096,6 @@ dependencies = [
 name = "pallet-listen"
 version = "1.0.0"
 dependencies = [
- "cumulus-primitives-core",
- "derive_more",
  "frame-support",
  "frame-system",
  "listen-primitives",
@@ -5108,7 +5106,6 @@ dependencies = [
  "pallet-treasury 4.0.0-dev",
  "parity-scale-codec",
  "scale-info",
- "serde",
  "sp-runtime",
  "sp-std",
 ]

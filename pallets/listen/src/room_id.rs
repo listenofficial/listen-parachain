@@ -1,7 +1,7 @@
 use codec::{self, Decode, Encode};
 
 #[derive(Decode, Encode)]
-pub struct RoomId(u32);
+pub struct RoomId(u64);
 
 /// This type can be converted into and possibly from an [`AccountId`] (which itself is generic).
 pub trait AccountIdConversion<AccountId>: Sized {

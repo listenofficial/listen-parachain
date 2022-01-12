@@ -12,6 +12,9 @@ repository = "https://github.com/listenofficial/listen-parachain.git"
 
 [dependencies]
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+#parity-scale-codec = { version = "2.0.0", default-features = false, features = [ "derive" ] }
+serde = { version = "1.0.117", default-features = false, features = [ "derive" ], optional = true }
+derive_more = "0.99.11"
 
 # substrate fram
 frame-support = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.13' }
@@ -19,6 +22,9 @@ frame-system = { default-features = false,  git = 'https://github.com/paritytech
 pallet-multisig = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.13' }
 pallet-timestamp = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.13' }
 pallet-treasury = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.13' }
+
+cumulus-primitives-core =  { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.13', default-features = false }
+
 
 #local
 listen-primitives = { path = '../../primitives', default-features = false, version = '1.0.0' }
@@ -47,6 +53,9 @@ std = [
     "listen-primitives/std",
     "orml-tokens/std",
 	"scale-info/std",
+#	"parity-scale-codec/std",
+	"serde/std",
+	"cumulus-primitives-core/std",
 
 ]
 

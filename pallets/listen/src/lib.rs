@@ -17,6 +17,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod primitives;
+pub mod room_id;
+
 pub use crate::pallet::*;
 use crate::primitives::{
 	vote, AllProps, Audio, AudioPrice, DisbandVote, GroupInfo, GroupMaxMembers, ListenVote,
@@ -274,6 +276,7 @@ pub mod pallet {
 			.unwrap(),
 		}
 	}
+
 	#[pallet::storage]
 	#[pallet::getter(fn props_payment)]
 	pub type PropsPayment<T: Config> =

@@ -813,6 +813,7 @@ impl pallet_listen::Config for Runtime {
 	type HalfRoomCouncilOrigin = HalfRoomCouncil;
 	type DelayDisbandDuration = DisbandDelayTime;
 	type RoomTreasuryHandler = RoomTreasury;
+	type RoomIdConvert = pallet_listen::room_id::RoomId;
 }
 
 parameter_types! {

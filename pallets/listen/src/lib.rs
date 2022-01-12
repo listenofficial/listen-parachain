@@ -22,7 +22,7 @@ pub mod room_id;
 pub use crate::pallet::*;
 use crate::primitives::{
 	vote, AllProps, Audio, AudioPrice, DisbandVote, GroupInfo, GroupMaxMembers, ListenVote,
-	PersonInfo, PropsPrice, RedPacket, RewardStatus, RoomId, RoomRewardInfo, SessionIndex,
+	PersonInfo, PropsPrice, RedPacket, RewardStatus, RoomRewardInfo, SessionIndex,
 };
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
@@ -38,7 +38,7 @@ pub use frame_support::{
 	weights::Weight,
 	Blake2_256, IterableStorageDoubleMap, IterableStorageMap, PalletId,
 };
-use frame_system::{self as system, ensure_root, ensure_signed};
+pub use frame_system::{self as system, ensure_root, ensure_signed};
 use listen_primitives::{
 	constants::{currency::*, time::*},
 	traits::{CollectiveHandler, ListenHandler, RoomTreasuryHandler},
@@ -48,6 +48,7 @@ use orml_tokens::{self, BalanceLock};
 use orml_traits::MultiCurrency;
 use pallet_multisig;
 use pallet_timestamp as timestamp;
+pub use room_id::{AccountIdConversion as RoomIdConvertor, RoomId};
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
@@ -106,6 +107,7 @@ pub mod pallet {
 		type RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin: EnsureOrigin<Self::Origin>;
 		type HalfRoomCouncilOrigin: EnsureOrigin<Self::Origin>;
 		type RoomTreasuryHandler: RoomTreasuryHandler<u64>;
+		type RoomIdConvert: RoomIdConvertor<Self::AccountId>;
 		#[pallet::constant]
 		type VoteExpire: Get<Self::BlockNumber>;
 		#[pallet::constant]

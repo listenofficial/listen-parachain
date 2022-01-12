@@ -25,6 +25,7 @@ pallet-timestamp = { default-features = false, git = 'https://github.com/parityt
 
 # local
 listen-primitives = { path = "../../primitives", default-features = false }
+pallet-listen = { path = "../listen", default-features = false }
 
 
 [dev-dependencies]
@@ -45,6 +46,7 @@ std = [
 	"listen-primitives/std",
 	"pallet-timestamp/std",
 	"scale-info/std",
+	"pallet-listen/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

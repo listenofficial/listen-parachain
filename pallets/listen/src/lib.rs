@@ -20,6 +20,7 @@ pub mod primitives;
 pub mod room_id;
 
 pub use crate::pallet::*;
+use codec::FullCodec;
 use crate::primitives::{
 	vote, AllProps, Audio, AudioPrice, DisbandVote, GroupInfo, GroupMaxMembers, ListenVote,
 	PersonInfo, PropsPrice, RedPacket, RewardStatus, RoomRewardInfo, SessionIndex,
@@ -59,7 +60,7 @@ use sp_runtime::{
 };
 use sp_std::{
 	cmp,
-	collections::{btree_map::BTreeMap, btree_set::BTreeSet},
+	collections::{btree_map::BTreeMap as BTMap, btree_set::BTreeSet},
 	convert::{TryFrom, TryInto},
 	prelude::*,
 	result,
@@ -146,7 +147,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn group_id)]
-	pub type NextGroupId<T: Config> = StorageValue<_, u64, ValueQuery>;
+	pub type NextGroupId<T: Config> = StorageValue<_, RoomId, ValueQuery>;
 
 	/// The cost of creating a group
 	#[pallet::storage]
@@ -161,13 +162,13 @@ pub mod pallet {
 	/// All groups that have been created
 	#[pallet::storage]
 	#[pallet::getter(fn all_room)]
-	pub type AllRoom<T: Config> = StorageMap<_, Blake2_128Concat, u64, RoomInfoOf<T>>;
+	pub type AllRoom<T: Config> = StorageMap<_, Blake2_128Concat, RoomId, RoomInfoOf<T>>;
 
 	/// Everyone in the room (People who have not yet claimed their reward).
 	#[pallet::storage]
 	#[pallet::getter(fn listeners_of_room)]
 	pub type ListenersOfRoom<T: Config> =
-		StorageMap<_, Blake2_128Concat, u64, BTreeSet<T::AccountId>, ValueQuery>;
+		StorageMap<_, Blake2_128Concat, RoomId, BTreeSet<T::AccountId>, ValueQuery>;
 
 	/// Minimum amount of red packets per person in each currency.
 	#[pallet::storage]
@@ -194,7 +195,7 @@ pub mod pallet {
 		Blake2_128Concat,
 		SessionIndex,
 		Blake2_128Concat,
-		u64,
+		RoomId,
 		RoomRewardInfo<MultiBalanceOf<T>>,
 		ValueQuery,
 	>;
@@ -205,7 +206,7 @@ pub mod pallet {
 	pub type RedPacketOfRoom<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
-		u64,
+		RoomId,
 		Blake2_128Concat,
 		u128,
 		RedPacket<
@@ -229,7 +230,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn pending_disband_rooms)]
 	pub type PendingDisbandRooms<T: Config> =
-		StorageValue<_, BTreeMap<u64, T::BlockNumber>, ValueQuery>;
+		StorageValue<_, BTMap<u64, T::BlockNumber>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn last_session_index)]
@@ -523,6 +524,7 @@ pub mod pallet {
 
 			let group_info = GroupInfo {
 				group_id,
+				room_treasury_id: group_id.into_account(),
 				create_payment,
 				last_block_of_get_the_reward: Self::now(),
 				group_manager: who.clone(),
@@ -548,7 +550,7 @@ pub mod pallet {
 
 			<AllRoom<T>>::insert(group_id, group_info);
 			Self::add_invitee_info(&who, group_id);
-			<NextGroupId<T>>::try_mutate(|h| -> DispatchResult {
+			<NextGroupId<T>>::try_mutate(|RoomId(h)| -> DispatchResult {
 				*h = h.checked_add(1u64).ok_or(Error::<T>::Overflow)?;
 				Ok(())
 			})?;
@@ -562,7 +564,7 @@ pub mod pallet {
 		/// Receive rewards for a fixed period of time
 		#[pallet::weight(10_000)]
 		#[transactional]
-		pub fn manager_get_reward(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
+		pub fn manager_get_reward(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 
 			let mut room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
@@ -630,7 +632,7 @@ pub mod pallet {
 		#[pallet::weight(10_000)]
 		pub fn update_join_cost(
 			origin: OriginFor<T>,
-			group_id: u64,
+			group_id: RoomId,
 			join_cost: MultiBalanceOf<T>,
 		) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
@@ -653,7 +655,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn into_room(
 			origin: OriginFor<T>,
-			group_id: u64,
+			group_id: RoomId,
 			invitee: Option<<T::Lookup as StaticLookup>::Source>,
 		) -> DispatchResult {
 			let inviter = ensure_signed(origin)?;
@@ -711,7 +713,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn set_room_privacy(
 			origin: OriginFor<T>,
-			room_id: u64,
+			room_id: RoomId,
 			is_private: bool,
 		) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
@@ -736,7 +738,7 @@ pub mod pallet {
 		#[pallet::weight(10_000)]
 		pub fn set_max_number_of_room_members(
 			origin: OriginFor<T>,
-			group_id: u64,
+			group_id: RoomId,
 			new_max: u32,
 		) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
@@ -781,7 +783,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn buy_props_in_room(
 			origin: OriginFor<T>,
-			group_id: u64,
+			group_id: RoomId,
 			props: AllProps,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -856,7 +858,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn buy_audio_in_room(
 			origin: OriginFor<T>,
-			group_id: u64,
+			group_id: RoomId,
 			audio: Audio,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -966,7 +968,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn remove_someone_from_blacklist(
 			origin: OriginFor<T>,
-			group_id: u64,
+			group_id: RoomId,
 			who: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
 			T::RoomRootOrHalfCouncilOrigin::try_origin(origin)
@@ -998,7 +1000,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn remove_someone(
 			origin: OriginFor<T>,
-			group_id: u64,
+			group_id: RoomId,
 			who: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
 			T::RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin::try_origin(origin.clone())
@@ -1033,7 +1035,7 @@ pub mod pallet {
 		///
 		#[pallet::weight(10_000)]
 		#[transactional]
-		pub fn ask_for_disband_room(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
+		pub fn ask_for_disband_room(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			ensure!(!Self::is_can_disband(group_id)?, Error::<T>::Disbanding);
@@ -1148,7 +1150,7 @@ pub mod pallet {
 		///
 		#[pallet::weight(10_000)]
 		#[transactional]
-		pub fn vote(origin: OriginFor<T>, group_id: u64, vote: ListenVote) -> DispatchResult {
+		pub fn vote(origin: OriginFor<T>, group_id: RoomId, vote: ListenVote) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
@@ -1336,7 +1338,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn send_redpacket_in_room(
 			origin: OriginFor<T>,
-			group_id: u64,
+			group_id: RoomId,
 			currency_id: CurrencyIdOf<T>,
 			lucky_man_number: u32,
 			amount: MultiBalanceOf<T>,
@@ -1386,7 +1388,7 @@ pub mod pallet {
 		/// Expired red packets obtained by the owner.
 		#[pallet::weight(10_000)]
 		#[transactional]
-		pub fn give_back_expired_redpacket(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
+		pub fn give_back_expired_redpacket(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			let _ = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
@@ -1399,7 +1401,7 @@ pub mod pallet {
 		///
 		#[pallet::weight(10_000)]
 		#[transactional]
-		pub fn exit(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
+		pub fn exit(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
 			let user = ensure_signed(origin)?;
 
 			let mut room = Self::room_exists_and_user_in_room(group_id, &user)?;
@@ -1439,7 +1441,7 @@ pub mod pallet {
 		/// The Origin can be everyone.
 		#[pallet::weight(10_000)]
 		#[transactional]
-		pub fn disband_room(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
+		pub fn disband_room(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			ensure!(Self::is_can_disband(group_id)?, Error::<T>::NotDisbanding);
@@ -1452,15 +1454,15 @@ pub mod pallet {
 		/// Council Members reject disband the room.
 		#[pallet::weight(10_000)]
 		#[transactional]
-		pub fn council_reject_disband(origin: OriginFor<T>, group_id: u64) -> DispatchResult {
+		pub fn council_reject_disband(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
 			T::HalfRoomCouncilOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 
 			let disband_rooms = <PendingDisbandRooms<T>>::get();
 			let room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			if let Some(disband_time) = disband_rooms.get(&group_id) {
+			if let Some(disband_time) = disband_rooms.get(&group_id.into()) {
 				/// before the room is disband.
 				if Self::now() <= *disband_time {
-					<PendingDisbandRooms<T>>::mutate(|h| h.remove(&group_id));
+					<PendingDisbandRooms<T>>::mutate(|h| h.remove(&group_id.into()));
 					Self::remove_vote_info(room);
 				} else {
 					return Err(Error::<T>::Disbanding)?
@@ -1479,7 +1481,7 @@ pub mod pallet {
 		pub fn get_redpacket_in_room(
 			origin: OriginFor<T>,
 			info: Vec<(<T::Lookup as StaticLookup>::Source, MultiBalanceOf<T>)>,
-			group_id: u64,
+			group_id: RoomId,
 			redpacket_id: u128,
 		) -> DispatchResult {
 			let mul = ensure_signed(origin)?;
@@ -1630,34 +1632,34 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		SetMultisig,
 		AirDroped(T::AccountId),
-		CreatedRoom(T::AccountId, u64),
+		CreatedRoom(T::AccountId, RoomId),
 		Invited(T::AccountId, T::AccountId),
-		IntoRoom(T::AccountId, T::AccountId, u64),
-		RejectedInvite(T::AccountId, u64),
-		ChangedPermission(T::AccountId, u64),
+		IntoRoom(T::AccountId, T::AccountId, RoomId),
+		RejectedInvite(T::AccountId, RoomId),
+		ChangedPermission(T::AccountId, RoomId),
 		BuyProps(T::AccountId),
 		BuyAudio(T::AccountId),
-		Kicked(T::AccountId, u64),
-		AskForDisband(T::AccountId, u64),
-		DisbandVote(T::AccountId, u64),
+		Kicked(T::AccountId, RoomId),
+		AskForDisband(T::AccountId, RoomId),
+		DisbandVote(T::AccountId, RoomId),
 		Payout(T::AccountId, MultiBalanceOf<T>),
-		SendRedPocket(u64, u128, MultiBalanceOf<T>),
-		GetRedPocket(u64, u128, MultiBalanceOf<T>),
-		JoinCostChanged(u64, MultiBalanceOf<T>),
+		SendRedPocket(RoomId, u128, MultiBalanceOf<T>),
+		GetRedPocket(RoomId, u128, MultiBalanceOf<T>),
+		JoinCostChanged(RoomId, MultiBalanceOf<T>),
 		SetPropsPrice,
 		SetAudioPrice,
 		SetDisbandInterval,
 		SetKickInterval,
 		SetCreateCost,
 		SetServerId(T::AccountId),
-		Exit(T::AccountId, u64),
+		Exit(T::AccountId, RoomId),
 		ManagerGetReward(T::AccountId, MultiBalanceOf<T>, MultiBalanceOf<T>),
 		SetMaxNumberOfRoomMembers(T::AccountId, u32),
-		RemoveSomeoneFromBlackList(T::AccountId, u64),
-		SetRoomPrivacy(u64, bool),
-		DisbandRoom(u64, T::AccountId),
-		CouncilRejectDisband(u64),
-		ReturnExpiredRedpacket(u64),
+		RemoveSomeoneFromBlackList(T::AccountId, RoomId),
+		SetRoomPrivacy(RoomId, bool),
+		DisbandRoom(RoomId, T::AccountId),
+		CouncilRejectDisband(RoomId),
+		ReturnExpiredRedpacket(RoomId),
 		SetRedpackMinAmount(CurrencyIdOf<T>, MultiBalanceOf<T>),
 		ListenTest,
 	}
@@ -1694,7 +1696,7 @@ pub mod pallet {
 			<system::Module<T>>::block_number()
 		}
 
-		fn add_invitee_info(yourself: &T::AccountId, group_id: u64) {
+		fn add_invitee_info(yourself: &T::AccountId, group_id: RoomId) {
 			<ListenersOfRoom<T>>::mutate(group_id, |h| h.insert(yourself.clone()));
 			<PurchaseSummary<T>>::mutate(yourself.clone(), |h| {
 				h.rooms.push((group_id, RewardStatus::default()))
@@ -1710,17 +1712,17 @@ pub mod pallet {
 			consume_total_amount
 		}
 
-		fn vote_passed_and_pending_disband(group_id: u64) -> result::Result<bool, DispatchError> {
+		fn vote_passed_and_pending_disband(group_id: RoomId) -> result::Result<bool, DispatchError> {
 			let _ = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			let disband_rooms = <PendingDisbandRooms<T>>::get();
-			if let Some(disband_time) = disband_rooms.get(&group_id) {
+			if let Some(disband_time) = disband_rooms.get(&group_id.into()) {
 				return Ok(true)
 			}
 			Ok(false)
 		}
 
 		fn room_exists_and_user_in_room(
-			group_id: u64,
+			group_id: RoomId,
 			who: &T::AccountId,
 		) -> result::Result<RoomInfoOf<T>, DispatchError> {
 			let room = AllRoom::<T>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
@@ -1735,7 +1737,7 @@ pub mod pallet {
 			}
 		}
 
-		fn join_do(who: &T::AccountId, invitee: &T::AccountId, group_id: u64) -> DispatchResult {
+		fn join_do(who: &T::AccountId, invitee: &T::AccountId, group_id: RoomId) -> DispatchResult {
 			let room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			let join_cost = room_info.join_cost;
 
@@ -1759,7 +1761,7 @@ pub mod pallet {
 		}
 
 		fn pay_for(
-			group_id: u64,
+			group_id: RoomId,
 			join_cost: MultiBalanceOf<T>,
 			room_info: RoomInfoOf<T>,
 		) -> DispatchResult {
@@ -1888,7 +1890,7 @@ pub mod pallet {
 						room.disband_vote_end_block = now;
 						<AllRoom<T>>::insert(group_id, room);
 						<PendingDisbandRooms<T>>::mutate(|h| {
-							h.insert(group_id, now + T::DelayDisbandDuration::get())
+							h.insert(group_id.into(), now + T::DelayDisbandDuration::get())
 						});
 					}
 				} else {
@@ -1947,9 +1949,9 @@ pub mod pallet {
 			<InfoOfDisbandedRoom<T>>::insert(session_index, group_id, room_rewad_info);
 			<ListenersOfRoom<T>>::remove(group_id);
 			<AllRoom<T>>::remove(group_id);
-			<PendingDisbandRooms<T>>::mutate(|h| h.remove(&group_id));
-			T::CollectiveHandler::remove_room_collective_info(group_id);
-			T::RoomTreasuryHandler::remove_room_treasury_info(group_id);
+			<PendingDisbandRooms<T>>::mutate(|h| h.remove(&group_id.into()));
+			T::CollectiveHandler::remove_room_collective_info(group_id.into());
+			T::RoomTreasuryHandler::remove_room_treasury_info(group_id.into());
 		}
 
 		fn remove_vote_info(mut room: RoomInfoOf<T>) {
@@ -1968,7 +1970,7 @@ pub mod pallet {
 			session_index
 		}
 
-		fn remove_redpacket_by_room_id(room_id: u64, all: bool) {
+		fn remove_redpacket_by_room_id(room_id: RoomId, all: bool) {
 			let redpackets = <RedPacketOfRoom<T>>::iter_prefix(room_id).collect::<Vec<_>>();
 			let now = Self::now();
 
@@ -1986,7 +1988,7 @@ pub mod pallet {
 		}
 
 		fn remove_redpacket(
-			room_id: u64,
+			room_id: RoomId,
 			redpacket: &RedPacket<
 				T::AccountId,
 				BTreeSet<T::AccountId>,
@@ -2050,10 +2052,10 @@ pub mod pallet {
 			}
 		}
 
-		pub fn is_can_disband(group_id: u64) -> result::Result<bool, DispatchError> {
+		pub fn is_can_disband(group_id: RoomId) -> result::Result<bool, DispatchError> {
 			let _ = AllRoom::<T>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			let disband_rooms = <PendingDisbandRooms<T>>::get();
-			if let Some(disband_time) = disband_rooms.get(&group_id) {
+			if let Some(disband_time) = disband_rooms.get(&group_id.into()) {
 				if Self::now() >= *disband_time {
 					return Ok(true)
 				}
@@ -2064,7 +2066,7 @@ pub mod pallet {
 		/// Delete information about rooms that have been dismissed
 		fn remove_expire_disband_info() {
 			let mut index: u32;
-			let mut info: Vec<(u64, RoomRewardInfo<MultiBalanceOf<T>>)>;
+			let mut info: Vec<(RoomId, RoomRewardInfo<MultiBalanceOf<T>>)>;
 
 			let last_session_index = Self::last_session_index();
 			let now_session = Self::get_session_index();
@@ -2116,9 +2118,9 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> ListenHandler<u64, T::AccountId, DispatchError, u128> for Pallet<T> {
+	impl<T: Config> ListenHandler<RoomId, T::AccountId, DispatchError, u128> for Pallet<T> {
 		fn get_room_council(
-			room_id: u64,
+			room_id: RoomId,
 		) -> Result<Vec<<T as frame_system::Config>::AccountId>, DispatchError> {
 			ensure!(!Self::is_can_disband(room_id)?, Error::<T>::Disbanding);
 			let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
@@ -2132,7 +2134,7 @@ pub mod pallet {
 		}
 
 		fn get_prime(
-			room_id: u64,
+			room_id: RoomId,
 		) -> Result<Option<<T as frame_system::Config>::AccountId>, DispatchError> {
 			ensure!(!Self::is_can_disband(room_id)?, Error::<T>::Disbanding);
 			let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
@@ -2140,17 +2142,17 @@ pub mod pallet {
 			Ok(prime)
 		}
 
-		fn get_root(room_id: u64) -> Result<<T as frame_system::Config>::AccountId, DispatchError> {
+		fn get_root(room_id: RoomId) -> Result<<T as frame_system::Config>::AccountId, DispatchError> {
 			ensure!(!Self::is_can_disband(room_id)?, Error::<T>::Disbanding);
 			let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
 			let root = room_info.group_manager;
 			Ok(root)
 		}
 
-		fn get_room_free_amount(room_id: u64) -> u128 {
+		fn get_room_free_amount(room_id: RoomId) -> u128 {
 			if let Some(room) = <AllRoom<T>>::get(room_id) {
 				let disband_rooms = <PendingDisbandRooms<T>>::get();
-				if let Some(disband_time) = disband_rooms.get(&room_id) {
+				if let Some(disband_time) = disband_rooms.get(&room_id.into()) {
 					if Self::now() >= *disband_time {
 						return 0u128
 					}
@@ -2163,7 +2165,7 @@ pub mod pallet {
 			}
 		}
 
-		fn sub_room_free_amount(room_id: u64, amount: u128) -> Result<(), DispatchError> {
+		fn sub_room_free_amount(room_id: RoomId, amount: u128) -> Result<(), DispatchError> {
 			ensure!(!Self::is_can_disband(room_id)?, Error::<T>::Disbanding);
 			let mut room = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
 			if room.total_balances.saturating_sub(room.group_manager_balances) >=

@@ -36,7 +36,7 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use listen_primitives::traits::{ListenHandler, RoomTreasuryHandler};
-use pallet_listen;
+use pallet_listen::{self, RoomId};
 use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -82,7 +82,7 @@ pub mod pallet {
 	#[pallet::disable_frame_system_supertrait_check]
 	pub trait Config: frame_system::Config {
 		type NativeCurrency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
-		type ListenHandler: ListenHandler<u64, Self::AccountId, DispatchError, u128>;
+		type ListenHandler: ListenHandler<RoomId, Self::AccountId, DispatchError, u128>;
 		/// Origin from which approvals must come.
 		type ApproveOrigin: EnsureOrigin<Self::Origin>;
 		/// Origin from which rejections must come.
@@ -250,7 +250,7 @@ pub mod pallet {
 					if proposal.start_spend_time.is_some() &&
 						proposal.start_spend_time.unwrap() <= Self::now() &&
 						T::ListenHandler::sub_room_free_amount(
-							room_id,
+							room_id.into(),
 							proposal.value.saturated_into::<u128>(),
 						)
 						.is_ok()

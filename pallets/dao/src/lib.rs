@@ -19,6 +19,7 @@
 #![recursion_limit = "128"]
 
 pub use crate::pallet::*;
+use pallet_listen::RoomId;
 use frame_support::{
 	codec::{Decode, Encode},
 	decl_error, decl_event, decl_module, decl_storage,
@@ -167,7 +168,7 @@ pub mod pallet {
 		type DefaultVote: DefaultVote;
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
-		type ListenHandler: ListenHandler<RoomIndex, Self::AccountId, DispatchError, u128>;
+		type ListenHandler: ListenHandler<RoomId, Self::AccountId, DispatchError, u128>;
 		#[pallet::constant]
 		type MotionDuration: Get<Self::BlockNumber>;
 		/// Maximum number of proposals allowed to be active in parallel.
@@ -276,8 +277,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let members = T::ListenHandler::get_room_council(room_id)?;
-			let room_owner = T::ListenHandler::get_root(room_id)?;
+			let members = T::ListenHandler::get_room_council(room_id.into())?;
+			let room_owner = T::ListenHandler::get_root(room_id.into())?;
 
 			ensure!(members.contains(&who), Error::<T, I>::NotMember);
 			ensure!(room_owner == who, Error::<T, I>::NotRoomOwner);
@@ -307,7 +308,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let members = T::ListenHandler::get_room_council(room_id)?;
+			let members = T::ListenHandler::get_room_council(room_id.into())?;
 			ensure!(members.contains(&who), Error::<T, I>::NotMember);
 
 			let proposal_len = proposal.using_encoded(|x| x.len());
@@ -368,7 +369,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let members = T::ListenHandler::get_room_council(room_id)?;
+			let members = T::ListenHandler::get_room_council(room_id.into())?;
 			let seats = members.len() as MemberCount;
 			ensure!(members.contains(&who), Error::<T, I>::NotMember);
 
@@ -428,7 +429,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let no_votes = voting.nays.len() as MemberCount;
 			let yes_votes = voting.ayes.len() as MemberCount;
-			let seats = T::ListenHandler::get_room_council(room_id)?.len() as MemberCount;
+			let seats = T::ListenHandler::get_room_council(room_id.into())?.len() as MemberCount;
 
 			let result: (IsEnd, IsPass) = Self::vote_result(&voting, room_id)?;
 
@@ -463,7 +464,7 @@ pub mod pallet {
 		) -> result::Result<(IsEnd, IsPass), DispatchError> {
 			let mut no_votes = voting.nays.len() as MemberCount;
 			let mut yes_votes = voting.ayes.len() as MemberCount;
-			let seats = T::ListenHandler::get_room_council(room_id)?.len() as MemberCount;
+			let seats = T::ListenHandler::get_room_council(room_id.into())?.len() as MemberCount;
 
 			let approved = yes_votes >= voting.threshold;
 			let disapproved =
@@ -582,8 +583,8 @@ impl<
 	fn try_origin(o: O) -> Result<Self::Success, O> {
 		o.into().and_then(|o| match o {
 			RoomRawOrigin::Member(room_id, who)
-				if T::ListenHandler::get_root(room_id).is_ok() &&
-					T::ListenHandler::get_root(room_id).unwrap() == who =>
+				if T::ListenHandler::get_root(room_id.into()).is_ok() &&
+					T::ListenHandler::get_root(room_id.into()).unwrap() == who =>
 				Ok(()),
 			r => Err(O::from(r)),
 		})

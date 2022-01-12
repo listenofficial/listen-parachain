@@ -1,7 +1,22 @@
-use codec::{self, Decode, Encode};
+#![cfg_attr(not(feature = "std"), no_std)]
+use codec::{self, Decode, Encode, FullCodec};
+use scale_info::TypeInfo;
+use sp_std::prelude::*;
 
-#[derive(Decode, Encode)]
-pub struct RoomId(u64);
+#[derive(Decode, Encode, Copy, Clone, Default, PartialEq, Debug, TypeInfo)]
+pub struct RoomId(pub u64);
+
+impl From<RoomId> for u64 {
+	fn from(x: RoomId) -> Self {
+		x.0
+	}
+}
+
+impl From<u64> for RoomId {
+	fn from(x: u64) -> Self {
+		RoomId(x)
+	}
+}
 
 /// This type can be converted into and possibly from an [`AccountId`] (which itself is generic).
 pub trait AccountIdConversion<AccountId>: Sized {

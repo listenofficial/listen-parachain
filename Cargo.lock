@@ -4955,6 +4955,7 @@ dependencies = [
  "hex-literal",
  "listen-primitives",
  "pallet-balances",
+ "pallet-listen",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",

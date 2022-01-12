@@ -3,11 +3,11 @@ use frame_system::{self as system};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::{prelude::*, result};
+use super::RoomId;
 
 use listen_primitives::{constants::currency::*, Balance};
 
 pub type SessionIndex = u32;
-pub type RoomId = u64;
 
 #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone, TypeInfo)]
 pub struct PropsPrice<BalanceOf> {
@@ -109,7 +109,8 @@ impl Default for ListenVote {
 
 #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, Clone, TypeInfo)]
 pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, DisbandVote, Moment> {
-	pub group_id: u64,
+	pub group_id: RoomId,
+	pub room_treasury_id: AccountId,
 	pub create_payment: Balance,
 	pub last_block_of_get_the_reward: BlockNumber,
 

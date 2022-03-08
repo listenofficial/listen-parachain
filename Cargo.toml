@@ -3,12 +3,12 @@ members = [
 	"node",
 	"runtime",
 	"pallets/currencies",
-	"pallets/nicks",
+#	"pallets/nicks",
 	"primitives",
 	"pallets/listen",
 	"pallets/dao",
 	"pallets/treasury",
-	"pallets/nft",
+#	"pallets/nft",
 ]
 
 [profile.release]

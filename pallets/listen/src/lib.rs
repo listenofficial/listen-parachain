@@ -311,18 +311,19 @@ pub mod pallet {
 		StorageValue<_, AudioPrice<MultiBalanceOf<T>>, ValueQuery, AudioPaymentOnEmpty<T>>;
 
 	#[pallet::pallet]
+	#[pallet::without_storage_info]
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub server_id: T::AccountId,
+		pub server_id: Option<T::AccountId>,
 		pub multisig_members: Vec<T::AccountId>,
 	}
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { server_id: Default::default(), multisig_members: Default::default() }
+			Self { server_id: None, multisig_members: Default::default() }
 		}
 	}
 
@@ -330,7 +331,10 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			/// set server id
-			ServerId::<T>::put(&self.server_id);
+
+			if let Some(server_id) = &self.server_id {
+				ServerId::<T>::put(server_id);
+			}
 
 			/// set multisig id
 			if self.multisig_members.len() >= 2 {

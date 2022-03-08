@@ -101,4 +101,9 @@ pub mod parachains {
 			pub const TokenSymbol: &[u8] = "KLT".as_bytes();
 		}
 	}
+
+	/// statemine
+	pub mod statemine {
+		pub const PARA_ID: u32 = 1000;
+	}
 }

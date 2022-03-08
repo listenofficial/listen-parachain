@@ -11,7 +11,7 @@ pub use listen_primitives::{
 	constants::{currency::*, parachains::*, time::*},
 	Amount, CurrencyId, Index, *,
 };
-pub use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
+pub use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset, DepositToAlternative};
 use pallet_currencies::BasicCurrencyAdapter;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -34,6 +34,7 @@ use static_assertions::const_assert;
 use frame_support::{
 	construct_runtime, match_type, parameter_types,
 	traits::{
+		EnsureOneOf,
 		Contains, EqualPrivilegeOnly, Everything, LockIdentifier, Nothing, U128CurrencyToVote,
 	},
 	weights::{
@@ -44,8 +45,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{
-	limits::{BlockLength, BlockWeights},
-	EnsureOneOf, EnsureRoot,
+	limits::{BlockLength, BlockWeights}, EnsureRoot,
 };
 use orml_traits::{parameter_type_with_key, MultiCurrency};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -67,10 +67,11 @@ use polkadot_runtime_common::{BlockHashCount, RocksDbWeight, SlowAdjustingFeeUpd
 // XCM Imports
 use xcm::latest::prelude::*;
 use xcm_builder::{
+
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin,
 	FixedRateOfFungible, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset,
-	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+	ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
 	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit, UsingComponents,
 };
@@ -122,6 +123,81 @@ pub fn ksm_per_second() -> u128 {
 	let fee_per_second = base_tx_per_second * base_tx_fee;
 	fee_per_second / 100
 }
+
+#[sp_version::runtime_version]
+pub const VERSION: RuntimeVersion = RuntimeVersion {
+	spec_name: create_runtime_str!("listen-parachain"),
+	impl_name: create_runtime_str!("listen-parachain"),
+	authoring_version: 1,
+	spec_version: 2021111802,
+	impl_version: 0,
+	apis: RUNTIME_API_VERSIONS,
+	transaction_version: 1,
+	state_version: 1,
+};
+
+
+// Create the runtime by composing the FRAME pallets that were previously configured.
+construct_runtime!(
+	pub enum Runtime where
+		Block = Block,
+		NodeBlock = opaque::Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		// System support stuff.
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+		ParachainSystem: cumulus_pallet_parachain_system::{
+			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
+		} = 1,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
+		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
+		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>},
+
+		// Monetary stuff.
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
+		Vesting: pallet_vesting::{Pallet, Call, Storage, Config<T>, Event<T>} = 12,
+		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 13,
+
+
+		// Collator support. The order of these 4 are important and shall not change.
+		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
+		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
+		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
+
+		// XCM helpers.
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Storage} = 31,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin, Storage} = 32,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
+
+		// orml
+		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 60,
+		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 61,
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 62,
+
+		// local
+		Tokens: orml_tokens::{Pallet, Config<T>, Storage, Event<T>} = 41,
+		Dao: pallet_dao::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>} = 42,
+		Listen: pallet_listen::{Pallet, Storage, Call, Event<T>, Config<T>} = 43,
+		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage, Config<T>} = 44,
+		RoomTreasury: pallet_treasury::{Pallet, Storage, Call, Event<T>} = 45,
+		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 46,
+		// Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 47,
+
+		// Dao
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} =50,
+		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 51,
+		Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 52,
+		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 53,
+		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 54,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 55,
+
+	}
+);
 
 /// fixme
 parameter_types! {
@@ -302,17 +378,6 @@ impl_opaque_keys! {
 	}
 }
 
-#[sp_version::runtime_version]
-pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("listen-parachain"),
-	impl_name: create_runtime_str!("listen-parachain"),
-	authoring_version: 1,
-	spec_version: 2021111802,
-	impl_version: 0,
-	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 1,
-};
-
 /// The existential deposit. Set to 1/10 of the Rococo Relay Chain.
 pub const EXISTENTIAL_DEPOSIT: Balance = MILLIUNIT;
 
@@ -412,6 +477,8 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = SS58Prefix;
 	/// The action to take on a Runtime Upgrade
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
+
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -478,7 +545,7 @@ parameter_types! {
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
-	type OnValidationData = ();
+	type OnSystemEvent = ();
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type DmpMessageHandler = DmpQueue;
 	type ReservedDmpWeight = ReservedDmpWeight;
@@ -505,12 +572,16 @@ parameter_types! {
 /// `Transact` in order to determine the dispatch Origin.
 pub type LocationToAccountId = (
 	// The parent (Relay-chain) origin converts to the default `AccountId`.
-	ParentIsDefault<AccountId>,
+	ParentIsPreset<AccountId>,
 	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
+
+parameter_types! {
+	pub ListenTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+}
 
 pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	Currencies,
@@ -520,6 +591,7 @@ pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	LocationToAccountId,
 	CurrencyId,
 	CurrencyIdConvert,
+	DepositToAlternative<ListenTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>
 >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
@@ -650,6 +722,10 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type ChannelInfo = ParachainSystem;
 	type VersionWrapper = PolkadotXcm;
+	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+	type ControllerOrigin = EnsureRoot<AccountId>;
+	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+	// type WeightInfo = ();
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -697,7 +773,6 @@ parameter_types! {
 
 // We allow root and the Relay Chain council to execute privileged collator selection operations.
 pub type CollatorSelectionUpdateOrigin = EnsureOneOf<
-	AccountId,
 	EnsureRoot<AccountId>,
 	EnsureXcm<IsMajorityOfBody<RelayLocation, ExecutiveBody>>,
 >;
@@ -785,11 +860,11 @@ parameter_types! {
 
 type HalfRoomCouncil = pallet_dao::EnsureProportionMoreThan<_1, _2, AccountId, RoomCollective>;
 type RoomRoot = pallet_dao::EnsureRoomRoot<Runtime, AccountId, RoomCollective>;
-type RoomRootOrHalfRoomCouncil = EnsureOneOf<AccountId, RoomRoot, HalfRoomCouncil>;
+type RoomRootOrHalfRoomCouncil = EnsureOneOf<RoomRoot, HalfRoomCouncil>;
 type SomeCouncil = pallet_dao::EnsureMembers<_2, AccountId, RoomCollective>;
-type HalfRoomCouncilOrSomeRoomCouncil = EnsureOneOf<AccountId, HalfRoomCouncil, SomeCouncil>;
+type HalfRoomCouncilOrSomeRoomCouncil = EnsureOneOf<HalfRoomCouncil, SomeCouncil>;
 type RoomRootOrHalfRoomCouncilOrSomeRoomCouncil =
-	EnsureOneOf<AccountId, RoomRoot, HalfRoomCouncilOrSomeRoomCouncil>;
+	EnsureOneOf<RoomRoot, HalfRoomCouncilOrSomeRoomCouncil>;
 
 impl pallet_listen::Config for Runtime {
 	type Event = Event;
@@ -823,17 +898,17 @@ parameter_types! {
 
 }
 
-impl pallet_nft::Config for Runtime {
-	type Event = Event;
-	type ClassId = u32;
-	type TokenId = u32;
-	type MultiCurrency = Currencies;
-	type MaxClassMetadata = MaxClassMetadata;
-	type MaxTokenMetadata = MaxTokenMetadata;
-	type MaxTokenAttribute = MaxTokenAttribute;
-	type GetLikeCurrencyId = GetLikeCurrencyId;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-}
+// impl pallet_nft::Config for Runtime {
+// 	type Event = Event;
+// 	type ClassId = u32;
+// 	type TokenId = u32;
+// 	type MultiCurrency = Currencies;
+// 	type MaxClassMetadata = MaxClassMetadata;
+// 	type MaxTokenMetadata = MaxTokenMetadata;
+// 	type MaxTokenAttribute = MaxTokenAttribute;
+// 	type GetLikeCurrencyId = GetLikeCurrencyId;
+// 	type GetNativeCurrencyId = GetNativeCurrencyId;
+// }
 
 parameter_types! {
 	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
@@ -1016,7 +1091,6 @@ impl pallet_democracy::Config for Runtime {
 	// To cancel a proposal before it has been passed, the technical committee must be unanimous or
 	// Root must agree.
 	type CancelProposalOrigin = EnsureOneOf<
-		AccountId,
 		EnsureRoot<AccountId>,
 		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>,
 	>;
@@ -1045,7 +1119,6 @@ parameter_types! {
 }
 
 type EnsureRootOrHalfCouncil = EnsureOneOf<
-	AccountId,
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>,
 >;
@@ -1069,6 +1142,7 @@ parameter_types! {
 	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
 		RuntimeBlockWeights::get().max_block;
 	pub const MaxScheduledPerBlock: u32 = 50;
+	pub const NoPreimagePostponement: Option<u32> = Some(10);
 }
 
 impl pallet_scheduler::Config for Runtime {
@@ -1079,8 +1153,10 @@ impl pallet_scheduler::Config for Runtime {
 	type MaximumWeight = MaximumSchedulerWeight;
 	type ScheduleOrigin = EnsureRoot<AccountId>;
 	type MaxScheduledPerBlock = MaxScheduledPerBlock;
-	type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = ();
 	type OriginPrivilegeCmp = EqualPrivilegeOnly;
+	type PreimageProvider = ();
+	type NoPreimagePostponement = NoPreimagePostponement;
 }
 
 parameter_types! {
@@ -1103,7 +1179,6 @@ impl orml_unknown_tokens::Config for Runtime {
 }
 
 pub type EnsureRootOrThreeFourthsCouncil = EnsureOneOf<
-	AccountId,
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>,
 >;
@@ -1123,6 +1198,17 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 parameter_types! {
 	pub const BaseXcmWeight: Weight = 100_000_000;
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
+	pub const MaxAssetsForTransfer: usize = 2;
+}
+
+parameter_type_with_key! {
+	pub ParachainMinFee: |location: MultiLocation| -> u128 {
+		#[allow(clippy::match_ref_pats)] // false positive
+		match (location.parents, location.first_interior()) {
+			(1, Some(Parachain(statemine::PARA_ID))) => 4_000_000_000,
+			_ => u128::MAX,
+		}
+	};
 }
 
 impl orml_xtokens::Config for Runtime {
@@ -1136,68 +1222,10 @@ impl orml_xtokens::Config for Runtime {
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
 	type BaseXcmWeight = BaseXcmWeight;
 	type LocationInverter = LocationInverter<Ancestry>;
+	type MaxAssetsForTransfer = MaxAssetsForTransfer;
+	type MinXcmFee = ParachainMinFee;
+
 }
-// Create the runtime by composing the FRAME pallets that were previously configured.
-construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = opaque::Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		// System support stuff.
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-		ParachainSystem: cumulus_pallet_parachain_system::{
-			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
-		} = 1,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
-		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>},
-
-		// Monetary stuff.
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
-		Vesting: pallet_vesting::{Pallet, Call, Storage, Config<T>, Event<T>} = 12,
-		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 13,
-
-
-		// Collator support. The order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
-		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
-
-		// XCM helpers.
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Storage} = 31,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin, Storage} = 32,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
-
-		// orml
-		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 60,
-		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 61,
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 62,
-
-		// local
-		Tokens: orml_tokens::{Pallet, Config<T>, Storage, Event<T>} = 41,
-		Dao: pallet_dao::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>} = 42,
-		Listen: pallet_listen::{Pallet, Storage, Call, Event<T>, Config<T>} = 43,
-		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage, Config<T>} = 44,
-		RoomTreasury: pallet_treasury::{Pallet, Storage, Call, Event<T>} = 45,
-		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 46,
-		Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 47,
-
-		// Dao
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} =50,
-		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 51,
-		Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 52,
-		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 53,
-		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 54,
-		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 55,
-
-	}
-);
 
 impl_runtime_apis! {
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
@@ -1301,8 +1329,8 @@ impl_runtime_apis! {
 	}
 
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
-		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
-			ParachainSystem::collect_collation_info()
+		fn collect_collation_info(header: &<Block as BlockT>::Header) -> cumulus_primitives_core::CollationInfo {
+			ParachainSystem::collect_collation_info(header)
 		}
 	}
 

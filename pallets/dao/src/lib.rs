@@ -177,6 +177,7 @@ pub mod pallet {
 	}
 
 	#[pallet::pallet]
+	#[pallet::without_storage_info]
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
@@ -574,7 +575,7 @@ pub struct EnsureRoomRoot<T, AccountId, I: 'static>(sp_std::marker::PhantomData<
 impl<
 		O: Into<Result<RoomRawOrigin<<T as frame_system::Config>::AccountId, I>, O>>
 			+ From<RoomRawOrigin<<T as frame_system::Config>::AccountId, I>>,
-		AccountId: Default,
+		AccountId,
 		T: Config<I>,
 		I: 'static,
 	> EnsureOrigin<O> for EnsureRoomRoot<T, AccountId, I>

@@ -120,6 +120,7 @@ pub fn development_config() -> ChainSpec {
 		vec![],
 		get_telemetry_endpoints(),
 		Some("listen-dev"),
+		None,
 		Some(get_properties()),
 		Extensions {
 			relay_chain: "rococo-dev".into(), // You MUST set this to the correct network!
@@ -184,6 +185,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		// Protocol ID
 		Some("listen"),
 		// Properties
+		None,
 		Some(get_properties()),
 		// Extensions
 		Extensions {
@@ -243,9 +245,9 @@ fn testnet_genesis(
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
 		tokens: Default::default(),
-		sudo: SudoConfig { key: get_root() },
+		sudo: SudoConfig { key: Some(get_root()) },
 		listen: ListenConfig {
-			server_id: get_root(),
+			server_id: Some(get_root()),
 			multisig_members: vec![
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				get_account_id_from_seed::<sr25519::Public>("Bob"),

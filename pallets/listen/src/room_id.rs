@@ -27,11 +27,11 @@ pub trait AccountIdConversion<AccountId>: Sized {
 	fn try_from_account(a: &AccountId) -> Option<Self>;
 }
 
-impl<T: Encode + Decode + Default> AccountIdConversion<T> for RoomId {
+impl<T: Encode + Decode> AccountIdConversion<T> for RoomId {
 	fn into_account(&self) -> T {
 		(b"room", self)
 			.using_encoded(|b| T::decode(&mut TrailingZeroInput(b)))
-			.unwrap_or_default()
+			.unwrap()
 	}
 
 	fn try_from_account(x: &T) -> Option<Self> {

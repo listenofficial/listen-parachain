@@ -11,7 +11,9 @@ pub use listen_primitives::{
 	constants::{currency::*, parachains::*, time::*},
 	Amount, CurrencyId, Index, *,
 };
-pub use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset, DepositToAlternative};
+pub use orml_xcm_support::{
+	DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
+};
 use pallet_currencies::BasicCurrencyAdapter;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
@@ -34,8 +36,8 @@ use static_assertions::const_assert;
 use frame_support::{
 	construct_runtime, match_type, parameter_types,
 	traits::{
-		EnsureOneOf,
-		Contains, EqualPrivilegeOnly, Everything, LockIdentifier, Nothing, U128CurrencyToVote,
+		Contains, EnsureOneOf, EqualPrivilegeOnly, Everything, LockIdentifier, Nothing,
+		U128CurrencyToVote,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
@@ -45,7 +47,8 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{
-	limits::{BlockLength, BlockWeights}, EnsureRoot,
+	limits::{BlockLength, BlockWeights},
+	EnsureRoot,
 };
 use orml_traits::{parameter_type_with_key, MultiCurrency};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -67,7 +70,6 @@ use polkadot_runtime_common::{BlockHashCount, RocksDbWeight, SlowAdjustingFeeUpd
 // XCM Imports
 use xcm::latest::prelude::*;
 use xcm_builder::{
-
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin,
 	FixedRateOfFungible, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset,
@@ -136,7 +138,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	state_version: 1,
 };
 
-
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -186,7 +187,7 @@ construct_runtime!(
 		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage, Config<T>} = 44,
 		RoomTreasury: pallet_treasury::{Pallet, Storage, Call, Event<T>} = 45,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 46,
-		// Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 47,
+		Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 47,
 
 		// Dao
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} =50,
@@ -591,7 +592,7 @@ pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	LocationToAccountId,
 	CurrencyId,
 	CurrencyIdConvert,
-	DepositToAlternative<ListenTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>
+	DepositToAlternative<ListenTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
@@ -772,10 +773,8 @@ parameter_types! {
 }
 
 // We allow root and the Relay Chain council to execute privileged collator selection operations.
-pub type CollatorSelectionUpdateOrigin = EnsureOneOf<
-	EnsureRoot<AccountId>,
-	EnsureXcm<IsMajorityOfBody<RelayLocation, ExecutiveBody>>,
->;
+pub type CollatorSelectionUpdateOrigin =
+	EnsureOneOf<EnsureRoot<AccountId>, EnsureXcm<IsMajorityOfBody<RelayLocation, ExecutiveBody>>>;
 
 impl pallet_collator_selection::Config for Runtime {
 	type Event = Event;
@@ -898,17 +897,17 @@ parameter_types! {
 
 }
 
-// impl pallet_nft::Config for Runtime {
-// 	type Event = Event;
-// 	type ClassId = u32;
-// 	type TokenId = u32;
-// 	type MultiCurrency = Currencies;
-// 	type MaxClassMetadata = MaxClassMetadata;
-// 	type MaxTokenMetadata = MaxTokenMetadata;
-// 	type MaxTokenAttribute = MaxTokenAttribute;
-// 	type GetLikeCurrencyId = GetLikeCurrencyId;
-// 	type GetNativeCurrencyId = GetNativeCurrencyId;
-// }
+impl pallet_nft::Config for Runtime {
+	type Event = Event;
+	type ClassId = u32;
+	type TokenId = u32;
+	type MultiCurrency = Currencies;
+	type MaxClassMetadata = MaxClassMetadata;
+	type MaxTokenMetadata = MaxTokenMetadata;
+	type MaxTokenAttribute = MaxTokenAttribute;
+	type GetLikeCurrencyId = GetLikeCurrencyId;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+}
 
 parameter_types! {
 	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
@@ -1224,7 +1223,6 @@ impl orml_xtokens::Config for Runtime {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
 	type MinXcmFee = ParachainMinFee;
-
 }
 
 impl_runtime_apis! {

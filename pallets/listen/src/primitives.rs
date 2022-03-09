@@ -1,9 +1,9 @@
+use super::RoomId;
 use codec::{Decode, Encode};
 use frame_system::{self as system};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 use sp_std::{prelude::*, result};
-use super::RoomId;
 
 use listen_primitives::{constants::currency::*, Balance};
 

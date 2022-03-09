@@ -20,12 +20,11 @@ pub mod primitives;
 pub mod room_id;
 
 pub use crate::pallet::*;
-use codec::FullCodec;
 use crate::primitives::{
 	vote, AllProps, Audio, AudioPrice, DisbandVote, GroupInfo, GroupMaxMembers, ListenVote,
 	PersonInfo, PropsPrice, RedPacket, RewardStatus, RoomRewardInfo, SessionIndex,
 };
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, FullCodec};
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 pub use frame_support::{
@@ -331,7 +330,6 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			/// set server id
-
 			if let Some(server_id) = &self.server_id {
 				ServerId::<T>::put(server_id);
 			}
@@ -1392,7 +1390,10 @@ pub mod pallet {
 		/// Expired red packets obtained by the owner.
 		#[pallet::weight(10_000)]
 		#[transactional]
-		pub fn give_back_expired_redpacket(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
+		pub fn give_back_expired_redpacket(
+			origin: OriginFor<T>,
+			group_id: RoomId,
+		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
 			let _ = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
@@ -1716,7 +1717,9 @@ pub mod pallet {
 			consume_total_amount
 		}
 
-		fn vote_passed_and_pending_disband(group_id: RoomId) -> result::Result<bool, DispatchError> {
+		fn vote_passed_and_pending_disband(
+			group_id: RoomId,
+		) -> result::Result<bool, DispatchError> {
 			let _ = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
 			let disband_rooms = <PendingDisbandRooms<T>>::get();
 			if let Some(disband_time) = disband_rooms.get(&group_id.into()) {
@@ -2146,7 +2149,9 @@ pub mod pallet {
 			Ok(prime)
 		}
 
-		fn get_root(room_id: RoomId) -> Result<<T as frame_system::Config>::AccountId, DispatchError> {
+		fn get_root(
+			room_id: RoomId,
+		) -> Result<<T as frame_system::Config>::AccountId, DispatchError> {
 			ensure!(!Self::is_can_disband(room_id)?, Error::<T>::Disbanding);
 			let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
 			let root = room_info.group_manager;

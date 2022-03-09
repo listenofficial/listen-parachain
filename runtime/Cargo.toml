@@ -9,7 +9,6 @@ repository = "https://github.com/listenofficial/listen-parachain.git"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
-
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 
@@ -28,7 +27,7 @@ pallet-listen = { path = "../pallets/listen", default-features = false }
 #pallet-nicks = { path = "../pallets/nicks", default-features = false }
 pallet-treasury = { path = "../pallets/treasury", default-features = false }
 listen-primitives = { path = "../primitives", default-features = false }
-#pallet-nft = { path = "../pallets/nft", default-features = false }
+pallet-nft = { path = "../pallets/nft", default-features = false }
 
 
 # orml
@@ -174,7 +173,7 @@ std = [
 	"orml-xcm-support/std",
 	"orml-unknown-tokens/std",
 	"orml-xcm/std",
-#	"pallet-nft/std",
+	"pallet-nft/std",
 	"pallet-indices/std",
 	"pallet-identity/std",
 ]

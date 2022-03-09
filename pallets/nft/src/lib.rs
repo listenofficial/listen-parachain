@@ -295,6 +295,7 @@ pub mod module {
 	//BTreeSet<Vec<u8>>;
 
 	#[pallet::pallet]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::hooks]
@@ -500,7 +501,16 @@ impl<T: Config> Pallet<T> {
 				Error::<T>::NotIssuer
 			);
 
-			let mut data = TokenDataOf::<T>::default();
+			let mut data = TokenData {
+				class_id: Default::default(),
+				hash: Default::default(),
+				like_threshold: Default::default(),
+				attribute: Default::default(),
+				image_hash: vec![],
+				sell_records: vec![],
+				status: Default::default(),
+				claim_cost: Default::default(),
+			};
 			let hash = Self::get_hash(class_id, token_id);
 			data.hash = hash;
 			data.class_id = class_id;

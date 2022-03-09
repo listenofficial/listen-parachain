@@ -19,7 +19,6 @@
 #![recursion_limit = "128"]
 
 pub use crate::pallet::*;
-use pallet_listen::RoomId;
 use frame_support::{
 	codec::{Decode, Encode},
 	decl_error, decl_event, decl_module, decl_storage,
@@ -33,6 +32,7 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 use listen_primitives::traits::{CollectiveHandler, ListenHandler};
+use pallet_listen::RoomId;
 use pallet_timestamp;
 use scale_info::TypeInfo;
 use sp_core::u32_trait::Value as U32;

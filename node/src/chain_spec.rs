@@ -14,6 +14,8 @@ use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	AccountId32,
 };
+use hex_literal::hex;
+use sp_core::crypto::UncheckedInto;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<listen_runtime::GenesisConfig, Extensions>;
@@ -80,6 +82,8 @@ pub fn template_session_keys(keys: AuraId) -> listen_runtime::SessionKeys {
 	listen_runtime::SessionKeys { aura: keys }
 }
 
+
+
 pub fn development_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		// Name
@@ -129,17 +133,6 @@ pub fn development_config() -> ChainSpec {
 	)
 }
 
-fn get_properties() -> Properties {
-	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "LT".into());
-	properties.insert("tokenDecimals".into(), 12.into());
-	properties.insert("ss58Format".into(), 42.into());
-	properties
-}
-
-fn get_root() -> AccountId {
-	AccountId32::from_string("5FQyoSCbcnodfunhcC7ZpwKkad8JSFxLaZ54aoZyb7HXoX3h").unwrap()
-}
 
 pub fn local_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
@@ -149,6 +142,63 @@ pub fn local_testnet_config() -> ChainSpec {
 		"listen_testnet",
 		ChainType::Local,
 		move || {
+			testnet_genesis(
+				// initial collators.
+				// todo 这里需要自定义
+				vec![
+					(
+						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"].into(),
+						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"].unchecked_into(),
+					),
+					(
+						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"].into(),
+						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"].unchecked_into(),
+					),
+				],
+				vec![
+					get_account_id_from_seed::<sr25519::Public>("Alice"),
+					get_account_id_from_seed::<sr25519::Public>("Bob"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie"),
+					get_account_id_from_seed::<sr25519::Public>("Dave"),
+					get_account_id_from_seed::<sr25519::Public>("Eve"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+				],
+				PARA_ID.into(),
+			)
+		},
+		// Bootnodes
+		vec![],
+		// Telemetry
+		get_telemetry_endpoints(),
+		// Protocol ID
+		Some("listen"),
+		// Properties
+		None,
+		Some(get_properties()),
+		// Extensions
+		Extensions {
+			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
+			para_id: PARA_ID.into(),
+		},
+	)
+}
+
+
+pub fn staging_config() -> ChainSpec {
+	ChainSpec::from_genesis(
+		// Name
+		"Listen",
+		// ID
+		"listen",
+		ChainType::Live,
+		move || {
+			// todo 自定义收集人
 			testnet_genesis(
 				// initial collators.
 				vec![
@@ -189,7 +239,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		Some(get_properties()),
 		// Extensions
 		Extensions {
-			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
+			relay_chain: "kusama".into(), // You MUST set this to the correct network!
 			para_id: PARA_ID.into(),
 		},
 	)
@@ -283,4 +333,16 @@ fn testnet_genesis(
 			],
 		},
 	}
+}
+
+fn get_properties() -> Properties {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "LT".into());
+	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("ss58Format".into(), 42.into());
+	properties
+}
+
+fn get_root() -> AccountId {
+	AccountId32::from_string("5FQyoSCbcnodfunhcC7ZpwKkad8JSFxLaZ54aoZyb7HXoX3h").unwrap()
 }

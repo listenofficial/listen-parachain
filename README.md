@@ -33,7 +33,34 @@ cargo build --release
 ```
 
 ### Run
-to be done.
+#### relay chain
+```
+./target/release/polkadot build-spec --chain rococo-local --disable-default-bootnode --raw > rococo-local-cfde.json
+./polkadot  --chain rococo-local-cfde.json --alice --base-path alice-db --ws-port 9988 --port 40338 --node-key bd2f9ba01b71cae0cb641005b8f5a2c8ca0bcb41ce670300ad34829305244bec  --ws-external --rpc-external --rpc-methods=Unsafe --rpc-cors=all
+./polkadot  --chain rococo-local-cfde.json --bob --base-path bob-db --ws-port 9989 --port 40339  --ws-external --rpc-external --rpc-methods=Unsafe –rpc-cors=all
+```
+#### parachain
+```buildoutcfg
+./listen-collator export-genesis-wasm > genesis-wasm
+./listen-collator export-genesis-state > genesis-state
+```
 ## PS
 Some of our basic modules, such as multi-asset, cross-chain transfer, come from the [Acala Team](https://github.com/AcalaNetwork/Acala). And some have been modified. Thanks to their talented engineers for their outstanding contribution to the Polkadot community.
+
+## other
+```buildoutcfg
+./listen-collator build-spec --raw > localspec.json
+```
+```buildoutcfg
+./subkey inspect ///xxx
+./target/release/polkadot key insert --base-path /tmp/node01 \
+--chain customSpecRaw.json \
+--scheme Sr25519 \
+--suri ///xxx \
+--password-interactive \
+--key-type aura
+```
+
+
+
 

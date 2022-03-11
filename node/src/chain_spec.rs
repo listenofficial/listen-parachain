@@ -28,7 +28,7 @@ pub fn get_pair_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair
 }
 
 pub fn testnet_config() -> Result<ChainSpec, String> {
-	ChainSpec::from_json_bytes(&include_bytes!("../res/local-testnet.json")[..])
+	ChainSpec::from_json_bytes(&include_bytes!("../res/localspec.json")[..])
 }
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -156,6 +156,9 @@ pub fn local_testnet_config() -> ChainSpec {
 					),
 				],
 				vec![
+					hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"].into(),
+					hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"].into(),
+
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie"),

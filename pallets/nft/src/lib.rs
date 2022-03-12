@@ -595,7 +595,7 @@ impl<T: Config> Pallet<T> {
 				T::MultiCurrency::withdraw(T::GetNativeCurrencyId::get(), &owner, cost)?;
 			}
 			if class_info.data.like_threshold > BalanceOf::<T>::from(0u32) {
-					T::MultiCurrency::withdraw(
+				T::MultiCurrency::withdraw(
 					T::GetLikeCurrencyId::get(),
 					&owner,
 					class_info.data.like_threshold,
@@ -622,7 +622,11 @@ impl<T: Config> Pallet<T> {
 			ensure!(!Self::is_in_sale(token.0, token.1), Error::<T>::InSale);
 			ensure!(!t.data.status.is_active_image, Error::<T>::ActiveNft);
 			if t.data.like_threshold > Default::default() {
-				T::MultiCurrency::deposit(T::GetLikeCurrencyId::get(), &owner, t.data.like_threshold)?;
+				T::MultiCurrency::deposit(
+					T::GetLikeCurrencyId::get(),
+					&owner,
+					t.data.like_threshold,
+				)?;
 			}
 			Self::remove_token_ownership(owner, token.0, token.1);
 

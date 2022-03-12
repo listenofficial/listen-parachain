@@ -435,7 +435,7 @@ pub struct BaseCallFilter;
 impl Contains<Call> for BaseCallFilter {
 	fn contains(call: &Call) -> bool {
 		if let Call::Balances(func) = call {
-			return false;
+			return false
 		}
 		true
 	}

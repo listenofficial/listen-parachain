@@ -1,4 +1,5 @@
 use cumulus_primitives_core::ParaId;
+use hex_literal::hex;
 use listen_primitives::{constants::currency::UNIT, Balance};
 use listen_runtime::{
 	AccountId, AuraId, CouncilConfig, CurrenciesConfig, ElectionsConfig, ListenConfig, Signature,
@@ -9,13 +10,14 @@ use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
 use serde::{Deserialize, Serialize};
-use sp_core::{crypto::Ss58Codec, sr25519, Pair, Public};
+use sp_core::{
+	crypto::{Ss58Codec, UncheckedInto},
+	sr25519, Pair, Public,
+};
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
 	AccountId32,
 };
-use hex_literal::hex;
-use sp_core::crypto::UncheckedInto;
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<listen_runtime::GenesisConfig, Extensions>;
@@ -82,8 +84,6 @@ pub fn template_session_keys(keys: AuraId) -> listen_runtime::SessionKeys {
 	listen_runtime::SessionKeys { aura: keys }
 }
 
-
-
 pub fn development_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		// Name
@@ -133,7 +133,6 @@ pub fn development_config() -> ChainSpec {
 	)
 }
 
-
 pub fn local_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		// Name
@@ -147,18 +146,21 @@ pub fn local_testnet_config() -> ChainSpec {
 				// todo 这里需要自定义
 				vec![
 					(
-						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"].into(),
-						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"].unchecked_into(),
+						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
+							.into(),
+						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
+							.unchecked_into(),
 					),
 					(
-						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"].into(),
-						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"].unchecked_into(),
+						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"]
+							.into(),
+						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"]
+							.unchecked_into(),
 					),
 				],
 				vec![
 					hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"].into(),
 					hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"].into(),
-
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie"),
@@ -191,7 +193,6 @@ pub fn local_testnet_config() -> ChainSpec {
 		},
 	)
 }
-
 
 pub fn staging_config() -> ChainSpec {
 	ChainSpec::from_genesis(

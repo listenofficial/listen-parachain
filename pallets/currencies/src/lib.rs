@@ -281,29 +281,29 @@ pub mod module {
 			Ok(().into())
 		}
 
-		/// Transfer some native currency to another account.
-		///
-		/// The dispatch origin for this call must be `Signed` by the
-		/// transactor.
-		#[pallet::weight(T::WeightInfo::transfer_native_currency())]
-		pub fn transfer_native_currency(
-			origin: OriginFor<T>,
-			dest: <T::Lookup as StaticLookup>::Source,
-			#[pallet::compact] amount: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
-			let from = ensure_signed(origin)?;
-
-			let to = T::Lookup::lookup(dest)?;
-			T::NativeCurrency::transfer(&from, &to, amount)?;
-
-			Self::deposit_event(Event::Transferred(
-				T::GetNativeCurrencyId::get(),
-				from,
-				to,
-				amount,
-			));
-			Ok(().into())
-		}
+		// /// Transfer some native currency to another account.
+		// ///
+		// /// The dispatch origin for this call must be `Signed` by the
+		// /// transactor.
+		// #[pallet::weight(T::WeightInfo::transfer_native_currency())]
+		// pub fn transfer_native_currency(
+		// 	origin: OriginFor<T>,
+		// 	dest: <T::Lookup as StaticLookup>::Source,
+		// 	#[pallet::compact] amount: BalanceOf<T>,
+		// ) -> DispatchResultWithPostInfo {
+		// 	let from = ensure_signed(origin)?;
+		//
+		// 	let to = T::Lookup::lookup(dest)?;
+		// 	T::NativeCurrency::transfer(&from, &to, amount)?;
+		//
+		// 	Self::deposit_event(Event::Transferred(
+		// 		T::GetNativeCurrencyId::get(),
+		// 		from,
+		// 		to,
+		// 		amount,
+		// 	));
+		// 	Ok(().into())
+		// }
 
 		/// update amount of account `who` under `currency_id`.
 		///

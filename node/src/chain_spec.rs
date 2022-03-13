@@ -1,6 +1,9 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use listen_primitives::{constants::currency::UNIT, Balance};
+use listen_primitives::{
+	constants::{currency::*, time::*},
+	Balance,
+};
 use listen_runtime::{
 	AccountId, AuraId, CouncilConfig, CurrenciesConfig, ElectionsConfig, ListenConfig, Signature,
 	SudoConfig, TechnicalCommitteeConfig, VestingConfig, EXISTENTIAL_DEPOSIT,
@@ -16,7 +19,7 @@ use sp_core::{
 };
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},
-	AccountId32,
+	AccountId32, Percent,
 };
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
@@ -104,7 +107,7 @@ pub fn development_config() -> ChainSpec {
 						get_collator_keys_from_seed("Bob"),
 					),
 				],
-				vec![
+				Some(vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie"),
@@ -117,7 +120,7 @@ pub fn development_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-				],
+				]),
 				PARA_ID.into(),
 			)
 		},
@@ -143,24 +146,17 @@ pub fn local_testnet_config() -> ChainSpec {
 		move || {
 			testnet_genesis(
 				// initial collators.
-				// todo 这里需要自定义
 				vec![
 					(
-						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
-							.into(),
-						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
-							.unchecked_into(),
+						get_account_id_from_seed::<sr25519::Public>("Alice"),
+						get_collator_keys_from_seed("Alice"),
 					),
 					(
-						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"]
-							.into(),
-						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"]
-							.unchecked_into(),
+						get_account_id_from_seed::<sr25519::Public>("Bob"),
+						get_collator_keys_from_seed("Bob"),
 					),
 				],
-				vec![
-					hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"].into(),
-					hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"].into(),
+				Some(vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Charlie"),
@@ -173,7 +169,7 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-				],
+				]),
 				PARA_ID.into(),
 			)
 		},
@@ -202,33 +198,23 @@ pub fn staging_config() -> ChainSpec {
 		"listen",
 		ChainType::Live,
 		move || {
-			// todo 自定义收集人
 			testnet_genesis(
 				// initial collators.
 				vec![
 					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						get_collator_keys_from_seed("Alice"),
+						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
+							.into(),
+						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
+							.unchecked_into(),
 					),
 					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
-						get_collator_keys_from_seed("Bob"),
+						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"]
+							.into(),
+						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"]
+							.unchecked_into(),
 					),
 				],
-				vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-				],
+				None,
 				PARA_ID.into(),
 			)
 		},
@@ -254,7 +240,7 @@ pub const STASH: Balance = 100 * UNIT;
 
 fn testnet_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
-	endowed_accounts: Vec<AccountId>,
+	endowed_accounts: Option<Vec<AccountId>>,
 	id: ParaId,
 ) -> listen_runtime::GenesisConfig {
 	listen_runtime::GenesisConfig {
@@ -264,7 +250,42 @@ fn testnet_genesis(
 				.to_vec(),
 		},
 		balances: listen_runtime::BalancesConfig {
-			balances: endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect(),
+			balances: match endowed_accounts {
+				Some(x) => x.iter().cloned().map(|k| (k, ENDOWMENT)).collect(),
+				_ => vec![
+					(
+						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
+							.into(),
+						1000 * UNIT,
+					),
+					(
+						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"]
+							.into(),
+						1000 * UNIT,
+					),
+					(
+						hex!["a6251784d54fbbdd7d878be7fa150b9d87472f2a9a0c7d74c81db5f8534d9965"]
+							.into(),
+						Percent::from_percent(80) * MAX_ISSUANCE,
+					),
+					(
+						hex!["885b79207efbc35eb824ae58eb8faa8ad2547b47c1c21b90f1bf38ab39100105"]
+							.into(),
+						Percent::from_percent(10) * MAX_ISSUANCE,
+					),
+					(
+						hex!["e4768b6973c02f524f141b409083feedc799f8956ec4511cd02f96c238dff94c"]
+							.into(),
+						Percent::from_percent(5) * MAX_ISSUANCE,
+					),
+					(
+						hex!["7c4282956be8c433f5e31b09ce5f59ca318ba14074c643eee79ee0fd8aaf0b18"]
+							.into(),
+						Percent::from_percent(5) * MAX_ISSUANCE,
+					),
+				],
+			},
+			// balances: endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect(),
 		},
 		parachain_info: listen_runtime::ParachainInfoConfig { parachain_id: id },
 		collator_selection: listen_runtime::CollatorSelectionConfig {

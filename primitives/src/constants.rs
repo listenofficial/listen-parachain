@@ -8,6 +8,7 @@ pub mod currency {
 	pub const UNIT: Balance = 1_000_000_000_000;
 	pub const MILLIUNIT: Balance = 1_000_000_000;
 	pub const MICROUNIT: Balance = 1_000_000;
+	pub const MAX_ISSUANCE: Balance = 100 * 100_000_000 * UNIT;
 
 	// pub const fn deposit(items: u32, bytes: u32) -> Balance {
 	// 	items as Balance * 15 * CENTS + (bytes as Balance) * 6 * CENTS
@@ -55,6 +56,8 @@ pub mod time {
 	pub const MINUTES: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 	pub const HOURS: BlockNumber = MINUTES * 60;
 	pub const DAYS: BlockNumber = HOURS * 24;
+	pub const WEEKS: BlockNumber = 7 * DAYS;
+	pub const YEARS: BlockNumber = 52 * WEEKS;
 }
 
 pub mod parachains {

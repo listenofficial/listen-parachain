@@ -1,7 +1,7 @@
 [workspace]
 members = [
-	"node",
-	"runtime",
+	"node/*",
+	"runtime/*",
 	"pallets/currencies",
 #	"pallets/nicks",
 	"primitives",

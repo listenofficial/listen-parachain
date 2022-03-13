@@ -1,5 +1,5 @@
 [package]
-name = "listen-runtime"
+name = "kisten-runtime"
 version = "1.0.0"
 authors = ["LISTEN TEAM"]
 edition = "2021"
@@ -21,13 +21,13 @@ smallvec = "1.6.1"
 static_assertions  = { version = "1.1.0" }
 
 # Local Dependencies
-pallet-currencies = { path = "../pallets/currencies", default-features = false }
-pallet-dao = { path = "../pallets/dao", default-features = false }
-pallet-listen = { path = "../pallets/listen", default-features = false }
+pallet-currencies = { path = "../../pallets/currencies", default-features = false }
+pallet-dao = { path = "../../pallets/dao", default-features = false }
+pallet-listen = { path = "../../pallets/listen", default-features = false }
 #pallet-nicks = { path = "../pallets/nicks", default-features = false }
-pallet-treasury = { path = "../pallets/treasury", default-features = false }
-listen-primitives = { path = "../primitives", default-features = false }
-pallet-nft = { path = "../pallets/nft", default-features = false }
+pallet-treasury = { path = "../../pallets/treasury", default-features = false }
+listen-primitives = { path = "../../primitives", default-features = false }
+pallet-nft = { path = "../../pallets/nft", default-features = false }
 
 
 # orml

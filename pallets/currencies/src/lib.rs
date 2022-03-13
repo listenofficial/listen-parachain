@@ -289,6 +289,7 @@ pub mod module {
 		// pub fn transfer_native_currency(
 		// 	origin: OriginFor<T>,
 		// 	dest: <T::Lookup as StaticLookup>::Source,
+
 		// 	#[pallet::compact] amount: BalanceOf<T>,
 		// ) -> DispatchResultWithPostInfo {
 		// 	let from = ensure_signed(origin)?;

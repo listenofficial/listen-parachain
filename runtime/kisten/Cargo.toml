@@ -28,6 +28,7 @@ pallet-listen = { path = "../../pallets/listen", default-features = false }
 pallet-treasury = { path = "../../pallets/treasury", default-features = false }
 listen-primitives = { path = "../../primitives", default-features = false }
 pallet-nft = { path = "../../pallets/nft", default-features = false }
+orml-vesting = { path = "../../pallets/vesting", default-features = false }
 
 
 # orml
@@ -78,7 +79,7 @@ pallet-democracy = { git = 'https://github.com/paritytech/substrate.git', branch
 pallet-elections-phragmen = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.17', default-features = false }
 sp-npos-elections = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.17', default-features = false }
 pallet-scheduler = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.17', default-features = false }
-pallet-vesting = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.17', default-features = false }
+#pallet-vesting = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.17', default-features = false }
 pallet-indices = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.17', default-features = false }
 pallet-identity = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.17', default-features = false }
 
@@ -168,7 +169,8 @@ std = [
 	"pallet-elections-phragmen/std",
 	"sp-npos-elections/std",
 	"pallet-scheduler/std",
-	"pallet-vesting/std",
+#	"pallet-vesting/std",
+	"orml-vesting/std",
 	"orml-xtokens/std",
 	"orml-xcm-support/std",
 	"orml-unknown-tokens/std",

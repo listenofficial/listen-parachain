@@ -6,7 +6,7 @@ use listen_primitives::{
 };
 use listen_runtime::{
 	AccountId, AuraId, CouncilConfig, CurrenciesConfig, ElectionsConfig, ListenConfig, Signature,
-	SudoConfig, TechnicalCommitteeConfig, VestingConfig, EXISTENTIAL_DEPOSIT,
+	SudoConfig, TechnicalCommitteeConfig, EXISTENTIAL_DEPOSIT,
 };
 use pallet_currencies::{ListenAssetInfo, ListenAssetMetadata};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -196,7 +196,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		"kisten",
 		// ID
 		"kisten",
-		ChainType::Local,
+		ChainType::Live,
 		move || {
 			testnet_genesis(
 				// initial collators.
@@ -229,7 +229,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		Some(get_properties()),
 		// Extensions
 		Extensions {
-			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
+			relay_chain: "kusama".into(), // You MUST set this to the correct network!
 			para_id: PARA_ID.into(),
 		},
 	)
@@ -300,7 +300,7 @@ fn testnet_genesis(
 		technical_committee: Default::default(),
 		council: Default::default(),
 		democracy: Default::default(),
-		vesting: Default::default(),
+		orml_vesting: Default::default(),
 		session: listen_runtime::SessionConfig {
 			keys: invulnerables
 				.iter()

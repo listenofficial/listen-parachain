@@ -3377,6 +3377,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "orml-unknown-tokens",
+ "orml-vesting",
  "orml-xcm",
  "orml-xcm-support",
  "orml-xtokens",
@@ -3402,7 +3403,6 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-treasury 1.0.0",
- "pallet-vesting",
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
@@ -4298,6 +4298,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "orml-unknown-tokens",
+ "orml-vesting",
  "orml-xcm",
  "orml-xcm-support",
  "orml-xtokens",
@@ -4323,7 +4324,6 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-treasury 1.0.0",
- "pallet-vesting",
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
@@ -5024,6 +5024,22 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "orml-vesting"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",

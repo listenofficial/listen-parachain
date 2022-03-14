@@ -25,6 +25,7 @@ use sp_core::{
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
+		BlockNumberProvider,
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
 		IdentifyAccount, Verify,
 	},
@@ -131,7 +132,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("listen-parachain"),
 	impl_name: create_runtime_str!("listen-parachain"),
 	authoring_version: 1,
-	spec_version: 2022031203,
+	spec_version: 2022031401,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -158,8 +159,7 @@ construct_runtime!(
 		// Monetary stuff.
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
-		Vesting: pallet_vesting::{Pallet, Call, Storage, Config<T>, Event<T>} = 12,
-		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 13,
+		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 12,
 
 
 		// Collator support. The order of these 4 are important and shall not change.
@@ -188,6 +188,7 @@ construct_runtime!(
 		RoomTreasury: pallet_treasury::{Pallet, Storage, Call, Event<T>} = 45,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 46,
 		Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 47,
+		OrmlVesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 48,
 
 		// Dao
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} =50,
@@ -1168,23 +1169,36 @@ impl pallet_scheduler::Config for Runtime {
 	type NoPreimagePostponement = NoPreimagePostponement;
 }
 
-parameter_types! {
-	pub const MinVestedTransfer: Balance = 100 * UNIT;
-}
-
-impl pallet_vesting::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type BlockNumberToBalance = ConvertInto;
-	type MinVestedTransfer = MinVestedTransfer;
-	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
-	// `VestingInfo` encode length is 36bytes. 28 schedules gets encoded as 1009 bytes, which is the
-	// highest number of schedules that encodes less than 2^10.
-	const MAX_VESTING_SCHEDULES: u32 = 28;
-}
 
 impl orml_unknown_tokens::Config for Runtime {
 	type Event = Event;
+}
+
+parameter_types! {
+	pub MinVestedTransfer: Balance = 0;
+	pub const MaxVestingSchedules: u32 = 100;
+}
+
+
+pub struct RelayChainBlockNumberProvider<T>(sp_std::marker::PhantomData<T>);
+
+impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider for RelayChainBlockNumberProvider<T> {
+	type BlockNumber = BlockNumber;
+
+	fn current_block_number() -> Self::BlockNumber {
+		cumulus_pallet_parachain_system::Pallet::<T>::validation_data()
+			.map(|d| d.relay_parent_number)
+			.unwrap_or_default()
+	}
+}
+
+impl orml_vesting::Config for Runtime {
+	type Event = Event;
+	type Currency = pallet_balances::Pallet<Runtime>;
+	type MinVestedTransfer = MinVestedTransfer;
+	type WeightInfo = ();
+	type MaxVestingSchedules = MaxVestingSchedules;
+	type BlockNumberProvider = RelayChainBlockNumberProvider<Runtime>;
 }
 
 pub type EnsureRootOrThreeFourthsCouncil = EnsureOneOf<

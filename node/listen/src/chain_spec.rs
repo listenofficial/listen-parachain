@@ -6,7 +6,7 @@ use listen_primitives::{
 };
 use listen_runtime::{
 	AccountId, AuraId, CouncilConfig, CurrenciesConfig, ElectionsConfig, ListenConfig, Signature,
-	SudoConfig, TechnicalCommitteeConfig, VestingConfig, EXISTENTIAL_DEPOSIT,
+	SudoConfig, TechnicalCommitteeConfig, EXISTENTIAL_DEPOSIT,
 };
 use pallet_currencies::{ListenAssetInfo, ListenAssetMetadata};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -300,7 +300,6 @@ fn testnet_genesis(
 		technical_committee: Default::default(),
 		council: Default::default(),
 		democracy: Default::default(),
-		vesting: Default::default(),
 		session: listen_runtime::SessionConfig {
 			keys: invulnerables
 				.iter()
@@ -320,6 +319,7 @@ fn testnet_genesis(
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
 		tokens: Default::default(),
+		orml_vesting: Default::default(),
 		sudo: SudoConfig { key: Some(get_root()) },
 		listen: ListenConfig {
 			server_id: Some(get_root()),

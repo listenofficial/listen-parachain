@@ -9,6 +9,7 @@ members = [
 	"pallets/dao",
 	"pallets/treasury",
 	"pallets/nft",
+	"pallets/vesting",
 ]
 
 [profile.release]

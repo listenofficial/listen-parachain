@@ -7,16 +7,17 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 pub mod parachains;
-use parachains::*;
 pub use cumulus_primitives_core::ParaId;
 pub use listen_primitives::{
 	constants::{currency::*, time::*},
-	Amount, CurrencyId, Index, Balance, AccountId, BlockNumber, Signature, Hash, AccountIndex,Header
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, Hash, Header, Index,
+	Signature,
 };
 pub use orml_xcm_support::{
 	DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
 };
 use pallet_currencies::BasicCurrencyAdapter;
+use parachains::*;
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{
@@ -27,9 +28,8 @@ use sp_core::{
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		BlockNumberProvider,
-		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
-		IdentifyAccount, Verify,
+		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, BlockNumberProvider,
+		Convert, ConvertInto, IdentifyAccount, Verify,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiSignature, Percent,
@@ -205,21 +205,21 @@ construct_runtime!(
 
 /// fixme
 parameter_types! {
-	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
-	pub KTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(native::KT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
-	pub KICOPerSecond: (AssetId, u128) = (MultiLocation::new(
-				1,
-				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec()))
-			).into(), ksm_per_second() * 100);
-	pub LTPerSecond: (AssetId, u128) = (MultiLocation::new(
-				1,
-				X2(Parachain(listen::PARA_ID.into()), GeneralKey(listen::LT::TokenSymbol.to_vec()))
-			).into(), ksm_per_second() * 100);
-	pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(
-				1,
-				X2(Parachain(listen::PARA_ID.into()), GeneralKey(listen::USDT::TokenSymbol.to_vec()))
-			).into(), ksm_per_second() * 100);
-	}
+pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
+pub KTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(native::KT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
+pub KICOPerSecond: (AssetId, u128) = (MultiLocation::new(
+			1,
+			X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec()))
+		).into(), ksm_per_second() * 100);
+pub LTPerSecond: (AssetId, u128) = (MultiLocation::new(
+			1,
+			X2(Parachain(listen::PARA_ID.into()), GeneralKey(listen::LT::TokenSymbol.to_vec()))
+		).into(), ksm_per_second() * 100);
+pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(
+			1,
+			X2(Parachain(listen::PARA_ID.into()), GeneralKey(listen::USDT::TokenSymbol.to_vec()))
+		).into(), ksm_per_second() * 100);
+}
 
 pub type Trader = (
 	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
@@ -235,7 +235,10 @@ fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
 		// native::USDT::AssetId => native::USDT::TokenSymbol,
 		_ => return None,
 	};
-	Some(MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(token_symbol.to_vec()))))
+	Some(MultiLocation::new(
+		1,
+		X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(token_symbol.to_vec())),
+	))
 }
 
 pub struct CurrencyIdConvert;
@@ -249,20 +252,22 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 
 			kico::KICO::AssetId => Some(MultiLocation::new(
 				1,
-				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec()))
+				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec())),
 			)),
 
 			listen::LT::AssetId => Some(MultiLocation::new(
 				1,
-				X2(Parachain(listen::PARA_ID.into()), GeneralKey(listen::LT::TokenSymbol.to_vec()))
+				X2(Parachain(listen::PARA_ID.into()), GeneralKey(listen::LT::TokenSymbol.to_vec())),
 			)),
 			listen::USDT::AssetId => Some(MultiLocation::new(
 				1,
-				X2(Parachain(listen::PARA_ID.into()), GeneralKey(listen::USDT::TokenSymbol.to_vec()))
+				X2(
+					Parachain(listen::PARA_ID.into()),
+					GeneralKey(listen::USDT::TokenSymbol.to_vec()),
+				),
 			)),
 
 			_ => None,
-
 		}
 	}
 }
@@ -270,31 +275,24 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		if location == MultiLocation::parent() {
-			return Some(kusama::KSM::AssetId.into());
+			return Some(kusama::KSM::AssetId.into())
 		}
 		match location {
-			MultiLocation {
-				parents: 1,
-				interior: X2(Parachain(para_id), GeneralKey(key)),
-			} => {
+			MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } =>
 				match (para_id, &key[..]) {
 					(kico::PARA_ID, kico::KICO::TokenSymbol) => Some(kico::KICO::AssetId.into()),
 					(listen::PARA_ID, listen::LT::TokenSymbol) => Some(listen::LT::AssetId.into()),
-					(listen::PARA_ID, listen::USDT::TokenSymbol) => Some(listen::USDT::AssetId.into()),
+					(listen::PARA_ID, listen::USDT::TokenSymbol) =>
+						Some(listen::USDT::AssetId.into()),
 
-					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => {
-						match key {
-							native::KT::TokenSymbol => Some(native::KT::AssetId.into()),
-							_ => None,
-						}
+					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => match key {
+						native::KT::TokenSymbol => Some(native::KT::AssetId.into()),
+						_ => None,
 					},
 					_ => None,
-				}
-
-			}
+				},
 			_ => None,
 		}
-
 	}
 }
 
@@ -1173,7 +1171,6 @@ impl pallet_scheduler::Config for Runtime {
 	type NoPreimagePostponement = NoPreimagePostponement;
 }
 
-
 impl orml_unknown_tokens::Config for Runtime {
 	type Event = Event;
 }
@@ -1183,10 +1180,11 @@ parameter_types! {
 	pub const MaxVestingSchedules: u32 = 100;
 }
 
-
 pub struct RelayChainBlockNumberProvider<T>(sp_std::marker::PhantomData<T>);
 
-impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider for RelayChainBlockNumberProvider<T> {
+impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider
+	for RelayChainBlockNumberProvider<T>
+{
 	type BlockNumber = BlockNumber;
 
 	fn current_block_number() -> Self::BlockNumber {

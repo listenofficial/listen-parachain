@@ -12,7 +12,8 @@ use parachains::*;
 pub use cumulus_primitives_core::ParaId;
 pub use listen_primitives::{
 	constants::{currency::*, time::*},
-	Amount, CurrencyId, Index, Balance, AccountId, BlockNumber, Signature, Hash, AccountIndex,Header
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, Hash, Header, Index,
+	Signature,
 };
 pub use orml_xcm_support::{
 	DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
@@ -28,9 +29,8 @@ use sp_core::{
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		BlockNumberProvider,
-		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, ConvertInto,
-		IdentifyAccount, Verify,
+		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, BlockNumberProvider,
+		Convert, ConvertInto, IdentifyAccount, Verify,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiSignature, Percent,
@@ -262,10 +262,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 			)),
 			kisten::KT::AssetId => Some(MultiLocation::new(
 				1,
-				X2(
-					Parachain(kisten::PARA_ID.into()),
-					GeneralKey(kisten::KT::TokenSymbol.to_vec()),
-				),
+				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KT::TokenSymbol.to_vec())),
 			)),
 			_ => None,
 		}
@@ -281,8 +278,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } =>
 				match (para_id, &key[..]) {
 					(kico::PARA_ID, kico::KICO::TokenSymbol) => Some(kico::KICO::AssetId.into()),
-					(kisten::PARA_ID, kisten::KT::TokenSymbol) =>
-						Some(kisten::KT::AssetId.into()),
+					(kisten::PARA_ID, kisten::KT::TokenSymbol) => Some(kisten::KT::AssetId.into()),
 
 					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => match key {
 						native::LT::TokenSymbol => Some(native::LT::AssetId.into()),
@@ -513,10 +509,11 @@ parameter_types! {
 	pub const MaxVestingSchedules: u32 = 100;
 }
 
-
 pub struct RelayChainBlockNumberProvider<T>(sp_std::marker::PhantomData<T>);
 
-impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider for RelayChainBlockNumberProvider<T> {
+impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider
+	for RelayChainBlockNumberProvider<T>
+{
 	type BlockNumber = BlockNumber;
 
 	fn current_block_number() -> Self::BlockNumber {
@@ -1198,7 +1195,6 @@ impl pallet_scheduler::Config for Runtime {
 	type PreimageProvider = ();
 	type NoPreimagePostponement = NoPreimagePostponement;
 }
-
 
 impl orml_unknown_tokens::Config for Runtime {
 	type Event = Event;

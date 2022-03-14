@@ -1,4 +1,3 @@
-
 /// kico
 pub mod kico {
 	pub const PARA_ID: u32 = 2017;
@@ -43,4 +42,3 @@ pub mod kusama {
 pub mod statemine {
 	pub const PARA_ID: u32 = 1000;
 }
-

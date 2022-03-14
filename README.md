@@ -39,6 +39,7 @@ cargo build --release
 ./polkadot  --chain rococo-local-cfde.json --alice --base-path alice-db --ws-port 9988 --port 40338 --node-key bd2f9ba01b71cae0cb641005b8f5a2c8ca0bcb41ce670300ad34829305244bec  --ws-external --rpc-external --rpc-methods=Unsafe --rpc-cors=all
 ./polkadot  --chain rococo-local-cfde.json --bob --base-path bob-db --ws-port 9989 --port 40339  --ws-external --rpc-external --rpc-methods=Unsafe –rpc-cors=all
 ```
+> /ip4/47.108.199.133/tcp/30334/p2p/12D3KooWK7kGugDnzY92ZVqsRspk5LJQRyvGujnCaCwhBafeJi2k
 #### parachain
 ```buildoutcfg
 ./listen-collator export-genesis-wasm > genesis-wasm

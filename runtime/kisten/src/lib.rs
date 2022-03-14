@@ -6,10 +6,12 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+pub mod parachains;
+use parachains::*;
 pub use cumulus_primitives_core::ParaId;
 pub use listen_primitives::{
-	constants::{currency::*, parachains::*, time::*},
-	Amount, CurrencyId, Index, *,
+	constants::{currency::*, time::*},
+	Amount, CurrencyId, Index, Balance, AccountId, BlockNumber, Signature, Hash, AccountIndex,Header
 };
 pub use orml_xcm_support::{
 	DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
@@ -204,43 +206,36 @@ construct_runtime!(
 /// fixme
 parameter_types! {
 	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
-	pub LTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
-		GeneralKey(native::LT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
-	pub LTPPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
-		GeneralKey(native::LTP::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
-	pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
-		GeneralKey(native::USDT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
+	pub KTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(native::KT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
 	pub KICOPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
 				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec()))
 			).into(), ksm_per_second() * 100);
-	pub KLTPerSecond: (AssetId, u128) = (MultiLocation::new(
+	pub LTPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
-				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KLT::TokenSymbol.to_vec()))
+				X2(Parachain(listen::PARA_ID.into()), GeneralKey(listen::LT::TokenSymbol.to_vec()))
 			).into(), ksm_per_second() * 100);
-
-}
+	pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(
+				1,
+				X2(Parachain(listen::PARA_ID.into()), GeneralKey(listen::USDT::TokenSymbol.to_vec()))
+			).into(), ksm_per_second() * 100);
+	}
 
 pub type Trader = (
 	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
-	FixedRateOfFungible<LTPerSecond, ToTreasury>,
-	FixedRateOfFungible<LTPPerSecond, ToTreasury>,
-	FixedRateOfFungible<USDTPerSecond, ToTreasury>,
+	FixedRateOfFungible<KTPerSecond, ToTreasury>,
 	FixedRateOfFungible<KICOPerSecond, ToTreasury>,
-	FixedRateOfFungible<KLTPerSecond, ToTreasury>,
+	FixedRateOfFungible<LTPerSecond, ToTreasury>,
+	FixedRateOfFungible<USDTPerSecond, ToTreasury>,
 );
 
 fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
 	let token_symbol = match id {
-		native::LT::AssetId => native::LT::TokenSymbol,
-		native::USDT::AssetId => native::USDT::TokenSymbol,
-		native::LTP::AssetId => native::LTP::TokenSymbol,
+		native::KT::AssetId => native::KT::TokenSymbol,
+		// native::USDT::AssetId => native::USDT::TokenSymbol,
 		_ => return None,
 	};
-	Some(MultiLocation::new(
-		1,
-		X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(token_symbol.to_vec())),
-	))
+	Some(MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(token_symbol.to_vec()))))
 }
 
 pub struct CurrencyIdConvert;
@@ -250,21 +245,24 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 		match id {
 			kusama::KSM::AssetId => Some(MultiLocation::parent()),
 
-			native::LT::AssetId | native::USDT::AssetId | native::LTP::AssetId =>
-				native_currency_location(id),
+			native::KT::AssetId => native_currency_location(id),
 
 			kico::KICO::AssetId => Some(MultiLocation::new(
 				1,
-				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec())),
+				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec()))
 			)),
-			kisten::KLT::AssetId => Some(MultiLocation::new(
+
+			listen::LT::AssetId => Some(MultiLocation::new(
 				1,
-				X2(
-					Parachain(kisten::PARA_ID.into()),
-					GeneralKey(kisten::KLT::TokenSymbol.to_vec()),
-				),
+				X2(Parachain(listen::PARA_ID.into()), GeneralKey(listen::LT::TokenSymbol.to_vec()))
 			)),
+			listen::USDT::AssetId => Some(MultiLocation::new(
+				1,
+				X2(Parachain(listen::PARA_ID.into()), GeneralKey(listen::USDT::TokenSymbol.to_vec()))
+			)),
+
 			_ => None,
+
 		}
 	}
 }
@@ -272,25 +270,31 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		if location == MultiLocation::parent() {
-			return Some(kusama::KSM::AssetId.into())
+			return Some(kusama::KSM::AssetId.into());
 		}
 		match location {
-			MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } =>
+			MultiLocation {
+				parents: 1,
+				interior: X2(Parachain(para_id), GeneralKey(key)),
+			} => {
 				match (para_id, &key[..]) {
 					(kico::PARA_ID, kico::KICO::TokenSymbol) => Some(kico::KICO::AssetId.into()),
-					(kisten::PARA_ID, kisten::KLT::TokenSymbol) =>
-						Some(kisten::KLT::AssetId.into()),
+					(listen::PARA_ID, listen::LT::TokenSymbol) => Some(listen::LT::AssetId.into()),
+					(listen::PARA_ID, listen::USDT::TokenSymbol) => Some(listen::USDT::AssetId.into()),
 
-					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => match key {
-						native::LT::TokenSymbol => Some(native::LT::AssetId.into()),
-						native::USDT::TokenSymbol => Some(native::USDT::AssetId.into()),
-						native::LTP::TokenSymbol => Some(native::LTP::AssetId.into()),
-						_ => None,
+					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => {
+						match key {
+							native::KT::TokenSymbol => Some(native::KT::AssetId.into()),
+							_ => None,
+						}
 					},
 					_ => None,
-				},
+				}
+
+			}
 			_ => None,
 		}
+
 	}
 }
 

@@ -6,10 +6,13 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+pub mod parachains;
+use parachains::*;
+
 pub use cumulus_primitives_core::ParaId;
 pub use listen_primitives::{
-	constants::{currency::*, parachains::*, time::*},
-	Amount, CurrencyId, Index, *,
+	constants::{currency::*, time::*},
+	Amount, CurrencyId, Index, Balance, AccountId, BlockNumber, Signature, Hash, AccountIndex,Header
 };
 pub use orml_xcm_support::{
 	DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
@@ -214,9 +217,9 @@ parameter_types! {
 				1,
 				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec()))
 			).into(), ksm_per_second() * 100);
-	pub KLTPerSecond: (AssetId, u128) = (MultiLocation::new(
+	pub KTPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
-				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KLT::TokenSymbol.to_vec()))
+				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KT::TokenSymbol.to_vec()))
 			).into(), ksm_per_second() * 100);
 
 }
@@ -227,7 +230,7 @@ pub type Trader = (
 	FixedRateOfFungible<LTPPerSecond, ToTreasury>,
 	FixedRateOfFungible<USDTPerSecond, ToTreasury>,
 	FixedRateOfFungible<KICOPerSecond, ToTreasury>,
-	FixedRateOfFungible<KLTPerSecond, ToTreasury>,
+	FixedRateOfFungible<KTPerSecond, ToTreasury>,
 );
 
 fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
@@ -257,11 +260,11 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				1,
 				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec())),
 			)),
-			kisten::KLT::AssetId => Some(MultiLocation::new(
+			kisten::KT::AssetId => Some(MultiLocation::new(
 				1,
 				X2(
 					Parachain(kisten::PARA_ID.into()),
-					GeneralKey(kisten::KLT::TokenSymbol.to_vec()),
+					GeneralKey(kisten::KT::TokenSymbol.to_vec()),
 				),
 			)),
 			_ => None,
@@ -278,8 +281,8 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } =>
 				match (para_id, &key[..]) {
 					(kico::PARA_ID, kico::KICO::TokenSymbol) => Some(kico::KICO::AssetId.into()),
-					(kisten::PARA_ID, kisten::KLT::TokenSymbol) =>
-						Some(kisten::KLT::AssetId.into()),
+					(kisten::PARA_ID, kisten::KT::TokenSymbol) =>
+						Some(kisten::KT::AssetId.into()),
 
 					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => match key {
 						native::LT::TokenSymbol => Some(native::LT::AssetId.into()),

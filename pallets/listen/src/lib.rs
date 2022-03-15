@@ -48,7 +48,7 @@ use orml_tokens::{self, BalanceLock};
 use orml_traits::MultiCurrency;
 use pallet_multisig;
 use pallet_timestamp as timestamp;
-pub use room_id::{AccountIdConversion as RoomIdConvertor, RoomId};
+pub use room_id::{AccountIdConversion as RoomTreasuryIdConvertor, RoomTreasuryId};
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
@@ -65,6 +65,8 @@ use sp_std::{
 	result,
 };
 use vote::*;
+
+pub type RoomId = u64;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -107,7 +109,7 @@ pub mod pallet {
 		type RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin: EnsureOrigin<Self::Origin>;
 		type HalfRoomCouncilOrigin: EnsureOrigin<Self::Origin>;
 		type RoomTreasuryHandler: RoomTreasuryHandler<u64>;
-		type RoomIdConvert: RoomIdConvertor<Self::AccountId>;
+		// type RoomIdConvert: RoomIdConvertor<Self::AccountId>;
 		#[pallet::constant]
 		type VoteExpire: Get<Self::BlockNumber>;
 		#[pallet::constant]
@@ -526,7 +528,7 @@ pub mod pallet {
 
 			let group_info = GroupInfo {
 				group_id,
-				room_treasury_id: group_id.into_account(),
+				room_treasury_id: RoomTreasuryId(group_id).into_account(),
 				create_payment,
 				last_block_of_get_the_reward: Self::now(),
 				group_manager: who.clone(),
@@ -552,7 +554,7 @@ pub mod pallet {
 
 			<AllRoom<T>>::insert(group_id, group_info);
 			Self::add_invitee_info(&who, group_id);
-			<NextGroupId<T>>::try_mutate(|RoomId(h)| -> DispatchResult {
+			<NextGroupId<T>>::try_mutate(|h| -> DispatchResult {
 				*h = h.checked_add(1u64).ok_or(Error::<T>::Overflow)?;
 				Ok(())
 			})?;

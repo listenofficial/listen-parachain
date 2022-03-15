@@ -4,17 +4,17 @@ use scale_info::TypeInfo;
 use sp_std::prelude::*;
 
 #[derive(Decode, Encode, Copy, Clone, Default, PartialEq, Debug, TypeInfo)]
-pub struct RoomId(pub u64);
+pub struct RoomTreasuryId(pub u64);
 
-impl From<RoomId> for u64 {
-	fn from(x: RoomId) -> Self {
+impl From<RoomTreasuryId> for u64 {
+	fn from(x: RoomTreasuryId) -> Self {
 		x.0
 	}
 }
 
-impl From<u64> for RoomId {
+impl From<u64> for RoomTreasuryId {
 	fn from(x: u64) -> Self {
-		RoomId(x)
+		RoomTreasuryId(x)
 	}
 }
 
@@ -27,7 +27,7 @@ pub trait AccountIdConversion<AccountId>: Sized {
 	fn try_from_account(a: &AccountId) -> Option<Self>;
 }
 
-impl<T: Encode + Decode> AccountIdConversion<T> for RoomId {
+impl<T: Encode + Decode> AccountIdConversion<T> for RoomTreasuryId {
 	fn into_account(&self) -> T {
 		(b"room", self).using_encoded(|b| T::decode(&mut TrailingZeroInput(b))).unwrap()
 	}

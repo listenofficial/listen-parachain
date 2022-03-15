@@ -41,6 +41,7 @@ use sp_std::{
 // mod mock;
 
 pub type Attributes = BTreeMap<Vec<u8>, Vec<u8>>;
+pub type NftLevel = Vec<u8>;
 
 /// Class info
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
@@ -77,18 +78,6 @@ pub struct TokenData<Hash, AccountId, Attribute, Balance, NftStatus, ClassId> {
 	status: NftStatus,
 }
 
-/// nft level
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
-pub enum NftLevel {
-	Rookie,
-	Angle,
-	WallStreetElite,
-	UnicornHunter,
-	Mafia,
-	GrandMaster,
-	Other(Vec<u8>),
-}
-
 #[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug, TypeInfo)]
 pub struct SaleInfo<TokenId, Balance, BlockNumber, AccountId> {
 	seller: AccountId,
@@ -107,12 +96,6 @@ pub struct NftStatus {
 impl Default for NftStatus {
 	fn default() -> Self {
 		Self { is_in_sale: false, is_active_image: false, is_claimed: false }
-	}
-}
-
-impl Default for NftLevel {
-	fn default() -> Self {
-		Self::Rookie
 	}
 }
 
@@ -419,11 +402,6 @@ impl<T: Config> Pallet<T> {
 		metadata: Vec<u8>,
 		data: ClassDataOf<T>,
 	) -> Result<T::ClassId, DispatchError> {
-		ensure!(IssuerOf::<T>::get(&data.level).is_none(), Error::<T>::LevelInUse);
-		match data.level {
-			NftLevel::Other(_) => return Err(Error::<T>::NoPermissionNFTLevel)?,
-			_ => {},
-		}
 
 		let bounded_metadata: BoundedVec<u8, T::MaxClassMetadata> =
 			metadata.try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?;

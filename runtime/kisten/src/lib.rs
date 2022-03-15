@@ -131,10 +131,10 @@ pub fn ksm_per_second() -> u128 {
 
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("listen-parachain"),
-	impl_name: create_runtime_str!("listen-parachain"),
+	spec_name: create_runtime_str!("kisten-parachain"),
+	impl_name: create_runtime_str!("kisten-parachain"),
 	authoring_version: 1,
-	spec_version: 2022031401,
+	spec_version: 2022031501,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,

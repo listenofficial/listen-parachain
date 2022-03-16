@@ -352,7 +352,7 @@ fn testnet_genesis(
 							symbol: "KTP".into(),
 							decimals: 12u8,
 						}),
-					},
+					},https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F18.167.37.162%3A9944#/chainstate
 					ENDOWMENT,
 				),
 			],

@@ -281,6 +281,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } =>
 				match (para_id, &key[..]) {
 					(kico::PARA_ID, kico::KICO::TokenSymbol) => Some(kico::KICO::AssetId.into()),
+
 					(listen::PARA_ID, listen::LT::TokenSymbol) => Some(listen::LT::AssetId.into()),
 					(listen::PARA_ID, listen::USDT::TokenSymbol) =>
 						Some(listen::USDT::AssetId.into()),

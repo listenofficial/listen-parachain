@@ -9,7 +9,6 @@ pub mod kico {
 
 /// native
 pub mod native {
-	// pub const PARA_ID: u32 = 1001;
 	pub mod KT {
 		pub const AssetId: u32 = 0;
 		pub const TokenSymbol: &[u8] = "KT".as_bytes();
@@ -33,7 +32,7 @@ pub mod listen {
 /// kusama
 pub mod kusama {
 	pub mod KSM {
-		pub const AssetId: u32 = 1;
+		pub const AssetId: u32 = 2;
 		pub const TokenSymbol: &[u8] = "KSM".as_bytes();
 	}
 }

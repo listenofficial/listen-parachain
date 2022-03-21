@@ -344,16 +344,52 @@ fn testnet_genesis(
 					ENDOWMENT,
 				),
 				(
-					101,
+					1,
 					ListenAssetInfo {
 						owner: get_root(),
 						metadata: Some(ListenAssetMetadata {
-							name: "kisten point".into(),
-							symbol: "KTP".into(),
+							name: "like".into(),
+							symbol: "LIKE".into(),
 							decimals: 12u8,
 						}),
 					},
 					ENDOWMENT,
+				),
+				(
+					2,
+					ListenAssetInfo {
+						owner: get_root(),
+						metadata: Some(ListenAssetMetadata {
+							name: "kusama".into(),
+							symbol: "KSM".into(),
+							decimals: 12u8,
+						}),
+					},
+					0u128,
+				),
+				(
+					5,
+					ListenAssetInfo {
+						owner: get_root(),
+						metadata: Some(ListenAssetMetadata {
+							name: "usdt".into(),
+							symbol: "USDT".into(),
+							decimals: 12u8,
+						}),
+					},
+					0u128,
+				),
+				(
+					100,
+					ListenAssetInfo {
+						owner: get_root(),
+						metadata: Some(ListenAssetMetadata {
+							name: "listen".into(),
+							symbol: "LT".into(),
+							decimals: 12u8,
+						}),
+					},
+					0u128,
 				),
 			],
 		},

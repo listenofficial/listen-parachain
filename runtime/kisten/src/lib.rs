@@ -867,7 +867,7 @@ parameter_types! {
 	pub const RoomProportion: Percent = Percent::from_percent(1);
 	pub const CouncilMaxNumber: u32 = 15;
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-	pub const GetLikeCurrencyId: CurrencyId = 101;
+	pub const GetLikeCurrencyId: CurrencyId = 1;
 
 }
 

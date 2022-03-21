@@ -432,7 +432,7 @@ parameter_types! {
 pub struct BaseCallFilter;
 impl Contains<Call> for BaseCallFilter {
 	fn contains(call: &Call) -> bool {
-		matches!(call, Call::Balances(_) |
+		!matches!(call, Call::Balances(_) |
 			Call::Dao(_) |
 			Call::Listen(_) |
 			Call::RoomTreasury(_) |

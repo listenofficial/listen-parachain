@@ -402,7 +402,6 @@ impl<T: Config> Pallet<T> {
 		metadata: Vec<u8>,
 		data: ClassDataOf<T>,
 	) -> Result<T::ClassId, DispatchError> {
-
 		let bounded_metadata: BoundedVec<u8, T::MaxClassMetadata> =
 			metadata.try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?;
 

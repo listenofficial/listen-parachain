@@ -251,8 +251,17 @@ fn testnet_genesis(
 		},
 		balances: listen_runtime::BalancesConfig {
 			balances: match endowed_accounts {
-				Some(x) => x.iter().cloned().map(|k| (k, ENDOWMENT)).collect(),
+				Some(x) => {
+					let mut accounts = x
+						.iter()
+						.cloned()
+						.map(|k| (k, ENDOWMENT))
+						.collect::<Vec<(AccountId, Balance)>>();
+					accounts.push((get_root(), 1000 * UNIT));
+					accounts
+				},
 				_ => vec![
+					(get_root(), 1000 * UNIT),
 					(
 						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
 							.into(),
@@ -285,7 +294,6 @@ fn testnet_genesis(
 					),
 				],
 			},
-			// balances: endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect(),
 		},
 		parachain_info: listen_runtime::ParachainInfoConfig { parachain_id: id },
 		collator_selection: listen_runtime::CollatorSelectionConfig {

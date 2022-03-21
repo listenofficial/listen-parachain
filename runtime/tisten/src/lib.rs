@@ -157,13 +157,13 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
-		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>},
+		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>} = 5,
+		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 6,
 
 		// Monetary stuff.
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
 		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 12,
-
 
 		// Collator support. The order of these 4 are important and shall not change.
 		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
@@ -189,11 +189,9 @@ construct_runtime!(
 		Listen: pallet_listen::{Pallet, Storage, Call, Event<T>, Config<T>} = 43,
 		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage, Config<T>} = 44,
 		RoomTreasury: pallet_treasury::{Pallet, Storage, Call, Event<T>} = 45,
-		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 46,
 		Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 47,
 		OrmlVesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 48,
 
-		// Dao
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} =50,
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 51,
 		Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 52,
@@ -434,10 +432,11 @@ parameter_types! {
 pub struct BaseCallFilter;
 impl Contains<Call> for BaseCallFilter {
 	fn contains(call: &Call) -> bool {
-		if let Call::Balances(func) = call {
-			return false
-		}
-		true
+		matches!(call, Call::Balances(_) |
+			Call::Dao(_) |
+			Call::Listen(_) |
+			Call::RoomTreasury(_) |
+			Call::Nft(_))
 	}
 }
 

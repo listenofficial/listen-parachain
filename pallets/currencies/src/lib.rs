@@ -185,7 +185,7 @@ pub mod module {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Users create the asset.
-		#[pallet::weight(10000)]
+		#[pallet::weight(200_000_000)]
 		pub fn create_asset(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -212,7 +212,7 @@ pub mod module {
 		/// Users set the asset metadata.
 		///
 		/// You should have created the asset first.
-		#[pallet::weight(10000)]
+		#[pallet::weight(200_000_000)]
 		pub fn set_metadata(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
@@ -246,7 +246,7 @@ pub mod module {
 		}
 
 		/// Users destroy their own assets.
-		#[pallet::weight(10000)]
+		#[pallet::weight(200_000_000)]
 		pub fn burn(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,

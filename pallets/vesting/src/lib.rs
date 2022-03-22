@@ -187,10 +187,6 @@ pub mod module {
 		ValueQuery,
 	>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn zero_block_to_relay_block)]
-	pub type ZeroBlockToRelayBlock<T: Config> = StorageValue<_, T::BlockNumber>;
-
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub vesting: Vec<ScheduledItem<T>>,
@@ -242,14 +238,7 @@ pub mod module {
 	pub struct Pallet<T>(_);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_initialize(n: T::BlockNumber) -> Weight {
-			if Self::zero_block_to_relay_block().is_none() {
-				ZeroBlockToRelayBlock::<T>::put(T::BlockNumberProvider::current_block_number());
-			}
-			0u32 as Weight
-		}
-	}
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

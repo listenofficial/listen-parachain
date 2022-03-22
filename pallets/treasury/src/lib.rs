@@ -168,7 +168,6 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-
 		#[pallet::weight(200_000_000)]
 		pub fn propose_spend(
 			origin: OriginFor<T>,
@@ -196,7 +195,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-
 		#[pallet::weight(200_000_000)]
 		pub fn reject_proposal(
 			origin: OriginFor<T>,
@@ -214,7 +212,6 @@ pub mod pallet {
 			Self::deposit_event(Event::<T>::Rejected(proposal_id, value));
 			Ok(())
 		}
-
 
 		#[pallet::weight(200_000_000)]
 		pub fn approve_proposal(

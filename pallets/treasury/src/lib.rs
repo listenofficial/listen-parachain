@@ -163,13 +163,12 @@ pub mod pallet {
 		InsufficientProposersBalance,
 		/// No proposal or bounty at that index.
 		InvalidIndex,
-		/// 房间没有议案
 		RoomHaveNoProposal,
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// 提一个消费议案
+
 		#[pallet::weight(200_000_000)]
 		pub fn propose_spend(
 			origin: OriginFor<T>,
@@ -197,7 +196,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// 拒绝议案
+
 		#[pallet::weight(200_000_000)]
 		pub fn reject_proposal(
 			origin: OriginFor<T>,
@@ -216,7 +215,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// 赞成议案（加入待执行队列)
+
 		#[pallet::weight(200_000_000)]
 		pub fn approve_proposal(
 			origin: OriginFor<T>,
@@ -237,7 +236,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// 手动获取资金
+		/// Users receive funds manually
 		#[pallet::weight(200_000_000)]
 		pub fn spend_fund(origin: OriginFor<T>, room_id: RoomIndex) -> DispatchResult {
 			let who = ensure_signed(origin)?;

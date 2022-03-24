@@ -48,11 +48,7 @@ cargo build --release
 ## PS
 Some of our basic modules, such as multi-asset, cross-chain transfer, come from the [Acala Team](https://github.com/AcalaNetwork/Acala). And some have been modified. Thanks to their talented engineers for their outstanding contribution to the Polkadot community.
 
-## other
-```buildoutcfg
-./listen-collator build-spec --raw > localspec.json
-```
-```buildoutcfg
+
 ./subkey inspect ///xxx
 ./target/release/polkadot key insert --base-path /tmp/node01 \
 --chain customSpecRaw.json \

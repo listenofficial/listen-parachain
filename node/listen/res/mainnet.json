@@ -3,7 +3,8 @@
   "id": "listen",
   "chainType": "Live",
   "bootNodes": [
-    "/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWGrU1Za8tQ6WJCBgo7Dxm2eVpVXk8H1z1Wsshud3RumZe"
+    "/dns/rpc.mainnet.listen.io/tcp/30333/p2p/12D3KooWD2WGGRfDk33d3bncnKs9xfVq1Coy2L473UAeoYvsuA6i",
+    "/dns/wss.mainnet.listen.io/tcp/30333/p2p/12D3KooW9yvBWUGkKKu56CPh9KhYacp1koez1ASbdYt2xdXrPoCb"
   ],
   "telemetryEndpoints": [
     [

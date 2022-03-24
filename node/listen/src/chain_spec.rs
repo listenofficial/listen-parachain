@@ -36,8 +36,12 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
 	ChainSpec::from_json_bytes(&include_bytes!("../res/localspec.json")[..])
 }
 
+pub fn mainnet_config() -> Result<ChainSpec, String> {
+	ChainSpec::from_json_bytes(&include_bytes!("../res/mainnet.json")[..])
+}
+
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const PARA_ID: u32 = 2026;
+const PARA_ID: u32 = 2117;
 
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
@@ -191,9 +195,10 @@ pub fn local_testnet_config() -> ChainSpec {
 }
 
 pub fn staging_config() -> ChainSpec {
+	let mainnet_para_id: u32 = 2117;
 	ChainSpec::from_genesis(
 		// Name
-		"Listen",
+		"Listen Network",
 		// ID
 		"listen",
 		ChainType::Live,
@@ -215,11 +220,14 @@ pub fn staging_config() -> ChainSpec {
 					),
 				],
 				None,
-				PARA_ID.into(),
+				mainnet_para_id.into(),
 			)
 		},
 		// Bootnodes
-		vec![],
+		vec![
+			String::from("/dns/rpc.mainnet.listen.io/tcp/30333/p2p/12D3KooWD2WGGRfDk33d3bncnKs9xfVq1Coy2L473UAeoYvsuA6i").try_into().unwrap(),
+			String::from("/dns/wss.mainnet.listen.io/tcp/30333/p2p/12D3KooW9yvBWUGkKKu56CPh9KhYacp1koez1ASbdYt2xdXrPoCb").try_into().unwrap(),
+		],
 		// Telemetry
 		get_telemetry_endpoints(),
 		// Protocol ID
@@ -230,7 +238,7 @@ pub fn staging_config() -> ChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "kusama".into(), // You MUST set this to the correct network!
-			para_id: PARA_ID.into(),
+			para_id: mainnet_para_id.into(),
 		},
 	)
 }
@@ -272,24 +280,21 @@ fn testnet_genesis(
 							.into(),
 						1000 * UNIT,
 					),
+
 					(
-						hex!["a6251784d54fbbdd7d878be7fa150b9d87472f2a9a0c7d74c81db5f8534d9965"]
-							.into(),
-						Percent::from_percent(80) * MAX_ISSUANCE,
+						AccountId32::from_string("5CPz1Zwv49d6BkkdpQFRp81EfME8Jsmzxe89rbm6JbRskgk1").unwrap(),
+						MAX_ISSUANCE / 1000,
 					),
 					(
-						hex!["885b79207efbc35eb824ae58eb8faa8ad2547b47c1c21b90f1bf38ab39100105"]
-							.into(),
+						AccountId32::from_string("5FsKkmUvb4UBq2RwAFH9b8E35GpbCrAbHRRVgTceeFzYimPo").unwrap(),
 						Percent::from_percent(10) * MAX_ISSUANCE,
 					),
 					(
-						hex!["e4768b6973c02f524f141b409083feedc799f8956ec4511cd02f96c238dff94c"]
-							.into(),
+						AccountId32::from_string("5H9Kw8MJYNrXpRCNSxqQw8VwwtWvt5pP3wuLkv3mZnFUiWEU").unwrap(),
 						Percent::from_percent(5) * MAX_ISSUANCE,
 					),
 					(
-						hex!["7c4282956be8c433f5e31b09ce5f59ca318ba14074c643eee79ee0fd8aaf0b18"]
-							.into(),
+						AccountId32::from_string("5GxuJP7KpBBzjAbtV3WzYB8Svb9RrbMmYLxAQTiWbGkp8jyQ").unwrap(),
 						Percent::from_percent(5) * MAX_ISSUANCE,
 					),
 				],

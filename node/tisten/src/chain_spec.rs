@@ -195,7 +195,7 @@ pub fn local_testnet_config() -> ChainSpec {
 }
 
 pub fn staging_config() -> ChainSpec {
-	let mainnet_para_id: u32 = 2117;
+	let mainnet_para_id: u32 = 2118;
 	ChainSpec::from_genesis(
 		// Name
 		"Listen Network",

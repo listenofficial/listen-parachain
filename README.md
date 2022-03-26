@@ -49,15 +49,13 @@ cd target/release
 ./listen-collator --collator --base-path db --pruning archive --state-cache-size=0 -- --execution wasm --chain kusama --unsafe-pruning --pruning=1000 --state-cache-size=0
 ```
 ## 3. Learn More
-* [Listen Official Website](https://listen.io)
-* Provids the RPC for Url [https://polkadot.js.org/apps](https://polkadot.js.org/apps/)
-```buildoutcfg
-wss://rpc.mainnet.listen.io
-wss://wss.mainnet.listen.io
-```
-* [Listen Mainnet Explorer](https://scan.listen.io)
-* [Twitter](https://twitter.com/Listen_io)
-* [Telegram](https://t.me/listengroup)
+* [***Listen Official Website***](https://listen.io)
+* Provids the RPC in https://polkadot.js.org/apps
+	* [***wss://rpc.mainnet.listen.io***](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Fwss.mainnet.listen.io#/explorer)
+	* [***wss://rpc.mainnet.listen.io***](https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Frpc.mainnet.listen.io#/explorer)
+* [***Listen Mainnet Explorer***](https://scan.listen.io)
+* [***Twitter***](https://twitter.com/Listen_io)
+* [***Telegram***](https://t.me/listengroup)
 
 
 

@@ -43,11 +43,11 @@ cd target/release
 ```
 ## 3. Learn More
 * [Listen Official Website](https://listen.io)
-* Provids the RPC for Url `https://polkadot.js.org/apps/`
-	```buildoutcfg
-		wss://rpc.mainnet.listen.io
- 	wss://wss.mainnet.listen.io
-	```
+* Provids the RPC for Url [https://polkadot.js.org/apps](https://polkadot.js.org/apps/)
+```buildoutcfg
+wss://rpc.mainnet.listen.io
+wss://wss.mainnet.listen.io
+```
 * [Listen Mainnet Explorer](https://scan.listen.io)
 * [Twitter](https://twitter.com/Listen_io)
 * [Telegram](https://t.me/listengroup)

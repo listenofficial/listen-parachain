@@ -280,21 +280,32 @@ fn testnet_genesis(
 							.into(),
 						1000 * UNIT,
 					),
-
 					(
-						AccountId32::from_string("5CPz1Zwv49d6BkkdpQFRp81EfME8Jsmzxe89rbm6JbRskgk1").unwrap(),
+						AccountId32::from_string(
+							"5CPz1Zwv49d6BkkdpQFRp81EfME8Jsmzxe89rbm6JbRskgk1",
+						)
+						.unwrap(),
 						MAX_ISSUANCE / 1000,
 					),
 					(
-						AccountId32::from_string("5FsKkmUvb4UBq2RwAFH9b8E35GpbCrAbHRRVgTceeFzYimPo").unwrap(),
+						AccountId32::from_string(
+							"5FsKkmUvb4UBq2RwAFH9b8E35GpbCrAbHRRVgTceeFzYimPo",
+						)
+						.unwrap(),
 						Percent::from_percent(10) * MAX_ISSUANCE,
 					),
 					(
-						AccountId32::from_string("5H9Kw8MJYNrXpRCNSxqQw8VwwtWvt5pP3wuLkv3mZnFUiWEU").unwrap(),
+						AccountId32::from_string(
+							"5H9Kw8MJYNrXpRCNSxqQw8VwwtWvt5pP3wuLkv3mZnFUiWEU",
+						)
+						.unwrap(),
 						Percent::from_percent(5) * MAX_ISSUANCE,
 					),
 					(
-						AccountId32::from_string("5GxuJP7KpBBzjAbtV3WzYB8Svb9RrbMmYLxAQTiWbGkp8jyQ").unwrap(),
+						AccountId32::from_string(
+							"5GxuJP7KpBBzjAbtV3WzYB8Svb9RrbMmYLxAQTiWbGkp8jyQ",
+						)
+						.unwrap(),
 						Percent::from_percent(5) * MAX_ISSUANCE,
 					),
 				],

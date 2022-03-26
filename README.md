@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/listen-logo.jpeg?raw=true" alt="image"/>
+  <img src="docs/listen-logo.jpeg?raw=true" alt="image" width="460"/>
 </p>
 
 <h3 align="center">Decentralized social platform</h3>
@@ -11,6 +11,13 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT%2FApache2-blue)](LICENSE)
 
 </div>
+<!-- TOC -->
+
+- [1. Introduce](#1-introduce)
+- [2. Getting Started](#2-getting-started)
+- [3. Learn More](#3-learn-more)
+
+<!-- /TOC -->
 
 ## 1. Introduce
 Listen is a decentralized social platform.

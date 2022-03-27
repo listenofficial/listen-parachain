@@ -54,7 +54,7 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
 };
-use orml_traits::{parameter_type_with_key, MultiCurrency, location::AbsoluteReserveProvider};
+use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_runtime::traits::Zero;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};

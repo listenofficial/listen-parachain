@@ -844,6 +844,25 @@ parameter_types! {
 	pub const RoomMaxProposals: u32 = 100;
 }
 
+pub struct DaoBaseCallFilter;
+impl Contains<Call> for DaoBaseCallFilter {
+	fn contains(call: &Call) -> bool {
+		match call {
+			Call::Listen(func) => match func {
+				pallet_listen::Call::manager_get_reward { .. } |
+				pallet_listen::Call::update_join_cost { .. } |
+				pallet_listen::Call::set_room_privacy { .. } |
+				pallet_listen::Call::set_max_number_of_room_members { .. } |
+				pallet_listen::Call::remove_someone_from_blacklist { .. } |
+				pallet_listen::Call::remove_someone { .. } |
+				pallet_listen::Call::council_reject_disband { .. } => true,
+				_ => false,
+			},
+			_ => false,
+		}
+	}
+}
+
 type RoomCollective = pallet_dao::Instance1;
 impl pallet_dao::Config<RoomCollective> for Runtime {
 	type Origin = Origin;
@@ -854,6 +873,7 @@ impl pallet_dao::Config<RoomCollective> for Runtime {
 	type DefaultVote = pallet_dao::PrimeDefaultVote;
 	type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
 	type ListenHandler = Listen;
+	type BaseCallFilter = DaoBaseCallFilter;
 }
 
 parameter_types! {

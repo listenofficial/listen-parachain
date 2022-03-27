@@ -27,7 +27,9 @@ use frame_support::{
 		PostDispatchInfo,
 	},
 	ensure,
-	traits::{ChangeMembers, Currency, EnsureOrigin, Get, InitializeMembers, ReservableCurrency},
+	traits::{
+		ChangeMembers, Contains, Currency, EnsureOrigin, Get, InitializeMembers, ReservableCurrency,
+	},
 	weights::{DispatchClass, GetDispatchInfo, Pays, Weight},
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
@@ -169,6 +171,7 @@ pub mod pallet {
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 		type ListenHandler: ListenHandler<RoomId, Self::AccountId, DispatchError, u128>;
+		type BaseCallFilter: Contains<Self::Proposal>;
 		#[pallet::constant]
 		type MotionDuration: Get<Self::BlockNumber>;
 		/// Maximum number of proposals allowed to be active in parallel.
@@ -264,6 +267,7 @@ pub mod pallet {
 		/// The given length bound for the proposal was too low.
 		WrongProposalLength,
 		VoteExpire,
+		DisallowFunc,
 	}
 
 	#[pallet::call]
@@ -277,7 +281,10 @@ pub mod pallet {
 			#[pallet::compact] length_bound: u32,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-
+			ensure!(
+				<T as pallet::Config<I>>::BaseCallFilter::contains(&proposal),
+				Error::<T, I>::DisallowFunc
+			);
 			let members = T::ListenHandler::get_room_council(room_id.into())?;
 			let room_owner = T::ListenHandler::get_root(room_id.into())?;
 
@@ -308,7 +315,10 @@ pub mod pallet {
 			#[pallet::compact] length_bound: u32,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-
+			ensure!(
+				<T as pallet::Config<I>>::BaseCallFilter::contains(&proposal),
+				Error::<T, I>::DisallowFunc
+			);
 			let members = T::ListenHandler::get_room_council(room_id.into())?;
 			ensure!(members.contains(&who), Error::<T, I>::NotMember);
 
@@ -369,7 +379,6 @@ pub mod pallet {
 			approve: bool,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-
 			let members = T::ListenHandler::get_room_council(room_id.into())?;
 			let seats = members.len() as MemberCount;
 			ensure!(members.contains(&who), Error::<T, I>::NotMember);

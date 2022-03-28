@@ -34,7 +34,7 @@ pub mod kico {
 
 /// kisten (Test)
 pub mod kisten {
-	pub const PARA_ID: u32 = 2022;
+	pub const PARA_ID: u32 = 2025;
 	pub mod KT {
 		pub const AssetId: u32 = 100;
 		pub const TokenSymbol: &[u8] = "KT".as_bytes();

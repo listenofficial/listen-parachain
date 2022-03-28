@@ -17,7 +17,7 @@ pub mod native {
 
 /// listen
 pub mod listen {
-	pub const PARA_ID: u32 = 1002;
+	pub const PARA_ID: u32 = 2022;
 	pub mod LT {
 		pub const AssetId: u32 = 100;
 		pub const TokenSymbol: &[u8] = "LT".as_bytes();

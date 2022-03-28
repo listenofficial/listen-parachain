@@ -134,7 +134,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("kisten-parachain"),
 	impl_name: create_runtime_str!("kisten-parachain"),
 	authoring_version: 1,
-	spec_version: 2022031501,
+	spec_version: 2022032801,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,

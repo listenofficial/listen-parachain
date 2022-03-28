@@ -37,7 +37,7 @@ pub fn testnet_config() -> Result<ChainSpec, String> {
 }
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const PARA_ID: u32 = 2022;
+const PARA_ID: u32 = 2025;
 
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
@@ -136,59 +136,6 @@ pub fn development_config() -> ChainSpec {
 	)
 }
 
-// pub fn local_testnet_config() -> ChainSpec {
-// 	ChainSpec::from_genesis(
-// 		// Name
-// 		"listen testnet",
-// 		// ID
-// 		"listen_testnet",
-// 		ChainType::Local,
-// 		move || {
-// 			testnet_genesis(
-// 				// initial collators.
-// 				vec![
-// 					(
-// 						get_account_id_from_seed::<sr25519::Public>("Alice"),
-// 						get_collator_keys_from_seed("Alice"),
-// 					),
-// 					(
-// 						get_account_id_from_seed::<sr25519::Public>("Bob"),
-// 						get_collator_keys_from_seed("Bob"),
-// 					),
-// 				],
-// 				Some(vec![
-// 					get_account_id_from_seed::<sr25519::Public>("Alice"),
-// 					get_account_id_from_seed::<sr25519::Public>("Bob"),
-// 					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-// 					get_account_id_from_seed::<sr25519::Public>("Dave"),
-// 					get_account_id_from_seed::<sr25519::Public>("Eve"),
-// 					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-// 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-// 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-// 					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-// 					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-// 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-// 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-// 				]),
-// 				PARA_ID.into(),
-// 			)
-// 		},
-// 		// Bootnodes
-// 		vec![],
-// 		// Telemetry
-// 		get_telemetry_endpoints(),
-// 		// Protocol ID
-// 		Some("listen"),
-// 		// Properties
-// 		None,
-// 		Some(get_properties()),
-// 		// Extensions
-// 		Extensions {
-// 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-// 			para_id: PARA_ID.into(),
-// 		},
-// 	)
-// }
 
 pub fn local_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
@@ -202,19 +149,18 @@ pub fn local_testnet_config() -> ChainSpec {
 				// initial collators.
 				vec![
 					(
-						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
-							.into(),
-						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
-							.unchecked_into(),
+						get_account_id_from_seed::<sr25519::Public>("Alice"),
+						get_collator_keys_from_seed("Alice"),
 					),
 					(
-						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"]
-							.into(),
-						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"]
-							.unchecked_into(),
+						get_account_id_from_seed::<sr25519::Public>("Bob"),
+						get_collator_keys_from_seed("Bob"),
 					),
 				],
-				None,
+				Some(
+					vec![get_account_id_from_seed::<sr25519::Public>("Alice"),
+						get_account_id_from_seed::<sr25519::Public>("Bob")
+				]),
 				PARA_ID.into(),
 			)
 		},
@@ -262,16 +208,6 @@ fn testnet_genesis(
 				},
 				_ => vec![
 					(get_root(), 1000 * UNIT),
-					(
-						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
-							.into(),
-						1000 * UNIT,
-					),
-					(
-						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"]
-							.into(),
-						1000 * UNIT,
-					),
 					(
 						hex!["a6251784d54fbbdd7d878be7fa150b9d87472f2a9a0c7d74c81db5f8534d9965"]
 							.into(),

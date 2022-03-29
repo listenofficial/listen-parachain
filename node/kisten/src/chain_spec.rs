@@ -136,7 +136,6 @@ pub fn development_config() -> ChainSpec {
 	)
 }
 
-
 pub fn local_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		// Name
@@ -157,9 +156,9 @@ pub fn local_testnet_config() -> ChainSpec {
 						get_collator_keys_from_seed("Bob"),
 					),
 				],
-				Some(
-					vec![get_account_id_from_seed::<sr25519::Public>("Alice"),
-						get_account_id_from_seed::<sr25519::Public>("Bob")
+				Some(vec![
+					get_account_id_from_seed::<sr25519::Public>("Alice"),
+					get_account_id_from_seed::<sr25519::Public>("Bob"),
 				]),
 				PARA_ID.into(),
 			)

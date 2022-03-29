@@ -40,8 +40,8 @@ use static_assertions::const_assert;
 use frame_support::{
 	construct_runtime, match_type, parameter_types,
 	traits::{
-		Contains, EnsureOneOf, EqualPrivilegeOnly, Everything, LockIdentifier, Nothing,
-		U128CurrencyToVote,
+		Contains, EnsureOneOf, EnsureOrigin, EqualPrivilegeOnly, Everything, LockIdentifier,
+		Nothing, U128CurrencyToVote,
 	},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
@@ -52,7 +52,7 @@ use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot,
+	EnsureRoot, RawOrigin,
 };
 use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -135,7 +135,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("listen-parachain"),
 	impl_name: create_runtime_str!("listen-parachain"),
 	authoring_version: 1,
-	spec_version: 2022032802,
+	spec_version: 2022032901,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -524,6 +524,28 @@ impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider
 	}
 }
 
+parameter_types! {
+	pub ListenFoundationAccounts: Vec<AccountId> = vec![
+		hex_literal::hex!["942b48158d635dd0f7924031f5823cb4142d449533df32c0a5330b0842d7fc4e"].into(),	// 5FQyoSCbcnodfunhcC7ZpwKkad8JSFxLaZ54aoZyb7HXoX3h
+	];
+}
+
+pub struct EnsureListenFoundation;
+impl EnsureOrigin<Origin> for EnsureListenFoundation {
+	type Success = AccountId;
+	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+			RawOrigin::Signed(caller) =>
+				if ListenFoundationAccounts::get().contains(&caller) {
+					Ok(caller)
+				} else {
+					Err(Origin::from(Some(caller)))
+				},
+			r => Err(Origin::from(r)),
+		})
+	}
+}
+
 impl orml_vesting::Config for Runtime {
 	type Event = Event;
 	type Currency = pallet_balances::Pallet<Runtime>;
@@ -531,6 +553,7 @@ impl orml_vesting::Config for Runtime {
 	type WeightInfo = ();
 	type MaxVestingSchedules = MaxVestingSchedules;
 	type BlockNumberProvider = RelayChainBlockNumberProvider<Runtime>;
+	type VestedTransferOrigin = EnsureListenFoundation;
 }
 
 parameter_types! {

@@ -134,7 +134,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("kisten-parachain"),
 	impl_name: create_runtime_str!("kisten-parachain"),
 	authoring_version: 1,
-	spec_version: 2022032901,
+	spec_version: 2022032902,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1216,8 +1216,11 @@ impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider
 
 parameter_types! {
 	pub ListenFoundationAccounts: Vec<AccountId> = vec![
+		hex_literal::hex!["d8c0376e6207982595036a5857ef96a794716784fcbb736e30f00274d95e5c33"].into(),	// 5GxuJP7KpBBzjAbtV3WzYB8Svb9RrbMmYLxAQTiWbGkp8jyQ
+		hex_literal::hex!["e0b3982f4bcc7d18f5bab773efbb3b0e245d65104eaaa28e5ecbc0c545f7bc27"].into(),	// 5H9Kw8MJYNrXpRCNSxqQw8VwwtWvt5pP3wuLkv3mZnFUiWEU
+		hex_literal::hex!["a842d55126265db0fd114a4cc854f65e7850129cbbd0ade3b24f23820c158665"].into(),	// 5FsKkmUvb4UBq2RwAFH9b8E35GpbCrAbHRRVgTceeFzYimPo
+		hex_literal::hex!["0eb40a404c1010b212e904217261ae0aa852b068298eb02f1a51c60abea6ee2b"].into(),	// 5CPz1Zwv49d6BkkdpQFRp81EfME8Jsmzxe89rbm6JbRskgk1
 		hex_literal::hex!["942b48158d635dd0f7924031f5823cb4142d449533df32c0a5330b0842d7fc4e"].into(),	// 5FQyoSCbcnodfunhcC7ZpwKkad8JSFxLaZ54aoZyb7HXoX3h
-
 	];
 }
 

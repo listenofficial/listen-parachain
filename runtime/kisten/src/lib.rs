@@ -384,7 +384,7 @@ impl_opaque_keys! {
 }
 
 /// The existential deposit. Set to 1/10 of the Rococo Relay Chain.
-pub const EXISTENTIAL_DEPOSIT: Balance = UNIT;
+pub const EXISTENTIAL_DEPOSIT: Balance = UNIT / 2;
 
 /// We assume that ~5% of the block weight is consumed by `on_initialize` handlers. This is
 /// used to limit the maximal weight of a single extrinsic.
@@ -921,6 +921,7 @@ impl pallet_listen::Config for Runtime {
 	type HalfRoomCouncilOrigin = HalfRoomCouncil;
 	type DelayDisbandDuration = DisbandDelayTime;
 	type RoomTreasuryHandler = RoomTreasury;
+	type SetMultisigOrigin = EnsureListenFoundation;
 }
 
 parameter_types! {

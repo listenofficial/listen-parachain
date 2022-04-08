@@ -71,6 +71,7 @@ pub type RoomId = u64;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use crate::Error::RewardAmountIsZero;
 	use frame_support::{
 		pallet_prelude::{
 			Blake2_128Concat, IsType, OptionQuery, StorageDoubleMap, StorageMap, StorageValue,
@@ -109,6 +110,7 @@ pub mod pallet {
 		type RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin: EnsureOrigin<Self::Origin>;
 		type HalfRoomCouncilOrigin: EnsureOrigin<Self::Origin>;
 		type RoomTreasuryHandler: RoomTreasuryHandler<u64>;
+		type SetMultisigOrigin: EnsureOrigin<Self::Origin, Success = Self::AccountId>;
 		// type RoomIdConvert: RoomIdConvertor<Self::AccountId>;
 		#[pallet::constant]
 		type VoteExpire: Get<Self::BlockNumber>;
@@ -425,46 +427,22 @@ pub mod pallet {
 			members: Vec<<T::Lookup as StaticLookup>::Source>,
 			threshould: u16,
 		) -> DispatchResult {
-			let server_id = ensure_signed(origin)?;
+			T::SetMultisigOrigin::ensure_origin(origin)?;
 
 			let len = members.len();
 			ensure!(
-				len > 1 && threshould > 0u16 && threshould <= len as u16,
-				Error::<T>::ThreshouldLenErr
+				len > 1 && len <= 20 && threshould > 0u16 && threshould <= len as u16,
+				Error::<T>::ThreshouldOrLenErr
 			);
-
-			match <ServerId<T>>::get() {
-				Some(id) =>
-					if id != server_id {
-						return Err(Error::<T>::NotServerId)?
-					},
-				_ => return Err(Error::<T>::ServerIdNotExists)?,
-			}
 
 			let mut members = Self::check_accounts(members)?;
 			members.sort();
+			ensure!(Self::is_unique(members.clone()), Error::<T>::NotUnique);
 
-			let multisig_id = <pallet_multisig::Module<T>>::multi_account_id(&members, threshould);
+			let multisig_id = pallet_multisig::Pallet::<T>::multi_account_id(&members, threshould);
 			<Multisig<T>>::put((members, threshould, multisig_id));
 
 			Self::deposit_event(Event::SetMultisig);
-			Ok(())
-		}
-
-		/// Set LISTEN service account.
-		///
-		/// The Origin must be Root
-		#[pallet::weight(200_000_000)]
-		pub fn set_server_id(
-			origin: OriginFor<T>,
-			server_id: <T::Lookup as StaticLookup>::Source,
-		) -> DispatchResult {
-			ensure_root(origin)?;
-
-			let server_id = T::Lookup::lookup(server_id)?;
-			<ServerId<T>>::put(&server_id);
-
-			Self::deposit_event(Event::SetServerId(server_id));
 			Ok(())
 		}
 
@@ -472,6 +450,7 @@ pub mod pallet {
 		///
 		/// The Origin can be everyone, but your account balances should be zero.
 		#[pallet::weight(200_000_000)]
+		#[transactional]
 		pub fn air_drop(
 			origin: OriginFor<T>,
 			members: Vec<<T::Lookup as StaticLookup>::Source>,
@@ -479,29 +458,25 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			let members = Self::check_accounts(members)?;
+			ensure!(members.len() as u32 <= 100u32, Error::<T>::VecTooLarge);
 			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
 			ensure!(who == multisig_id, Error::<T>::NotMultisigId);
 
 			for user in members.iter() {
-				if <AlreadyAirDropList<T>>::get().contains(&user) {
-					continue
-				}
 				/// the account balances should be zero.
-				if T::MultiCurrency::total_balance(T::GetNativeCurrencyId::get(), &user) !=
-					Zero::zero()
-				{
-					continue
-				}
+				ensure!(
+					T::MultiCurrency::total_balance(T::GetNativeCurrencyId::get(), &user).is_zero(),
+					Error::<T>::SomeoneBalanceIsNotZero
+				);
 				T::MultiCurrency::deposit(
 					T::GetNativeCurrencyId::get(),
 					&user,
 					T::AirDropAmount::get(),
 				)?;
-				<AlreadyAirDropList<T>>::mutate(|h| h.insert(user.clone()));
 				<system::Module<T>>::inc_ref(&user);
 			}
-			Self::deposit_event(Event::AirDroped(who));
 
+			Self::deposit_event(Event::AirDroped(members.len() as u8, members));
 			Ok(())
 		}
 
@@ -519,7 +494,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			let create_payment = Self::create_cost(&Self::number_convert_type(max_members)?);
+			let create_payment = Self::create_cost(&Self::members_convert_type(max_members)?);
 
 			/// the create cost transfers to the treasury
 			let to = Self::treasury_id();
@@ -553,7 +528,7 @@ pub mod pallet {
 			};
 
 			<AllRoom<T>>::insert(group_id, group_info);
-			Self::add_invitee_info(&who, group_id);
+			Self::add_new_user_info(&who, group_id);
 			<NextGroupId<T>>::try_mutate(|h| -> DispatchResult {
 				*h = h.checked_add(1u64).ok_or(Error::<T>::Overflow)?;
 				Ok(())
@@ -572,62 +547,29 @@ pub mod pallet {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 
 			let mut room_info = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+
+			let (total_reward, manager_proportion_amount, room_proportion_amount, last_block) =
+				Self::get_reward_info(&room_info)?;
+
 			let group_manager = room_info.group_manager.clone();
-			let mut last_block = room_info.last_block_of_get_the_reward.clone();
-			let now = Self::now();
-			let time = now.saturating_sub(last_block);
-			let mut duration_num =
-				time.checked_div(&T::RewardDuration::get()).ok_or(Error::<T>::DivByZero)?;
+			T::MultiCurrency::deposit(
+				T::GetNativeCurrencyId::get(),
+				&group_manager,
+				manager_proportion_amount,
+			)?;
 
-			if duration_num.is_zero() {
-				return Err(Error::<T>::NotRewardTime)?
-			} else {
-				let max_num = T::BlockNumber::from(5u32);
-				if duration_num > max_num {
-					duration_num = max_num;
-				}
+			room_info.total_balances = room_info
+				.total_balances
+				.clone()
+				.checked_add(&room_proportion_amount)
+				.ok_or(Error::<T>::Overflow)?;
+			room_info.total_balances =
+				room_info.total_balances.saturating_sub(manager_proportion_amount);
+			room_info.last_block_of_get_the_reward = last_block;
+			<AllRoom<T>>::insert(group_id, room_info);
 
-				let consume_total_amount = Self::get_room_consume_amount(room_info.clone());
-				let total_reward = consume_total_amount
-					.checked_mul(
-						&Self::block_convert_balance(duration_num)
-							.saturated_into::<MultiBalanceOf<T>>(),
-					)
-					.ok_or(Error::<T>::Overflow)?;
-
-				let manager_proportion_amount = T::ManagerProportion::get() *
-					total_reward.saturated_into::<MultiBalanceOf<T>>();
-
-				T::MultiCurrency::deposit(
-					T::GetNativeCurrencyId::get(),
-					&group_manager,
-					manager_proportion_amount,
-				)?;
-
-				room_info.total_balances = room_info
-					.total_balances
-					.checked_sub(&manager_proportion_amount)
-					.ok_or(Error::<T>::Overflow)?;
-				let room_add_amount =
-					T::RoomProportion::get() * total_reward.saturated_into::<MultiBalanceOf<T>>();
-				room_info.total_balances = room_info
-					.total_balances
-					.clone()
-					.checked_add(&room_add_amount)
-					.ok_or(Error::<T>::Overflow)?;
-
-				last_block = last_block.saturating_add(duration_num * T::RewardDuration::get());
-				room_info.last_block_of_get_the_reward = last_block;
-
-				<AllRoom<T>>::insert(group_id, room_info);
-
-				Self::deposit_event(Event::ManagerGetReward(
-					group_manager,
-					manager_proportion_amount,
-					room_add_amount,
-				));
-				Ok(())
-			}
+			Self::deposit_event(Event::ManagerGetReward(group_manager, total_reward));
+			Ok(())
 		}
 
 		/// The room manager modify the cost of group entry.
@@ -757,8 +699,8 @@ pub mod pallet {
 			// The value cannot be smaller than the current group size
 			ensure!(now_number <= new_max, Error::<T>::RoomMembersToMax);
 
-			let old_amount = Self::create_cost(&Self::number_convert_type(now_max)?);
-			let new_amount = Self::create_cost(&Self::number_convert_type(new_max)?);
+			let old_amount = Self::create_cost(&Self::members_convert_type(now_max)?);
+			let new_amount = Self::create_cost(&Self::members_convert_type(new_max)?);
 
 			let add_amount =
 				new_amount.saturating_sub(old_amount).saturated_into::<MultiBalanceOf<T>>();
@@ -1022,7 +964,7 @@ pub mod pallet {
 				if room.last_remove_someone_block > T::BlockNumber::from(0u32) {
 					let until = now.saturating_sub(room.last_remove_someone_block);
 					let interval =
-						Self::remove_interval(Self::number_convert_type(room.max_members)?);
+						Self::remove_interval(Self::members_convert_type(room.max_members)?);
 					ensure!(until > interval, Error::<T>::IsNotRemoveTime);
 				}
 				room.last_remove_someone_block = now;
@@ -1056,7 +998,8 @@ pub mod pallet {
 			// If there's ever been a request to dissolve
 			if room.disband_vote_end_block > T::BlockNumber::from(0u32) {
 				let until = now.saturating_sub(room.disband_vote_end_block);
-				let interval = Self::disband_interval(Self::number_convert_type(room.max_members)?);
+				let interval =
+					Self::disband_interval(Self::members_convert_type(room.max_members)?);
 				ensure!(until > interval, Error::<T>::IsNotAskForDisbandTime);
 			}
 
@@ -1600,6 +1543,8 @@ pub mod pallet {
 		RedPacketNotExists,
 		Expire,
 		NotMultisigId,
+		VecTooLarge,
+		SomeoneBalanceIsNotZero,
 		MultisigIdIsNone,
 		MustHavePaymentType,
 		AmountShouldDifferent,
@@ -1618,7 +1563,8 @@ pub mod pallet {
 		InBlackList,
 		NotInBlackList,
 		InProtectedDuration,
-		ThreshouldLenErr,
+		ThreshouldOrLenErr,
+		NotUnique,
 		BadOrigin,
 		PrivateRoom,
 		PrivacyNotChange,
@@ -1638,7 +1584,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		SetMultisig,
-		AirDroped(T::AccountId),
+		AirDroped(u8, Vec<T::AccountId>),
 		CreatedRoom(T::AccountId, RoomId),
 		Invited(T::AccountId, T::AccountId),
 		IntoRoom(T::AccountId, T::AccountId, RoomId),
@@ -1660,7 +1606,7 @@ pub mod pallet {
 		SetCreateCost,
 		SetServerId(T::AccountId),
 		Exit(T::AccountId, RoomId),
-		ManagerGetReward(T::AccountId, MultiBalanceOf<T>, MultiBalanceOf<T>),
+		ManagerGetReward(T::AccountId, MultiBalanceOf<T>),
 		SetMaxNumberOfRoomMembers(T::AccountId, u32),
 		RemoveSomeoneFromBlackList(T::AccountId, RoomId),
 		SetRoomPrivacy(RoomId, bool),
@@ -1703,7 +1649,7 @@ pub mod pallet {
 			<system::Module<T>>::block_number()
 		}
 
-		fn add_invitee_info(yourself: &T::AccountId, group_id: RoomId) {
+		fn add_new_user_info(yourself: &T::AccountId, group_id: RoomId) {
 			<ListenersOfRoom<T>>::mutate(group_id, |h| h.insert(yourself.clone()));
 			<PurchaseSummary<T>>::mutate(yourself.clone(), |h| {
 				h.rooms.push((group_id, RewardStatus::default()))
@@ -1728,6 +1674,43 @@ pub mod pallet {
 				return Ok(true)
 			}
 			Ok(false)
+		}
+
+		fn get_reward_info(
+			room_info: &RoomInfoOf<T>,
+		) -> result::Result<
+			(MultiBalanceOf<T>, MultiBalanceOf<T>, MultiBalanceOf<T>, T::BlockNumber),
+			DispatchError,
+		> {
+			let mut last_block = room_info.last_block_of_get_the_reward.clone();
+			let time = Self::now().saturating_sub(last_block);
+			let mut duration_num =
+				time.checked_div(&T::RewardDuration::get()).ok_or(Error::<T>::DivByZero)?;
+			if duration_num.is_zero() {
+				return Err(Error::<T>::NotRewardTime)?
+			} else {
+				duration_num = duration_num.min(T::BlockNumber::from(5u32));
+				let consume_total_amount = Self::get_room_consume_amount(room_info.clone());
+				let total_reward = consume_total_amount
+					.checked_mul(
+						&Self::block_convert_balance(duration_num)
+							.saturated_into::<MultiBalanceOf<T>>(),
+					)
+					.ok_or(Error::<T>::Overflow)?;
+
+				ensure!(!total_reward.is_zero(), Error::<T>::RewardAmountIsZero);
+				let manager_proportion_amount = T::ManagerProportion::get() *
+					total_reward.saturated_into::<MultiBalanceOf<T>>();
+				let room_proportion_amount =
+					T::RoomProportion::get() * total_reward.saturated_into::<MultiBalanceOf<T>>();
+				last_block = last_block.saturating_add(duration_num * T::RewardDuration::get());
+				return Ok((
+					total_reward,
+					manager_proportion_amount,
+					room_proportion_amount,
+					last_block,
+				))
+			}
 		}
 
 		fn room_exists_and_user_in_room(
@@ -1756,7 +1739,7 @@ pub mod pallet {
 				Self::pay_for(group_id, join_cost, room_info)?;
 			}
 
-			Self::add_invitee_info(&invitee, group_id);
+			Self::add_new_user_info(&invitee, group_id);
 
 			AllRoom::<T>::try_mutate_exists(group_id, |r| -> DispatchResult {
 				let mut room_info = r.as_mut().take().ok_or(Error::<T>::RoomNotExists)?;
@@ -1767,6 +1750,22 @@ pub mod pallet {
 			})?;
 
 			Ok(())
+		}
+
+		fn is_unique(members: Vec<T::AccountId>) -> bool {
+			let members_cp = members.clone();
+			for who in members {
+				let mut index = 0u32;
+				for member in members_cp.clone() {
+					if member == who {
+						index += 1;
+					}
+					if index > 1 {
+						return false
+					}
+				}
+			}
+			true
 		}
 
 		fn pay_for(
@@ -2115,7 +2114,7 @@ pub mod pallet {
 			<LastSessionIndex<T>>::put(index);
 		}
 
-		fn number_convert_type(num: u32) -> result::Result<GroupMaxMembers, DispatchError> {
+		fn members_convert_type(num: u32) -> result::Result<GroupMaxMembers, DispatchError> {
 			match num {
 				0 => return Err(Error::<T>::MemberIsEmpty)?,
 				1..=10 => Ok(GroupMaxMembers::Ten),

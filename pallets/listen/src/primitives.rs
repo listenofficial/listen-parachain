@@ -114,7 +114,7 @@ pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, DisbandVo
 	pub create_payment: Balance,
 	pub last_block_of_get_the_reward: BlockNumber,
 
-	pub group_manager: AccountId,
+	pub group_manager: Option<AccountId>,
 	pub prime: Option<AccountId>,
 	pub max_members: u32,
 

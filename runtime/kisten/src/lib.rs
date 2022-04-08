@@ -852,7 +852,7 @@ impl Contains<Call> for DaoBaseCallFilter {
 				pallet_listen::Call::manager_get_reward { .. } |
 				pallet_listen::Call::update_join_cost { .. } |
 				pallet_listen::Call::set_room_privacy { .. } |
-				pallet_listen::Call::set_max_number_of_room_members { .. } |
+				pallet_listen::Call::set_max_number_for_room_members { .. } |
 				pallet_listen::Call::remove_someone_from_blacklist { .. } |
 				pallet_listen::Call::remove_someone { .. } |
 				pallet_listen::Call::council_reject_disband { .. } => true,

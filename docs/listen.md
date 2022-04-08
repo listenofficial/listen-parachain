@@ -68,3 +68,108 @@
     * 逻辑
         * 群主才能操作
         * 群没有在等待解散队列
+        * 费用不能跟本来的相同
+6. 用户进群
+    * 代码 `pub fn into_room(
+            origin: OriginFor<T>,
+            group_id: RoomId,
+            invitee: Option<<T::Lookup as StaticLookup>::Source>,
+        )`
+    * 参数
+        * `group_id` 房间id
+        * `invitee` 被邀请人(invitee为None值， 说明是自己进群)
+    * 逻辑
+        * 还没有在群里的人才能进群
+        * 群没有在等待解散队列
+        * 私人群只有群主才能够邀请
+        * 在群黑名单里的人不能进群
+        * 群人数达到上限不能进群
+        * 进群费用去向
+            * 5%马上转给群主
+            * 5%进群，算入群主资产部分
+            * 50%进群，算入群员资产部分
+            * 剩下直接转进国库
+7. 设置群的开放属性
+    * 代码 `pub fn set_room_privacy(
+            origin: OriginFor<T>,
+            room_id: RoomId,
+            is_private: bool,
+        )`
+    * 参数
+        * `room_id` 房间id
+        * `is_private` 是否私人
+    * 逻辑
+        * 只有群主才能操作
+        * 属性不能跟本来的相同
+8. 设置群人数上限
+    * 代码 `pub fn set_max_number_for_room_members(
+            origin: OriginFor<T>,
+            group_id: RoomId,
+            new_max: u32,
+        )`
+    * 参数
+        * `group_id` 房间id
+        * `new_max` 人数上限
+    * 逻辑
+        * 只有群主才能操作
+        * 人数上限不能跟原本的相同
+        * 人数上限不能小于现在的群人数
+        * 如果现在该类型的群创建费用比之前的高，那么就把该补的费用转给国库
+9. 用户购买道具
+    * 代码 `pub fn buy_props_in_room(
+            origin: OriginFor<T>,
+            group_id: RoomId,
+            props: AllProps,
+        )`
+    * 参数
+        * `group_id` 房间id
+        * `props` 道具以及数量
+    * 逻辑
+        * 群里的用户可以购买
+        * 群没有在等待解散队列
+        * 更新个人消费记录以及重新排序群员消费队列
+        * 如果有解散投票，更新个人投票权重
+        * 获得一定比例的LIKE币
+10. 用户购买语音
+    * 代码 `pub fn buy_audio_in_room(
+            origin: OriginFor<T>,
+            group_id: RoomId,
+            audio: Audio,
+        )`
+    * 参数
+        * `group_id` 房间id
+        * `audio` 语音类型与数量
+    * 逻辑
+        * 群里的用户可以购买
+        * 群没有在等待解散队列
+        * 更新个人消费记录以及重新排序群员消费队列
+        * 如果有解散投票，更新个人投票权重
+        * 获得一定比例的LIKE币
+11. 设置创建群的费用
+    * 代码 `pub fn set_create_cost(
+            origin: OriginFor<T>,
+            max_members: GroupMaxMembers,
+            amount: MultiBalanceOf<T>,
+        )`
+    * 参数
+        * `max_members` 群人数上限等级
+        * `amount` 金额
+    * 逻辑
+        * root权限或是公投才能执行
+12. 踢人
+    * 代码 `pub fn remove_someone(
+            origin: OriginFor<T>,
+            group_id: RoomId,
+            who: <T::Lookup as StaticLookup>::Source,
+        )`
+    * 参数
+        * `group_id` 房间id
+        * `who` 即将被踢的人
+    * 逻辑
+        * 群主权限或是群议会可以执行
+        * 被踢的人在群里
+        * 不能踢群主
+        * 群不能在等待解散队列
+        * 群主踢人有时间限制（多久能踢一次)
+        * 把被踢的人拉进群黑名单
+        *

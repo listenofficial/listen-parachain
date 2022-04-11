@@ -501,11 +501,13 @@ pub mod pallet {
 			T::MultiCurrency::transfer(T::GetNativeCurrencyId::get(), &who, &to, create_payment)?;
 			let group_id = <NextGroupId<T>>::get();
 
+			let now = Self::now();
+
 			let group_info = GroupInfo {
 				group_id,
 				room_treasury_id: RoomTreasuryId(group_id).into_account(),
 				create_payment,
-				last_block_of_get_the_reward: Self::now(),
+				last_block_of_get_the_reward: now,
 				group_manager: Some(who.clone()),
 				prime: None,
 				max_members,
@@ -516,8 +518,8 @@ pub mod pallet {
 				total_balances: <MultiBalanceOf<T>>::from(0u32),
 				group_manager_balances: <MultiBalanceOf<T>>::from(0u32),
 				now_members_number: 1u32,
-				last_remove_someone_block: Self::now(),
-				disband_vote_end_block: T::BlockNumber::default(),
+				last_remove_someone_block: now,
+				disband_vote_end_block: now,
 				disband_vote: DisbandVote::default(),
 				create_time: <timestamp::Module<T>>::get(),
 				create_block: Self::now(),
@@ -968,7 +970,8 @@ pub mod pallet {
 			}
 
 			room.black_list.push(who.clone());
-			Self::remove_someone_in_room(who.clone(), &mut room);
+			room = Self::remove_someone_in_room(who.clone(), room);
+			AllRoom::<T>::insert(group_id, room);
 
 			Self::deposit_event(Event::Kicked(who.clone(), group_id));
 			Ok(())
@@ -983,22 +986,19 @@ pub mod pallet {
 
 			ensure!(!Self::is_can_disband(group_id)?, Error::<T>::Disbanding);
 			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
-			let create_block = room.create_block;
 			let now = Self::now();
 
 			// Groups cannot be dissolved for a period of time after they are created
 			ensure!(
-				now.saturating_sub(create_block) > T::ProtectedDuration::get(),
+				now.saturating_sub(room.create_block) > T::ProtectedDuration::get(),
 				Error::<T>::InProtectedDuration
 			);
 
 			// If there's ever been a request to dissolve
-			if room.disband_vote_end_block > T::BlockNumber::from(0u32) {
-				let until = now.saturating_sub(room.disband_vote_end_block);
-				let interval =
-					Self::disband_interval(Self::members_convert_type(room.max_members)?);
-				ensure!(until > interval, Error::<T>::IsNotAskForDisbandTime);
-			}
+			let until = now.saturating_sub(room.disband_vote_end_block);
+			let interval =
+				Self::disband_interval(Self::members_convert_type(room.max_members)?);
+			ensure!(until > interval, Error::<T>::IsNotAskForDisbandTime);
 
 			ensure!(!(Self::is_voting(&room)), Error::<T>::IsVoting);
 
@@ -1016,6 +1016,7 @@ pub mod pallet {
 				.approve_total_amount
 				.checked_add(&user_consume_amount)
 				.ok_or(Error::<T>::Overflow)?;
+			// It is possible that this person went to cast a vote and passed
 			room = Self::judge_vote_and_update_room(room);
 			AllRoom::<T>::insert(group_id, room);
 
@@ -1370,7 +1371,8 @@ pub mod pallet {
 				T::MultiCurrency::deposit(T::GetNativeCurrencyId::get(), &user, amount)?;
 				room.total_balances =
 					room.total_balances.checked_sub(&amount).ok_or(Error::<T>::Overflow)?;
-				Self::remove_someone_in_room(user.clone(), &mut room);
+				room = Self::remove_someone_in_room(user.clone(), room);
+				AllRoom::<T>::insert(group_id, room);
 			} else {
 				let amount = room.total_balances;
 				T::MultiCurrency::deposit(T::GetNativeCurrencyId::get(), &user, amount)?;
@@ -1794,22 +1796,21 @@ pub mod pallet {
 
 			let treasury_id = Self::treasury_id();
 
-			match room_info.group_manager.clone() {
-				None => {
-					T::MultiCurrency::deposit(
-						T::GetNativeCurrencyId::get(),
-						&treasury_id,
-						payment_manager_now,
-					)?;
-				},
+			match room_info.group_manager.clone(){
+				None => {T::MultiCurrency::deposit(
+				T::GetNativeCurrencyId::get(),
+				&treasury_id,
+				payment_manager_now,
+			)?;},
 				Some(x) => {
 					T::MultiCurrency::deposit(
-						T::GetNativeCurrencyId::get(),
-						&x,
-						payment_manager_now,
-					)?;
+				T::GetNativeCurrencyId::get(),
+				&x,
+				payment_manager_now,
+			)?;
 				},
 			};
+
 
 			T::MultiCurrency::deposit(
 				T::GetNativeCurrencyId::get(),
@@ -1949,8 +1950,12 @@ pub mod pallet {
 				None => MultiBalanceOf::<T>::from(0u32),
 				Some(x) => {
 					let amount = room.group_manager_balances.clone();
-					T::MultiCurrency::deposit(T::GetNativeCurrencyId::get(), &x, amount);
-					amount
+					T::MultiCurrency::deposit(
+				T::GetNativeCurrencyId::get(),
+				&x,
+				amount,
+			);
+				amount
 				},
 			};
 			// room.group_manager_balances.clone();
@@ -2025,35 +2030,31 @@ pub mod pallet {
 			<RedPacketOfRoom<T>>::remove(room_id, redpacket_id);
 		}
 
-		fn remove_someone_in_room(who: T::AccountId, room: &mut RoomInfoOf<T>) {
+		fn remove_someone_in_room(who: T::AccountId, mut room: RoomInfoOf<T>) -> RoomInfoOf<T>{
 			room.now_members_number = room.now_members_number.saturating_sub(1);
-			Self::remove_consumer_info(room, who.clone());
+			room = Self::remove_consumer_info(room, who.clone());
 			let mut listeners = <ListenersOfRoom<T>>::get(room.group_id);
 			listeners.take(&who);
-			// if room.group_manager == who {
-			// 	if room.consume.len() > 0 {
-			// 		let mut consume = room.consume.clone();
-			// 		room.group_manager = consume.remove(0).0;
-			// 	} else {
-			// 		room.group_manager = listeners.clone().iter().next().unwrap().clone();
-			// 	}
-			// }
+			if room.group_manager == Some(who.clone()) {
+				room.group_manager = None;
+			}
+
+			// todo 议会成员如果有投票 他的票数应该去掉
+			if let Some(pos) = room.council.iter().position(|h| h == &who ) {
+				room.council.swap_remove(pos);
+			}
+
 			<ListenersOfRoom<T>>::insert(room.group_id.clone(), listeners);
-			<AllRoom<T>>::insert(room.group_id, room);
+			room
 		}
 
-		fn remove_consumer_info(room: &mut RoomInfoOf<T>, who: T::AccountId) {
+		fn remove_consumer_info(mut room: RoomInfoOf<T>, who: T::AccountId) -> RoomInfoOf<T>{
+			// todo 如果有投解散群的票 那么把这个票数去掉
 			if let Some(pos) = room.consume.iter().position(|h| h.0 == who.clone()) {
 				room.consume.remove(pos);
 			}
-			room.council = vec![];
-			let mut consume = room.consume.clone();
-			if consume.len() > T::CouncilMaxNumber::get() as usize {
-				consume.split_off(T::CouncilMaxNumber::get() as usize);
-				room.council = consume;
-			} else {
-				room.council = room.consume.clone();
-			}
+
+			room
 		}
 
 		fn get_like(who: &T::AccountId, amount: MultiBalanceOf<T>) {
@@ -2144,13 +2145,7 @@ pub mod pallet {
 		) -> Result<Vec<<T as frame_system::Config>::AccountId>, DispatchError> {
 			ensure!(!Self::is_can_disband(room_id)?, Error::<T>::Disbanding);
 			let room_info = <AllRoom<T>>::get(room_id).ok_or(Error::<T>::RoomNotExists)?;
-			let council_and_amount = room_info.council;
-			let mut council = vec![];
-			for i in council_and_amount.iter() {
-				council.push(i.0.clone());
-			}
-			council.sort();
-			Ok(council)
+			Ok(room_info.council)
 		}
 
 		fn get_prime(

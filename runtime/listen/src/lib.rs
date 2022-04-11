@@ -159,6 +159,7 @@ construct_runtime!(
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
 		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>} = 5,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 6,
+		Utility: pallet_utility::{Pallet, Call, Event} = 7,
 
 		// Monetary stuff.
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
@@ -926,6 +927,14 @@ impl pallet_dao::Config<RoomCollective> for Runtime {
 	type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
 	type ListenHandler = Listen;
 	type BaseCallFilter = DaoBaseCallFilter;
+}
+
+
+impl pallet_utility::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type PalletsOrigin = OriginCaller;
+	type WeightInfo = ();
 }
 
 parameter_types! {

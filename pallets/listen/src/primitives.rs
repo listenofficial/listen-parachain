@@ -142,7 +142,7 @@ pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, DisbandVo
 
 	pub consume: Vec<(AccountId, Balance)>,
 
-	pub council: Vec<(AccountId, Balance)>,
+	pub council: Vec<(AccountId)>,
 
 	pub black_list: Vec<AccountId>,
 

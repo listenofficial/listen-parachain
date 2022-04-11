@@ -76,7 +76,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn set_name(origin: OriginFor<T>, name: Vec<u8>) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
@@ -100,7 +100,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn kill_name(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,
@@ -115,7 +115,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn force_name(
 			origin: OriginFor<T>,
 			target: <T::Lookup as StaticLookup>::Source,

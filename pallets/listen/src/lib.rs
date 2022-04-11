@@ -421,7 +421,7 @@ pub mod pallet {
 		/// Set a multi-sign account
 		///
 		/// The Origin must be LISTEN official service account.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn set_multisig(
 			origin: OriginFor<T>,
 			members: Vec<<T::Lookup as StaticLookup>::Source>,
@@ -449,7 +449,7 @@ pub mod pallet {
 		/// User gets airdrop.
 		///
 		/// The Origin can be everyone, but your account balances should be zero.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn air_drop(
 			origin: OriginFor<T>,
@@ -483,7 +483,7 @@ pub mod pallet {
 		/// The user creates a room.
 		///
 		/// Everyone can do it, and he(she) will be room manager.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn create_room(
 			origin: OriginFor<T>,
@@ -543,7 +543,7 @@ pub mod pallet {
 		/// The room manager get his reward.
 		/// You should have already created the room.
 		/// Receive rewards for a fixed period of time
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn manager_get_reward(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
@@ -580,7 +580,7 @@ pub mod pallet {
 		/// The room manager modify the cost of group entry.
 		///
 		/// The Origin must be RoomManager.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn update_join_cost(
 			origin: OriginFor<T>,
 			group_id: RoomId,
@@ -603,7 +603,7 @@ pub mod pallet {
 		///
 		/// If invitee is None, you go into the room by yourself. Otherwise, you invite people in.
 		/// You can not invite yourself.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn into_room(
 			origin: OriginFor<T>,
@@ -655,7 +655,7 @@ pub mod pallet {
 		/// Set the privacy properties of the room
 		///
 		/// The Origin must be room manager.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn set_room_privacy(
 			origin: OriginFor<T>,
 			room_id: RoomId,
@@ -677,7 +677,7 @@ pub mod pallet {
 		/// Set the maximum number of people in the room
 		///
 		/// The Origin must be room manager.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn set_max_number_for_room_members(
 			origin: OriginFor<T>,
 			group_id: RoomId,
@@ -723,7 +723,7 @@ pub mod pallet {
 
 		/// Users buy props in the room.
 		///
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn buy_props_in_room(
 			origin: OriginFor<T>,
@@ -800,7 +800,7 @@ pub mod pallet {
 		}
 
 		/// Users buy audio in the room.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn buy_audio_in_room(
 			origin: OriginFor<T>,
@@ -890,7 +890,7 @@ pub mod pallet {
 		/// Set the cost of creating the room
 		///
 		/// The Origin must be Root.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn set_create_cost(
 			origin: OriginFor<T>,
 			max_members: GroupMaxMembers,
@@ -911,7 +911,7 @@ pub mod pallet {
 		/// Remove someone from a blacklist
 		///
 		/// The Origin must be RoomCouncil or RoomManager.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn remove_someone_from_blacklist(
 			origin: OriginFor<T>,
@@ -943,7 +943,7 @@ pub mod pallet {
 		/// Remove someone from the room.
 		///
 		/// The Origin must be RoomCouncil or RoomManager.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn remove_someone(
 			origin: OriginFor<T>,
@@ -979,7 +979,7 @@ pub mod pallet {
 
 		/// Request dismissal of the room
 		///
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn ask_for_disband_room(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -996,8 +996,7 @@ pub mod pallet {
 
 			// If there's ever been a request to dissolve
 			let until = now.saturating_sub(room.disband_vote_end_block);
-			let interval =
-				Self::disband_interval(Self::members_convert_type(room.max_members)?);
+			let interval = Self::disband_interval(Self::members_convert_type(room.max_members)?);
 			ensure!(until > interval, Error::<T>::IsNotAskForDisbandTime);
 
 			ensure!(!(Self::is_voting(&room)), Error::<T>::IsVoting);
@@ -1027,7 +1026,7 @@ pub mod pallet {
 		/// Set the price of the audio
 		///
 		/// The Origin must be Root.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn set_audio_price(
 			origin: OriginFor<T>,
 			cost: AudioPrice<MultiBalanceOf<T>>,
@@ -1042,7 +1041,7 @@ pub mod pallet {
 		/// Set the price of the props.
 		///
 		/// The Origin must be Root.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn set_props_price(
 			origin: OriginFor<T>,
 			cost: PropsPrice<MultiBalanceOf<T>>,
@@ -1057,7 +1056,7 @@ pub mod pallet {
 		/// Sets the interval between removes someone in the room.
 		///
 		/// The Origin must be Root.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn set_remove_interval(
 			origin: OriginFor<T>,
 			max_members: GroupMaxMembers,
@@ -1074,7 +1073,7 @@ pub mod pallet {
 		}
 
 		/// Set the interval at which the group is dismissed.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn set_disband_interval(
 			origin: OriginFor<T>,
 			max_members: GroupMaxMembers,
@@ -1094,7 +1093,7 @@ pub mod pallet {
 		/// Users vote for disbanding the room.
 		///
 		///
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn vote(origin: OriginFor<T>, group_id: RoomId, vote: ListenVote) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -1165,7 +1164,7 @@ pub mod pallet {
 		/// the reward status should be NotGet in rooms.
 		///
 		/// Claim all rooms at once
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn pay_out(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -1262,7 +1261,7 @@ pub mod pallet {
 
 		///
 		/// Set the minimum amount for a person in a red envelope
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn set_redpack_min_amount(
 			origin: OriginFor<T>,
@@ -1282,7 +1281,7 @@ pub mod pallet {
 		/// Users send red envelopes in the room.
 		///
 		///
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn send_redpacket_in_room(
 			origin: OriginFor<T>,
@@ -1334,7 +1333,7 @@ pub mod pallet {
 		}
 
 		/// Expired red packets obtained by the owner.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn give_back_expired_redpacket(
 			origin: OriginFor<T>,
@@ -1350,7 +1349,7 @@ pub mod pallet {
 
 		/// Users exit the room
 		///
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn exit(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
 			let user = ensure_signed(origin)?;
@@ -1391,7 +1390,7 @@ pub mod pallet {
 		/// The vote has been passed.
 		///
 		/// The Origin can be everyone.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn disband_room(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -1404,7 +1403,7 @@ pub mod pallet {
 		}
 
 		/// Council Members reject disband the room.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn council_reject_disband(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
 			T::HalfRoomCouncilOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
@@ -1429,7 +1428,7 @@ pub mod pallet {
 		}
 
 		/// Multi account to help get red packets
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn get_redpacket_in_room(
 			origin: OriginFor<T>,
@@ -1796,21 +1795,22 @@ pub mod pallet {
 
 			let treasury_id = Self::treasury_id();
 
-			match room_info.group_manager.clone(){
-				None => {T::MultiCurrency::deposit(
-				T::GetNativeCurrencyId::get(),
-				&treasury_id,
-				payment_manager_now,
-			)?;},
+			match room_info.group_manager.clone() {
+				None => {
+					T::MultiCurrency::deposit(
+						T::GetNativeCurrencyId::get(),
+						&treasury_id,
+						payment_manager_now,
+					)?;
+				},
 				Some(x) => {
 					T::MultiCurrency::deposit(
-				T::GetNativeCurrencyId::get(),
-				&x,
-				payment_manager_now,
-			)?;
+						T::GetNativeCurrencyId::get(),
+						&x,
+						payment_manager_now,
+					)?;
 				},
 			};
-
 
 			T::MultiCurrency::deposit(
 				T::GetNativeCurrencyId::get(),
@@ -1950,12 +1950,8 @@ pub mod pallet {
 				None => MultiBalanceOf::<T>::from(0u32),
 				Some(x) => {
 					let amount = room.group_manager_balances.clone();
-					T::MultiCurrency::deposit(
-				T::GetNativeCurrencyId::get(),
-				&x,
-				amount,
-			);
-				amount
+					T::MultiCurrency::deposit(T::GetNativeCurrencyId::get(), &x, amount);
+					amount
 				},
 			};
 			// room.group_manager_balances.clone();
@@ -2030,7 +2026,7 @@ pub mod pallet {
 			<RedPacketOfRoom<T>>::remove(room_id, redpacket_id);
 		}
 
-		fn remove_someone_in_room(who: T::AccountId, mut room: RoomInfoOf<T>) -> RoomInfoOf<T>{
+		fn remove_someone_in_room(who: T::AccountId, mut room: RoomInfoOf<T>) -> RoomInfoOf<T> {
 			room.now_members_number = room.now_members_number.saturating_sub(1);
 			room = Self::remove_consumer_info(room, who.clone());
 			let mut listeners = <ListenersOfRoom<T>>::get(room.group_id);
@@ -2040,7 +2036,7 @@ pub mod pallet {
 			}
 
 			// todo 议会成员如果有投票 他的票数应该去掉
-			if let Some(pos) = room.council.iter().position(|h| h == &who ) {
+			if let Some(pos) = room.council.iter().position(|h| h == &who) {
 				room.council.swap_remove(pos);
 			}
 
@@ -2048,7 +2044,7 @@ pub mod pallet {
 			room
 		}
 
-		fn remove_consumer_info(mut room: RoomInfoOf<T>, who: T::AccountId) -> RoomInfoOf<T>{
+		fn remove_consumer_info(mut room: RoomInfoOf<T>, who: T::AccountId) -> RoomInfoOf<T> {
 			// todo 如果有投解散群的票 那么把这个票数去掉
 			if let Some(pos) = room.consume.iter().position(|h| h.0 == who.clone()) {
 				room.consume.remove(pos);

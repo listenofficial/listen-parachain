@@ -273,7 +273,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		/// Method of direct execution by the group master.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn execute(
 			origin: OriginFor<T>,
 			room_id: RoomIndex,
@@ -305,7 +305,7 @@ pub mod pallet {
 		}
 
 		/// A group of members of parliament introduced a motion.
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn propose(
 			origin: OriginFor<T>,
 			room_id: RoomIndex,
@@ -370,7 +370,7 @@ pub mod pallet {
 			}
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn vote(
 			origin: OriginFor<T>,
 			room_id: RoomIndex,
@@ -419,7 +419,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn disapprove_proposal(
 			origin: OriginFor<T>,
 			room_id: RoomIndex,

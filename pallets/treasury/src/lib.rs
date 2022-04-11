@@ -168,7 +168,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn propose_spend(
 			origin: OriginFor<T>,
 			room_id: RoomIndex,
@@ -195,7 +195,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn reject_proposal(
 			origin: OriginFor<T>,
 			room_id: RoomIndex,
@@ -213,7 +213,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn approve_proposal(
 			origin: OriginFor<T>,
 			room_id: RoomIndex,
@@ -234,7 +234,7 @@ pub mod pallet {
 		}
 
 		/// Users receive funds manually
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn spend_fund(origin: OriginFor<T>, room_id: RoomIndex) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let mut proposal_ids = <Approvals<T>>::get(room_id);

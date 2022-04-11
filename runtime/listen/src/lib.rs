@@ -929,7 +929,6 @@ impl pallet_dao::Config<RoomCollective> for Runtime {
 	type BaseCallFilter = DaoBaseCallFilter;
 }
 
-
 impl pallet_utility::Config for Runtime {
 	type Event = Event;
 	type Call = Call;

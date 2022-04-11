@@ -286,7 +286,7 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn create_class(
 			origin: OriginFor<T>,
 			metadata: Vec<u8>,
@@ -298,7 +298,7 @@ pub mod module {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn transfer(
 			origin: OriginFor<T>,
 			to: T::AccountId,
@@ -310,7 +310,7 @@ pub mod module {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn mint(
 			origin: OriginFor<T>,
 			class_id: T::ClassId,
@@ -324,7 +324,7 @@ pub mod module {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn claim(origin: OriginFor<T>, token: (T::ClassId, T::TokenId)) -> DispatchResult {
 			let owner = ensure_signed(origin)?;
 			Self::do_claim(&owner, token.0, token.1)?;
@@ -332,7 +332,7 @@ pub mod module {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn burn(origin: OriginFor<T>, token: (T::ClassId, T::TokenId)) -> DispatchResult {
 			let owner = ensure_signed(origin)?;
 			Self::do_burn(&owner, token)?;
@@ -340,7 +340,7 @@ pub mod module {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn offer_token_for_sale(
 			origin: OriginFor<T>,
 			token: (T::ClassId, T::TokenId),
@@ -352,7 +352,7 @@ pub mod module {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn withdraw_sale(
 			origin: OriginFor<T>,
 			token: (T::ClassId, T::TokenId),
@@ -363,14 +363,14 @@ pub mod module {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn buy_token(origin: OriginFor<T>, token: (T::ClassId, T::TokenId)) -> DispatchResult {
 			let buyer = ensure_signed(origin)?;
 			Self::do_buy_token(&buyer, token)?;
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn active(origin: OriginFor<T>, token: (T::ClassId, T::TokenId)) -> DispatchResult {
 			let owner = ensure_signed(origin)?;
 			Self::do_active_or_not(&owner, token, true)?;
@@ -385,7 +385,7 @@ pub mod module {
 			Ok(())
 		}
 
-		#[pallet::weight(200_000_000)]
+		#[pallet::weight(1500_000_000)]
 		pub fn inactive(origin: OriginFor<T>, token: (T::ClassId, T::TokenId)) -> DispatchResult {
 			let owner = ensure_signed(origin)?;
 			Self::do_active_or_not(&owner, token, false)?;
@@ -458,10 +458,11 @@ impl<T: Config> Pallet<T> {
 		image_hash: Vec<u8>,
 	) -> Result<T::TokenId, DispatchError> {
 		NextTokenId::<T>::try_mutate(class_id, |id| -> Result<T::TokenId, DispatchError> {
-			ensure!(
-				!AllTokensHash::<T>::get().contains(&image_hash),
-				Error::<T>::TokenAlreadyExists
-			);
+			// fixme
+			// ensure!(
+			// 	!AllTokensHash::<T>::get().contains(&image_hash),
+			// 	Error::<T>::TokenAlreadyExists
+			// );
 
 			let bounded_metadata: BoundedVec<u8, T::MaxTokenMetadata> =
 				metadata.try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?;

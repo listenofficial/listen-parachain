@@ -907,8 +907,7 @@ impl Contains<Call> for DaoBaseCallFilter {
 				pallet_listen::Call::set_room_privacy { .. } |
 				pallet_listen::Call::set_max_number_for_room_members { .. } |
 				pallet_listen::Call::remove_someone_from_blacklist { .. } |
-				pallet_listen::Call::remove_someone { .. } |
-				pallet_listen::Call::council_reject_disband { .. } => true,
+				pallet_listen::Call::remove_someone { .. } => true,
 				_ => false,
 			},
 			_ => false,

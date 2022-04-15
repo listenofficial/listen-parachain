@@ -173,3 +173,53 @@
         * 群主踢人有时间限制（多久能踢一次)
         * 把被踢的人拉进群黑名单
         * 被踢的议会成员或是群员如果有相关投票，把其票数去掉
+13. 把某人从黑名单中剔除
+    * 代码 `pub fn remove_someone_from_blacklist(
+            origin: OriginFor<T>,
+            group_id: RoomId,
+            who: <T::Lookup as StaticLookup>::Source,
+        )`
+    * 参数
+        * `group_id` 房间id
+    * 逻辑
+        * 群不能处于等待解散的队列
+14. 设置语音价格
+    * 代码 `pub fn set_audio_price(
+            origin: OriginFor<T>,
+            cost: AudioPrice<MultiBalanceOf<T>>,
+        )`
+    * 参数
+        * `cost` 语音类型及数量对应的价格
+    * 逻辑
+        * 需要root或是公投
+15. 设置道具价格
+    * 代码 `pub fn set_props_price(
+            origin: OriginFor<T>,
+            cost: PropsPrice<MultiBalanceOf<T>>,
+        )`
+    * 参数
+        * `cost` 道具价格
+    * 逻辑
+        * 需要root或是公投
+16. 设置群主踢人的时间间隔
+    * 代码 `pub fn set_remove_interval(
+            origin: OriginFor<T>,
+            max_members: GroupMaxMembers,
+            interval: T::BlockNumber,
+        )`
+    * 参数
+        * `max_members` 群人数类型
+        * `interval` 间隔时间
+    * 逻辑
+        * 需要root或是公投
+17. 设置解散群的时间间隔
+    * 代码 `pub fn set_disband_interval(
+            origin: OriginFor<T>,
+            max_members: GroupMaxMembers,
+            interval: T::BlockNumber,
+        )`
+    * 参数
+        * `max_members` 群人数类型
+        * `interval` 间隔时间
+    * 逻辑
+    	* 需要root或是公投

@@ -134,7 +134,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("kisten-parachain"),
 	impl_name: create_runtime_str!("kisten-parachain"),
 	authoring_version: 1,
-	spec_version: 2022041105,
+	spec_version: 2022041501,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -862,8 +862,7 @@ impl Contains<Call> for DaoBaseCallFilter {
 				pallet_listen::Call::set_room_privacy { .. } |
 				pallet_listen::Call::set_max_number_for_room_members { .. } |
 				pallet_listen::Call::remove_someone_from_blacklist { .. } |
-				pallet_listen::Call::remove_someone { .. } |
-				pallet_listen::Call::council_reject_disband { .. } => true,
+				pallet_listen::Call::remove_someone { .. } => true,
 				_ => false,
 			},
 			_ => false,
@@ -1085,14 +1084,14 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 }
 
 parameter_types! {
-	pub const LaunchPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-	pub const VotingPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-	pub const FastTrackVotingPeriod: BlockNumber = 3 * 24 * 60 * MINUTES;
+	pub const LaunchPeriod: BlockNumber = 4 * 60 * MINUTES;
+	pub const VotingPeriod: BlockNumber = 4 * 60 * MINUTES;
+	pub const FastTrackVotingPeriod: BlockNumber = 30 * MINUTES;
 	pub const InstantAllowed: bool = true;
 	pub const MinimumDeposit: Balance = 100 * UNIT;
-	pub const EnactmentPeriod: BlockNumber = 30 * 24 * 60 * MINUTES;
-	pub const CooloffPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-	pub const VoteLockingPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
+	pub const EnactmentPeriod: BlockNumber = 6 * 60 * MINUTES;
+	pub const CooloffPeriod: BlockNumber = 5 * 60 * MINUTES;
+	pub const VoteLockingPeriod: BlockNumber = 4 * 60 * MINUTES;
 	// One cent: $10,000 / MB
 	pub const PreimageByteDeposit: Balance = 1 * MILLIUNIT;
 	pub const MaxVotes: u32 = 100;

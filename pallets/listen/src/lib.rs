@@ -943,6 +943,7 @@ pub mod pallet {
 		/// Remove someone from the room.
 		///
 		/// The Origin must be RoomCouncil or RoomManager.
+		/// fixme 需要对投票进行进一步完善
 		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn remove_someone(
@@ -984,7 +985,8 @@ pub mod pallet {
 		pub fn ask_for_disband_room(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
-			ensure!(!Self::is_can_disband(group_id)?, Error::<T>::Disbanding);
+			// fixme
+			// ensure!(!Self::is_voting() && !(Self::vote_passed_and_pending_disband(group_id) == Ok(true)), Error::<T>::Disbanding);
 			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
 			let now = Self::now();
 
@@ -1397,35 +1399,36 @@ pub mod pallet {
 
 			ensure!(Self::is_can_disband(group_id)?, Error::<T>::NotDisbanding);
 			let room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			Self::disband(room);
+			Self::do_disband(room);
 			Self::deposit_event(Event::DisbandRoom(group_id, who));
 			Ok(())
 		}
 
-		/// Council Members reject disband the room.
-		#[pallet::weight(1500_000_000)]
-		#[transactional]
-		pub fn council_reject_disband(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
-			T::HalfRoomCouncilOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
-
-			let disband_rooms = <PendingDisbandRooms<T>>::get();
-			let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			if let Some(disband_time) = disband_rooms.get(&group_id.into()) {
-				/// before the room is disband.
-				if Self::now() <= *disband_time {
-					<PendingDisbandRooms<T>>::mutate(|h| h.remove(&group_id.into()));
-					room = Self::remove_vote_info(room);
-					AllRoom::<T>::insert(group_id, room);
-				} else {
-					return Err(Error::<T>::Disbanding)?
-				}
-			} else {
-				return Err(Error::<T>::NotDisbanding)?
-			}
-
-			Self::deposit_event(Event::CouncilRejectDisband(group_id));
-			Ok(())
-		}
+		// fixme 这个方法可以去掉 因为他让功能变得过分复杂
+		// /// Council Members reject disband the room.
+		// #[pallet::weight(1500_000_000)]
+		// #[transactional]
+		// pub fn council_reject_disband(origin: OriginFor<T>, group_id: RoomId) -> DispatchResult {
+		// 	T::HalfRoomCouncilOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
+		//
+		// 	let disband_rooms = <PendingDisbandRooms<T>>::get();
+		// 	let mut room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
+		// 	if let Some(disband_time) = disband_rooms.get(&group_id.into()) {
+		// 		/// before the room is disband.
+		// 		if Self::now() <= *disband_time {
+		// 			<PendingDisbandRooms<T>>::mutate(|h| h.remove(&group_id.into()));
+		// 			room = Self::remove_vote_info(room);
+		// 			AllRoom::<T>::insert(group_id, room);
+		// 		} else {
+		// 			return Err(Error::<T>::Disbanding)?
+		// 		}
+		// 	} else {
+		// 		return Err(Error::<T>::NotDisbanding)?
+		// 	}
+		//
+		// 	Self::deposit_event(Event::CouncilRejectDisband(group_id));
+		// 	Ok(())
+		// }
 
 		/// Multi account to help get red packets
 		#[pallet::weight(1500_000_000)]
@@ -1888,8 +1891,7 @@ pub mod pallet {
 		}
 
 		fn is_voting(room: &RoomInfoOf<T>) -> bool {
-			if !room.disband_vote_end_block.is_zero() &&
-				(Self::now().saturating_sub(room.disband_vote_end_block).is_zero()) &&
+			if (Self::now().saturating_sub(room.disband_vote_end_block).is_zero()) &&
 				!(Self::vote_passed_and_pending_disband(room.group_id) == Ok(true))
 			{
 				return true
@@ -1906,7 +1908,7 @@ pub mod pallet {
 				if vote_result.1 == Pass {
 					// The cost is 0. Dismiss immediately
 					if vote_result.2 == <MultiBalanceOf<T>>::from(0u32) {
-						Self::disband(room.clone());
+						Self::do_disband(room.clone());
 					} else {
 						room.disband_vote_end_block = now;
 						<PendingDisbandRooms<T>>::mutate(|h| {
@@ -1942,7 +1944,7 @@ pub mod pallet {
 			}
 		}
 
-		fn disband(room: RoomInfoOf<T>) {
+		fn do_disband(room: RoomInfoOf<T>) {
 			let group_id = room.group_id;
 			Self::remove_redpacket_by_room_id(group_id, true);
 			let total_reward = room.total_balances.clone();

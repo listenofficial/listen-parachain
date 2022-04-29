@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/listen-logo.jpeg?raw=true" alt="image" width="230"/>
+  <img src="image/listen-logo.jpeg?raw=true" alt="image" width="230"/>
 </p>
 
 <h3 align="center">Decentralized social platform</h3>

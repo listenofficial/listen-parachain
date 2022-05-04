@@ -135,7 +135,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("listen-parachain"),
 	impl_name: create_runtime_str!("listen-parachain"),
 	authoring_version: 1,
-	spec_version: 2022040601,
+	spec_version: 2022050401,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -436,9 +436,12 @@ impl Contains<Call> for BaseCallFilter {
 		!matches!(
 			call,
 			Call::Balances(_) |
-				// Call::Dao(_) | Call::Listen(_) |
-				Call::RoomTreasury(_) |
-				Call::Nft(_)
+			Call::Listen(pallet_listen::Call::ask_for_disband_room{..}) |
+			Call::Listen(pallet_listen::Call::vote{..}) |
+			Call::Listen(pallet_listen::Call::pay_out{..}) |
+			Call::Listen(pallet_listen::Call::disband_room{..}) |
+			Call::RoomTreasury(_) |
+			Call::Nft(_)
 		)
 	}
 }

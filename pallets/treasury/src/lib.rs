@@ -281,7 +281,7 @@ pub mod pallet {
 	impl<T: Config> RoomTreasuryHandler<RoomIndex> for Pallet<T> {
 		fn remove_room_treasury_info(room_id: RoomIndex) {
 			<Proposals<T>>::remove_prefix(room_id, None);
-			/// todo 已经同意通过的资金议案 不应该被清除
+			/// todo Funding bills that have been agreed to pass should not be swept away
 			<Approvals<T>>::remove(room_id);
 		}
 	}

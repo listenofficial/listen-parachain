@@ -420,7 +420,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Set a multi-sign account
 		///
-		/// The Origin must be LISTEN official service account.
+		/// The Origin must be one of the LISTEN Foundation accounts.
 		#[pallet::weight(1500_000_000)]
 		pub fn set_multisig(
 			origin: OriginFor<T>,
@@ -524,7 +524,7 @@ pub mod pallet {
 				create_time: <timestamp::Module<T>>::get(),
 				create_block: Self::now(),
 				consume: vec![],
-				council: vec![],
+				council: vec![who.clone()],  // room owner should be the one of the council members
 				black_list: vec![],
 				is_private,
 			};
@@ -940,10 +940,10 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Remove someone from the room.
+		/// Remove someone(not room owner or council members) in the room.
 		///
 		/// The Origin must be RoomCouncil or RoomManager.
-		/// fixme 需要对投票进行进一步完善
+		/// fixme Further refinement of the various votes is needed
 		#[pallet::weight(1500_000_000)]
 		#[transactional]
 		pub fn remove_someone(
@@ -951,13 +951,14 @@ pub mod pallet {
 			group_id: RoomId,
 			who: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
+			// For the time being, only the group master will execute it
 			T::RoomRootOrHalfRoomCouncilOrSomeRoomCouncilOrigin::try_origin(origin.clone())
 				.map_err(|_| Error::<T>::BadOrigin)?;
 
 			let who = T::Lookup::lookup(who)?;
 
 			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
-			ensure!(room.group_manager != Some(who.clone()), Error::<T>::RoomManager);
+			ensure!(room.group_manager != Some(who.clone()) && !room.council.contains(&who), Error::<T>::RoomManager);
 			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
 
 			let now = Self::now();
@@ -1365,6 +1366,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::Overflow)?;
 
 			if number > 1 {
+				ensure!(room.group_manager != Some(user.clone()) && !room.council.contains(&user), Error::<T>::RoomManager);
 				// If you quit halfway, you only get a quarter of the reward.
 				let amount = users_amount /
 					room.now_members_number.saturated_into::<MultiBalanceOf<T>>() /
@@ -1404,7 +1406,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// fixme 这个方法可以去掉 因为他让功能变得过分复杂
 		// /// Council Members reject disband the room.
 		// #[pallet::weight(1500_000_000)]
 		// #[transactional]
@@ -1853,15 +1854,6 @@ pub mod pallet {
 				room_info.consume.insert(index, new_user_consume.clone());
 			}
 
-			// fixme 议会成员不再以消费多少来选
-			// let mut consume = room_info.consume.clone();
-			// room_info.council = vec![];
-			// if consume.len() > T::CouncilMaxNumber::get() as usize {
-			// 	consume.split_off(T::CouncilMaxNumber::get() as usize);
-			// 	room_info.council = consume;
-			// } else {
-			// 	room_info.council = room_info.consume.clone();
-			// }
 
 			if Self::is_voting(&room_info) {
 				let mut is_in_vote = false;
@@ -2033,21 +2025,21 @@ pub mod pallet {
 			room = Self::remove_consumer_info(room, who.clone());
 			let mut listeners = <ListenersOfRoom<T>>::get(room.group_id);
 			listeners.take(&who);
-			if room.group_manager == Some(who.clone()) {
-				room.group_manager = None;
-			}
-
-			// todo 议会成员如果有投票 他的票数应该去掉
-			if let Some(pos) = room.council.iter().position(|h| h == &who) {
-				room.council.swap_remove(pos);
-			}
+			// if room.group_manager == Some(who.clone()) {
+			// 	room.group_manager = None;
+			// }
+			//
+			// // todo If a member of council has a vote, his vote should be removed
+			// if let Some(pos) = room.council.iter().position(|h| h == &who) {
+			// 	room.council.swap_remove(pos);
+			// }
 
 			<ListenersOfRoom<T>>::insert(room.group_id.clone(), listeners);
 			room
 		}
 
 		fn remove_consumer_info(mut room: RoomInfoOf<T>, who: T::AccountId) -> RoomInfoOf<T> {
-			// todo 如果有投解散群的票 那么把这个票数去掉
+			// todo If there is a vote to dissolve the group, that vote should be removed
 			if let Some(pos) = room.consume.iter().position(|h| h.0 == who.clone()) {
 				room.consume.remove(pos);
 			}

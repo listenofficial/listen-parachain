@@ -9,6 +9,9 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 pub mod parachains;
 use parachains::*;
 
+use pallet_grandpa::{
+	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
+};
 pub use cumulus_primitives_core::ParaId;
 pub use listen_primitives::{
 	constants::{currency::*, time::*},
@@ -29,6 +32,7 @@ use sp_core::{
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
+		NumberFor,
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, BlockNumberProvider,
 		Convert, ConvertInto, IdentifyAccount, Verify,
 	},
@@ -40,6 +44,8 @@ use static_assertions::const_assert;
 use frame_support::{
 	construct_runtime, match_type, parameter_types,
 	traits::{
+		ConstU32,
+		KeyOwnerProofSystem,
 		Contains, EnsureOneOf, EnsureOrigin, EqualPrivilegeOnly, Everything, LockIdentifier,
 		Nothing, U128CurrencyToVote,
 	},
@@ -151,12 +157,12 @@ construct_runtime!(
 	{
 		// System support stuff.
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-		ParachainSystem: cumulus_pallet_parachain_system::{
-			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
-		} = 1,
+		// ParachainSystem: cumulus_pallet_parachain_system::{
+		// 	Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
+		// } = 1,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
+		// ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
 		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>} = 5,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 6,
 		Utility: pallet_utility::{Pallet, Call, Event} = 7,
@@ -167,22 +173,23 @@ construct_runtime!(
 		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 12,
 
 		// Collator support. The order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
+		// Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
+		// CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
+		// Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
+		Grandpa: pallet_grandpa,
+		// AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
 
 		// XCM helpers.
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Storage} = 31,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin, Storage} = 32,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
+		// XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
+		// PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Storage} = 31,
+		// CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin, Storage} = 32,
+		// DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
 
 		// orml
-		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 60,
-		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 61,
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 62,
+		// UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 60,
+		// OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 61,
+		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 62,
 
 		// local
 		Tokens: orml_tokens::{Pallet, Config<T>, Storage, Event<T>} = 41,
@@ -203,121 +210,121 @@ construct_runtime!(
 	}
 );
 
-/// fixme
-parameter_types! {
-	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
-	pub LIKEerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
-		GeneralKey(native::LT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
-	pub LIKEPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
-		GeneralKey(native::LIKE::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
-	pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
-		GeneralKey(native::USDT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
-	pub KICOPerSecond: (AssetId, u128) = (MultiLocation::new(
-				1,
-				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec()))
-			).into(), ksm_per_second() * 100);
-	pub KTPerSecond: (AssetId, u128) = (MultiLocation::new(
-				1,
-				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KT::TokenSymbol.to_vec()))
-			).into(), ksm_per_second() * 100);
+// /// fixme
+// parameter_types! {
+// 	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
+// 	pub LIKEerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
+// 		GeneralKey(native::LT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
+// 	pub LIKEPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
+// 		GeneralKey(native::LIKE::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
+// 	pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
+// 		GeneralKey(native::USDT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
+// 	pub KICOPerSecond: (AssetId, u128) = (MultiLocation::new(
+// 				1,
+// 				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec()))
+// 			).into(), ksm_per_second() * 100);
+// 	pub KTPerSecond: (AssetId, u128) = (MultiLocation::new(
+// 				1,
+// 				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KT::TokenSymbol.to_vec()))
+// 			).into(), ksm_per_second() * 100);
+//
+// }
 
-}
+// pub type Trader = (
+// 	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
+// 	FixedRateOfFungible<LIKEerSecond, ToTreasury>,
+// 	FixedRateOfFungible<LIKEPerSecond, ToTreasury>,
+// 	FixedRateOfFungible<USDTPerSecond, ToTreasury>,
+// 	FixedRateOfFungible<KICOPerSecond, ToTreasury>,
+// 	FixedRateOfFungible<KTPerSecond, ToTreasury>,
+// );
+//
+// fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
+// 	let token_symbol = match id {
+// 		native::LT::AssetId => native::LT::TokenSymbol,
+// 		native::USDT::AssetId => native::USDT::TokenSymbol,
+// 		native::LIKE::AssetId => native::LIKE::TokenSymbol,
+// 		_ => return None,
+// 	};
+// 	Some(MultiLocation::new(
+// 		1,
+// 		X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(token_symbol.to_vec())),
+// 	))
+// }
 
-pub type Trader = (
-	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
-	FixedRateOfFungible<LIKEerSecond, ToTreasury>,
-	FixedRateOfFungible<LIKEPerSecond, ToTreasury>,
-	FixedRateOfFungible<USDTPerSecond, ToTreasury>,
-	FixedRateOfFungible<KICOPerSecond, ToTreasury>,
-	FixedRateOfFungible<KTPerSecond, ToTreasury>,
-);
+// pub struct CurrencyIdConvert;
+//
+// impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
+// 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
+// 		match id {
+// 			kusama::KSM::AssetId => Some(MultiLocation::parent()),
+//
+// 			native::LT::AssetId | native::USDT::AssetId | native::LIKE::AssetId =>
+// 				native_currency_location(id),
+//
+// 			kico::KICO::AssetId => Some(MultiLocation::new(
+// 				1,
+// 				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec())),
+// 			)),
+// 			kisten::KT::AssetId => Some(MultiLocation::new(
+// 				1,
+// 				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KT::TokenSymbol.to_vec())),
+// 			)),
+// 			_ => None,
+// 		}
+// 	}
+// }
 
-fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
-	let token_symbol = match id {
-		native::LT::AssetId => native::LT::TokenSymbol,
-		native::USDT::AssetId => native::USDT::TokenSymbol,
-		native::LIKE::AssetId => native::LIKE::TokenSymbol,
-		_ => return None,
-	};
-	Some(MultiLocation::new(
-		1,
-		X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(token_symbol.to_vec())),
-	))
-}
+// impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
+// 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
+// 		if location == MultiLocation::parent() {
+// 			return Some(kusama::KSM::AssetId.into())
+// 		}
+// 		match location {
+// 			MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } =>
+// 				match (para_id, &key[..]) {
+// 					(kico::PARA_ID, kico::KICO::TokenSymbol) => Some(kico::KICO::AssetId.into()),
+// 					(kisten::PARA_ID, kisten::KT::TokenSymbol) => Some(kisten::KT::AssetId.into()),
+//
+// 					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => match key {
+// 						native::LT::TokenSymbol => Some(native::LT::AssetId.into()),
+// 						native::USDT::TokenSymbol => Some(native::USDT::AssetId.into()),
+// 						native::LIKE::TokenSymbol => Some(native::LIKE::AssetId.into()),
+// 						_ => None,
+// 					},
+// 					_ => None,
+// 				},
+// 			_ => None,
+// 		}
+// 	}
+// }
+//
+// parameter_types! {
+// 	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+// }
+//
+// pub struct ToTreasury;
+// impl TakeRevenue for ToTreasury {
+// 	fn take_revenue(revenue: MultiAsset) {
+// 		if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
+// 			if let Some(currency_id) = CurrencyIdConvert::convert(location) {
+// 				// ensure KaruraTreasuryAccount have ed for all of the cross-chain asset.
+// 				// Ignore the result.
+// 				let _ = Currencies::deposit(currency_id, &TreasuryAccount::get(), amount);
+// 			}
+// 		}
+// 	}
+// }
 
-pub struct CurrencyIdConvert;
-
-impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
-	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		match id {
-			kusama::KSM::AssetId => Some(MultiLocation::parent()),
-
-			native::LT::AssetId | native::USDT::AssetId | native::LIKE::AssetId =>
-				native_currency_location(id),
-
-			kico::KICO::AssetId => Some(MultiLocation::new(
-				1,
-				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec())),
-			)),
-			kisten::KT::AssetId => Some(MultiLocation::new(
-				1,
-				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KT::TokenSymbol.to_vec())),
-			)),
-			_ => None,
-		}
-	}
-}
-
-impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
-	fn convert(location: MultiLocation) -> Option<CurrencyId> {
-		if location == MultiLocation::parent() {
-			return Some(kusama::KSM::AssetId.into())
-		}
-		match location {
-			MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } =>
-				match (para_id, &key[..]) {
-					(kico::PARA_ID, kico::KICO::TokenSymbol) => Some(kico::KICO::AssetId.into()),
-					(kisten::PARA_ID, kisten::KT::TokenSymbol) => Some(kisten::KT::AssetId.into()),
-
-					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => match key {
-						native::LT::TokenSymbol => Some(native::LT::AssetId.into()),
-						native::USDT::TokenSymbol => Some(native::USDT::AssetId.into()),
-						native::LIKE::TokenSymbol => Some(native::LIKE::AssetId.into()),
-						_ => None,
-					},
-					_ => None,
-				},
-			_ => None,
-		}
-	}
-}
-
-parameter_types! {
-	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
-}
-
-pub struct ToTreasury;
-impl TakeRevenue for ToTreasury {
-	fn take_revenue(revenue: MultiAsset) {
-		if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
-			if let Some(currency_id) = CurrencyIdConvert::convert(location) {
-				// ensure KaruraTreasuryAccount have ed for all of the cross-chain asset.
-				// Ignore the result.
-				let _ = Currencies::deposit(currency_id, &TreasuryAccount::get(), amount);
-			}
-		}
-	}
-}
-
-impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
-	fn convert(asset: MultiAsset) -> Option<CurrencyId> {
-		if let MultiAsset { id: Concrete(location), .. } = asset {
-			Self::convert(location)
-		} else {
-			None
-		}
-	}
-}
+// impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
+// 	fn convert(asset: MultiAsset) -> Option<CurrencyId> {
+// 		if let MultiAsset { id: Concrete(location), .. } = asset {
+// 			Self::convert(location)
+// 		} else {
+// 			None
+// 		}
+// 	}
+// }
 
 pub struct OnRuntimeUpgrade;
 impl frame_support::traits::OnRuntimeUpgrade for OnRuntimeUpgrade {
@@ -359,22 +366,41 @@ impl WeightToFeePolynomial for WeightToFee {
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
 /// to even the core data structures.
+// pub mod opaque {
+// 	use super::*;
+// 	use sp_runtime::{generic, traits::BlakeTwo256};
+//
+// 	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
+// 	/// Opaque block header type.
+// 	pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+// 	/// Opaque block type.
+// 	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+// 	/// Opaque block identifier type.
+// 	pub type BlockId = generic::BlockId<Block>;
+// }
+
+// impl_opaque_keys! {
+// 	pub struct SessionKeys {
+// 		pub aura: Aura,
+// 	}
+// }
 pub mod opaque {
 	use super::*;
-	use sp_runtime::{generic, traits::BlakeTwo256};
 
 	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
+
 	/// Opaque block header type.
 	pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 	/// Opaque block type.
 	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 	/// Opaque block identifier type.
 	pub type BlockId = generic::BlockId<Block>;
-}
 
-impl_opaque_keys! {
-	pub struct SessionKeys {
-		pub aura: Aura,
+	impl_opaque_keys! {
+		pub struct SessionKeys {
+			pub aura: Aura,
+			pub grandpa: Grandpa,
+		}
 	}
 }
 
@@ -489,7 +515,7 @@ impl frame_system::Config for Runtime {
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
 	type SS58Prefix = SS58Prefix;
 	/// The action to take on a Runtime Upgrade
-	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
+	type OnSetCode = ();//cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
@@ -513,15 +539,16 @@ parameter_types! {
 
 pub struct RelayChainBlockNumberProvider<T>(sp_std::marker::PhantomData<T>);
 
-impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider
+impl<T: frame_system::Config> BlockNumberProvider
 	for RelayChainBlockNumberProvider<T>
 {
 	type BlockNumber = BlockNumber;
 
 	fn current_block_number() -> Self::BlockNumber {
-		cumulus_pallet_parachain_system::Pallet::<T>::validation_data()
-			.map(|d| d.relay_parent_number)
-			.unwrap_or_default()
+		0u32.into()
+		// cumulus_pallet_parachain_system::Pallet::<T>::validation_data()
+		// 	.map(|d| d.relay_parent_number)
+		// 	.unwrap_or_default()
 	}
 }
 
@@ -565,12 +592,12 @@ parameter_types! {
 	pub const UncleGenerations: u32 = 0;
 }
 
-impl pallet_authorship::Config for Runtime {
-	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-	type UncleGenerations = UncleGenerations;
-	type FilterUncle = ();
-	type EventHandler = (CollatorSelection,);
-}
+// impl pallet_authorship::Config for Runtime {
+// 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
+// 	type UncleGenerations = UncleGenerations;
+// 	type FilterUncle = ();
+// 	type EventHandler = (CollatorSelection,);
+// }
 
 parameter_types! {
 	pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
@@ -611,80 +638,80 @@ parameter_types! {
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
 }
 
-impl cumulus_pallet_parachain_system::Config for Runtime {
-	type Event = Event;
-	type OnSystemEvent = ();
-	type SelfParaId = parachain_info::Pallet<Runtime>;
-	type DmpMessageHandler = DmpQueue;
-	type ReservedDmpWeight = ReservedDmpWeight;
-	type OutboundXcmpMessageSource = XcmpQueue;
-	type XcmpMessageHandler = XcmpQueue;
-	type ReservedXcmpWeight = ReservedXcmpWeight;
-}
+// impl cumulus_pallet_parachain_system::Config for Runtime {
+// 	type Event = Event;
+// 	type OnSystemEvent = ();
+// 	type SelfParaId = parachain_info::Pallet<Runtime>;
+// 	type DmpMessageHandler = DmpQueue;
+// 	type ReservedDmpWeight = ReservedDmpWeight;
+// 	type OutboundXcmpMessageSource = XcmpQueue;
+// 	type XcmpMessageHandler = XcmpQueue;
+// 	type ReservedXcmpWeight = ReservedXcmpWeight;
+// }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
 
-impl parachain_info::Config for Runtime {}
+// impl parachain_info::Config for Runtime {}
 
-impl cumulus_pallet_aura_ext::Config for Runtime {}
+// impl cumulus_pallet_aura_ext::Config for Runtime {}
 
-parameter_types! {
-	pub const RelayLocation: MultiLocation = MultiLocation::parent();
-	pub const RelayNetwork: NetworkId = NetworkId::Any;
-	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
-	pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
-}
+// parameter_types! {
+// 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
+// 	pub const RelayNetwork: NetworkId = NetworkId::Any;
+// 	// pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
+// 	pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
+// }
 
-/// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
-/// when determining ownership of accounts for asset transacting and when attempting to use XCM
-/// `Transact` in order to determine the dispatch Origin.
-pub type LocationToAccountId = (
-	// The parent (Relay-chain) origin converts to the default `AccountId`.
-	ParentIsPreset<AccountId>,
-	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
-	SiblingParachainConvertsVia<Sibling, AccountId>,
-	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
-	AccountId32Aliases<RelayNetwork, AccountId>,
-);
+// /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
+// /// when determining ownership of accounts for asset transacting and when attempting to use XCM
+// /// `Transact` in order to determine the dispatch Origin.
+// pub type LocationToAccountId = (
+// 	// The parent (Relay-chain) origin converts to the default `AccountId`.
+// 	ParentIsPreset<AccountId>,
+// 	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
+// 	SiblingParachainConvertsVia<Sibling, AccountId>,
+// 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
+// 	AccountId32Aliases<RelayNetwork, AccountId>,
+// );
 
 parameter_types! {
 	pub ListenTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 }
 
-pub type LocalAssetTransactor = MultiCurrencyAdapter<
-	Currencies,
-	UnknownTokens,
-	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
-	AccountId,
-	LocationToAccountId,
-	CurrencyId,
-	CurrencyIdConvert,
-	DepositToAlternative<ListenTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
->;
+// pub type LocalAssetTransactor = MultiCurrencyAdapter<
+// 	Currencies,
+// 	UnknownTokens,
+// 	IsNativeConcrete<CurrencyId, CurrencyIdConvert>,
+// 	AccountId,
+// 	LocationToAccountId,
+// 	CurrencyId,
+// 	CurrencyIdConvert,
+// 	DepositToAlternative<ListenTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
+// >;
 
-/// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
-/// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
-/// biases the kind of local `Origin` it will become.
-pub type XcmOriginToTransactDispatchOrigin = (
-	// Sovereign account converter; this attempts to derive an `AccountId` from the origin location
-	// using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
-	// foreign chains who want to have a local sovereign account on this chain which they control.
-	SovereignSignedViaLocation<LocationToAccountId, Origin>,
-	// Native converter for Relay-chain (Parent) location; will converts to a `Relay` origin when
-	// recognised.
-	RelayChainAsNative<RelayChainOrigin, Origin>,
-	// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
-	// recognised.
-	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
-	// Superuser converter for the Relay-chain (Parent) location. This will allow it to issue a
-	// transaction from the Root origin.
-	ParentAsSuperuser<Origin>,
-	// Native signed account converter; this just converts an `AccountId32` origin into a normal
-	// `Origin::Signed` origin of the same 32-byte value.
-	SignedAccountId32AsNative<RelayNetwork, Origin>,
-	// Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
-	XcmPassthrough<Origin>,
-);
+// /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
+// /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
+// /// biases the kind of local `Origin` it will become.
+// pub type XcmOriginToTransactDispatchOrigin = (
+// 	// Sovereign account converter; this attempts to derive an `AccountId` from the origin location
+// 	// using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
+// 	// foreign chains who want to have a local sovereign account on this chain which they control.
+// 	SovereignSignedViaLocation<LocationToAccountId, Origin>,
+// 	// Native converter for Relay-chain (Parent) location; will converts to a `Relay` origin when
+// 	// recognised.
+// 	RelayChainAsNative<RelayChainOrigin, Origin>,
+// 	// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
+// 	// recognised.
+// 	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
+// 	// Superuser converter for the Relay-chain (Parent) location. This will allow it to issue a
+// 	// transaction from the Root origin.
+// 	ParentAsSuperuser<Origin>,
+// 	// Native signed account converter; this just converts an `AccountId32` origin into a normal
+// 	// `Origin::Signed` origin of the same 32-byte value.
+// 	SignedAccountId32AsNative<RelayNetwork, Origin>,
+// 	// Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
+// 	XcmPassthrough<Origin>,
+// );
 
 parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
@@ -699,73 +726,73 @@ match_type! {
 	};
 }
 
-pub type Barrier = (
-	TakeWeightCredit,
-	AllowTopLevelPaidExecutionFrom<Everything>,
-	// Expected responses are OK.
-	AllowKnownQueryResponses<PolkadotXcm>,
-	// Subscriptions for version tracking are OK.
-	AllowSubscriptionsFrom<Everything>,
-	AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
-	// ^^^ Parent and its exec plurality get free execution
-);
+// pub type Barrier = (
+// 	TakeWeightCredit,
+// 	AllowTopLevelPaidExecutionFrom<Everything>,
+// 	// Expected responses are OK.
+// 	AllowKnownQueryResponses<PolkadotXcm>,
+// 	// Subscriptions for version tracking are OK.
+// 	AllowSubscriptionsFrom<Everything>,
+// 	AllowUnpaidExecutionFrom<ParentOrParentsExecutivePlurality>,
+// 	// ^^^ Parent and its exec plurality get free execution
+// );
 
-/// fixme
-pub struct XcmConfig;
-impl Config for XcmConfig {
-	type Call = Call;
-	type XcmSender = XcmRouter;
-	// How to withdraw and deposit an asset.
-	type AssetTransactor = LocalAssetTransactor;
-	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
-	type IsTeleporter = (); // Should be enough to allow teleportation of ROC
-	type LocationInverter = LocationInverter<Ancestry>;
-	type Barrier = Barrier;
-	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-	/// fixme
-	type Trader = Trader;
-	type ResponseHandler = PolkadotXcm;
-	type AssetTrap = PolkadotXcm;
-	type AssetClaims = PolkadotXcm;
-	type SubscriptionService = PolkadotXcm;
-}
+// /// fixme
+// pub struct XcmConfig;
+// impl Config for XcmConfig {
+// 	type Call = Call;
+// 	type XcmSender = XcmRouter;
+// 	// How to withdraw and deposit an asset.
+// 	type AssetTransactor = LocalAssetTransactor;
+// 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
+// 	type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
+// 	type IsTeleporter = (); // Should be enough to allow teleportation of ROC
+// 	type LocationInverter = LocationInverter<Ancestry>;
+// 	type Barrier = Barrier;
+// 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+// 	/// fixme
+// 	type Trader = Trader;
+// 	type ResponseHandler = PolkadotXcm;
+// 	type AssetTrap = PolkadotXcm;
+// 	type AssetClaims = PolkadotXcm;
+// 	type SubscriptionService = PolkadotXcm;
+// }
 
 parameter_types! {
 	pub const MaxDownwardMessageWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 10;
 }
 
-/// No local origins on this chain are allowed to dispatch XCM sends/executions.
-/// fixme
-pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
-
-/// The means for routing XCM messages which are not for local execution into the right message
-/// queues.
-pub type XcmRouter = (
-	// Two routers - use UMP to communicate with the relay chain:
-	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm>,
-	// ..and XCMP to communicate with the sibling chains.
-	XcmpQueue,
-);
+// No local origins on this chain are allowed to dispatch XCM sends/executions.
+// fixme
+// pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
+//
+// /// The means for routing XCM messages which are not for local execution into the right message
+// /// queues.
+// pub type XcmRouter = (
+// 	// Two routers - use UMP to communicate with the relay chain:
+// 	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm>,
+// 	// ..and XCMP to communicate with the sibling chains.
+// 	XcmpQueue,
+// );
 
 /// XcmRouter LocalOriginToLocation XcmConfig
-impl pallet_xcm::Config for Runtime {
-	type Event = Event;
-	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-	type XcmRouter = XcmRouter;
-	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-	type XcmExecuteFilter = Nothing;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmTeleportFilter = Nothing;
-	type XcmReserveTransferFilter = Everything;
-	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-	type LocationInverter = LocationInverter<Ancestry>;
-	type Origin = Origin;
-	type Call = Call;
-
-	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
-	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
-}
+// impl pallet_xcm::Config for Runtime {
+// 	type Event = Event;
+// 	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+// 	type XcmRouter = XcmRouter;
+// 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+// 	type XcmExecuteFilter = Nothing;
+// 	type XcmExecutor = XcmExecutor<XcmConfig>;
+// 	type XcmTeleportFilter = Nothing;
+// 	type XcmReserveTransferFilter = Everything;
+// 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+// 	type LocationInverter = LocationInverter<Ancestry>;
+// 	type Origin = Origin;
+// 	type Call = Call;
+//
+// 	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
+// 	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+// }
 
 parameter_types! {
 	pub const IndexDeposit: Balance = 1 * UNIT;
@@ -780,27 +807,27 @@ impl pallet_indices::Config for Runtime {
 	type WeightInfo = pallet_indices::weights::SubstrateWeight<Runtime>;
 }
 
-impl cumulus_pallet_xcm::Config for Runtime {
-	type Event = Event;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-}
+// impl cumulus_pallet_xcm::Config for Runtime {
+// 	type Event = Event;
+// 	type XcmExecutor = XcmExecutor<XcmConfig>;
+// }
 
-impl cumulus_pallet_xcmp_queue::Config for Runtime {
-	type Event = Event;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type ChannelInfo = ParachainSystem;
-	type VersionWrapper = PolkadotXcm;
-	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
-	type ControllerOrigin = EnsureRoot<AccountId>;
-	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-	// type WeightInfo = ();
-}
+// impl cumulus_pallet_xcmp_queue::Config for Runtime {
+// 	type Event = Event;
+// 	type XcmExecutor = XcmExecutor<XcmConfig>;
+// 	type ChannelInfo = ParachainSystem;
+// 	type VersionWrapper = PolkadotXcm;
+// 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+// 	type ControllerOrigin = EnsureRoot<AccountId>;
+// 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+// 	// type WeightInfo = ();
+// }
 
-impl cumulus_pallet_dmp_queue::Config for Runtime {
-	type Event = Event;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
-}
+// impl cumulus_pallet_dmp_queue::Config for Runtime {
+// 	type Event = Event;
+// 	type XcmExecutor = XcmExecutor<XcmConfig>;
+// 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
+// }
 
 parameter_types! {
 	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(33);
@@ -808,27 +835,49 @@ parameter_types! {
 	pub const Offset: u32 = 0;
 	pub const MaxAuthorities: u32 = 100_000;
 }
-
-impl pallet_session::Config for Runtime {
-	type Event = Event;
-	type ValidatorId = <Self as frame_system::Config>::AccountId;
-	// we don't have stash and controller, thus we don't need the convert as well.
-	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
-	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
-	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
-	type SessionManager = CollatorSelection;
-	// Essentially just Aura, but lets be pedantic.
-	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
-	type Keys = SessionKeys;
-	// type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
-	type WeightInfo = ();
-}
+//
+// impl pallet_session::Config for Runtime {
+// 	type Event = Event;
+// 	type ValidatorId = <Self as frame_system::Config>::AccountId;
+// 	// we don't have stash and controller, thus we don't need the convert as well.
+// 	type ValidatorIdOf = (); //pallet_collator_selection::IdentityCollator;
+// 	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
+// 	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
+// 	type SessionManager = CollatorSelection;
+// 	// Essentially just Aura, but lets be pedantic.
+// 	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
+// 	type Keys = SessionKeys;
+// 	// type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
+// 	type WeightInfo = ();
+// }
 
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 	type DisabledValidators = ();
 	type MaxAuthorities = MaxAuthorities;
 }
+
+impl pallet_grandpa::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+
+	type KeyOwnerProofSystem = ();
+
+	type KeyOwnerProof =
+		<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
+
+	type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
+		KeyTypeId,
+		GrandpaId,
+	)>>::IdentificationTuple;
+
+	type HandleEquivocation = ();
+
+	type WeightInfo = ();
+	type MaxAuthorities = ConstU32<32>;
+}
+
+
 
 parameter_types! {
 	pub const PotId: PalletId = PalletId(*b"PotStake");
@@ -839,25 +888,25 @@ parameter_types! {
 	pub const ExecutiveBody: BodyId = BodyId::Executive;
 }
 
-// We allow root and the Relay Chain council to execute privileged collator selection operations.
-pub type CollatorSelectionUpdateOrigin =
-	EnsureOneOf<EnsureRoot<AccountId>, EnsureXcm<IsMajorityOfBody<RelayLocation, ExecutiveBody>>>;
+// // We allow root and the Relay Chain council to execute privileged collator selection operations.
+// pub type CollatorSelectionUpdateOrigin =
+// 	EnsureOneOf<EnsureRoot<AccountId>, EnsureXcm<IsMajorityOfBody<RelayLocation, ExecutiveBody>>>;
 
-impl pallet_collator_selection::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type UpdateOrigin = CollatorSelectionUpdateOrigin;
-	type PotId = PotId;
-	type MaxCandidates = MaxCandidates;
-	type MinCandidates = MinCandidates;
-	type MaxInvulnerables = MaxInvulnerables;
-	// should be a multiple of session or things will get inconsistent
-	type KickThreshold = Period;
-	type ValidatorId = <Self as frame_system::Config>::AccountId;
-	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
-	type ValidatorRegistration = Session;
-	type WeightInfo = ();
-}
+// impl pallet_collator_selection::Config for Runtime {
+// 	type Event = Event;
+// 	type Currency = Balances;
+// 	type UpdateOrigin = CollatorSelectionUpdateOrigin;
+// 	type PotId = PotId;
+// 	type MaxCandidates = MaxCandidates;
+// 	type MinCandidates = MinCandidates;
+// 	type MaxInvulnerables = MaxInvulnerables;
+// 	// should be a multiple of session or things will get inconsistent
+// 	type KickThreshold = Period;
+// 	type ValidatorId = <Self as frame_system::Config>::AccountId;
+// 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
+// 	type ValidatorRegistration = Session;
+// 	type WeightInfo = ();
+// }
 
 parameter_type_with_key! {
 	pub ExistentialDeposits: |_currency_id: u32| -> Balance {
@@ -1244,42 +1293,42 @@ impl pallet_scheduler::Config for Runtime {
 	type NoPreimagePostponement = NoPreimagePostponement;
 }
 
-impl orml_unknown_tokens::Config for Runtime {
-	type Event = Event;
-}
+// impl orml_unknown_tokens::Config for Runtime {
+// 	type Event = Event;
+// }
 
 pub type EnsureRootOrThreeFourthsCouncil = EnsureOneOf<
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>,
 >;
 
-impl orml_xcm::Config for Runtime {
-	type Event = Event;
-	type SovereignOrigin = EnsureRootOrThreeFourthsCouncil;
-}
+// impl orml_xcm::Config for Runtime {
+// 	type Event = Event;
+// 	type SovereignOrigin = EnsureRootOrThreeFourthsCouncil;
+// }
 
-pub struct AccountIdToMultiLocation;
-impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
-	fn convert(account: AccountId) -> MultiLocation {
-		X1(AccountId32 { network: NetworkId::Any, id: account.into() }).into()
-	}
-}
+// pub struct AccountIdToMultiLocation;
+// impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
+// 	fn convert(account: AccountId) -> MultiLocation {
+// 		X1(AccountId32 { network: NetworkId::Any, id: account.into() }).into()
+// 	}
+// }
 
-parameter_types! {
-	pub const BaseXcmWeight: Weight = 100_000_000;
-	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
-	pub const MaxAssetsForTransfer: usize = 2;
-}
-
-parameter_type_with_key! {
-	pub ParachainMinFee: |location: MultiLocation| -> u128 {
-		#[allow(clippy::match_ref_pats)] // false positive
-		match (location.parents, location.first_interior()) {
-			(1, Some(Parachain(statemine::PARA_ID))) => 4_000_000_000,
-			_ => u128::MAX,
-		}
-	};
-}
+// parameter_types! {
+// 	pub const BaseXcmWeight: Weight = 100_000_000;
+// 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
+// 	pub const MaxAssetsForTransfer: usize = 2;
+// }
+//
+// parameter_type_with_key! {
+// 	pub ParachainMinFee: |location: MultiLocation| -> u128 {
+// 		#[allow(clippy::match_ref_pats)] // false positive
+// 		match (location.parents, location.first_interior()) {
+// 			(1, Some(Parachain(statemine::PARA_ID))) => 4_000_000_000,
+// 			_ => u128::MAX,
+// 		}
+// 	};
+// }
 
 impl pallet_utility::Config for Runtime {
 	type Event = Event;
@@ -1288,41 +1337,31 @@ impl pallet_utility::Config for Runtime {
 	type WeightInfo = ();
 }
 
-impl orml_xtokens::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
-	type CurrencyId = CurrencyId;
-	type CurrencyIdConvert = CurrencyIdConvert;
-	type AccountIdToMultiLocation = AccountIdToMultiLocation;
-	type SelfLocation = SelfLocation;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-	type BaseXcmWeight = BaseXcmWeight;
-	type LocationInverter = LocationInverter<Ancestry>;
-	type MaxAssetsForTransfer = MaxAssetsForTransfer;
-	type MinXcmFee = ParachainMinFee;
-	type MultiLocationsFilter = Everything;
-	type ReserveProvider = AbsoluteReserveProvider;
-}
+// impl orml_xtokens::Config for Runtime {
+// 	type Event = Event;
+// 	type Balance = Balance;
+// 	type CurrencyId = CurrencyId;
+// 	type CurrencyIdConvert = CurrencyIdConvert;
+// 	type AccountIdToMultiLocation = AccountIdToMultiLocation;
+// 	type SelfLocation = SelfLocation;
+// 	type XcmExecutor = XcmExecutor<XcmConfig>;
+// 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
+// 	type BaseXcmWeight = BaseXcmWeight;
+// 	type LocationInverter = LocationInverter<Ancestry>;
+// 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
+// 	type MinXcmFee = ParachainMinFee;
+// 	type MultiLocationsFilter = Everything;
+// 	type ReserveProvider = AbsoluteReserveProvider;
+// }
 
 impl_runtime_apis! {
-	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
-		fn slot_duration() -> sp_consensus_aura::SlotDuration {
-			sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
-		}
-
-		fn authorities() -> Vec<AuraId> {
-			Aura::authorities().into_inner()
-		}
-	}
-
 	impl sp_api::Core<Block> for Runtime {
 		fn version() -> RuntimeVersion {
 			VERSION
 		}
 
 		fn execute_block(block: Block) {
-			Executive::execute_block(block)
+			Executive::execute_block(block);
 		}
 
 		fn initialize_block(header: &<Block as BlockT>::Header) {
@@ -1373,15 +1412,55 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
+		fn slot_duration() -> sp_consensus_aura::SlotDuration {
+			sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
+		}
+
+		fn authorities() -> Vec<AuraId> {
+			Aura::authorities().into_inner()
+		}
+	}
+
 	impl sp_session::SessionKeys<Block> for Runtime {
 		fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
-			SessionKeys::generate(seed)
+			opaque::SessionKeys::generate(seed)
 		}
 
 		fn decode_session_keys(
 			encoded: Vec<u8>,
 		) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
-			SessionKeys::decode_into_raw_public_keys(&encoded)
+			opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
+		}
+	}
+
+	impl fg_primitives::GrandpaApi<Block> for Runtime {
+		fn grandpa_authorities() -> GrandpaAuthorityList {
+			Grandpa::grandpa_authorities()
+		}
+
+		fn current_set_id() -> fg_primitives::SetId {
+			Grandpa::current_set_id()
+		}
+
+		fn submit_report_equivocation_unsigned_extrinsic(
+			_equivocation_proof: fg_primitives::EquivocationProof<
+				<Block as BlockT>::Hash,
+				NumberFor<Block>,
+			>,
+			_key_owner_proof: fg_primitives::OpaqueKeyOwnershipProof,
+		) -> Option<()> {
+			None
+		}
+
+		fn generate_key_ownership_proof(
+			_set_id: fg_primitives::SetId,
+			_authority_id: GrandpaId,
+		) -> Option<fg_primitives::OpaqueKeyOwnershipProof> {
+			// NOTE: this is the only implementation possible since we've
+			// defined our key owner proof type as a bottom type (i.e. a type
+			// with no values).
+			None
 		}
 	}
 
@@ -1406,30 +1485,19 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
-		fn collect_collation_info(header: &<Block as BlockT>::Header) -> cumulus_primitives_core::CollationInfo {
-			ParachainSystem::collect_collation_info(header)
-		}
-	}
-
-
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
 		fn benchmark_metadata(extra: bool) -> (
 			Vec<frame_benchmarking::BenchmarkList>,
 			Vec<frame_support::traits::StorageInfo>,
 		) {
-			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+			use frame_benchmarking::{baseline, Benchmarking, BenchmarkList};
 			use frame_support::traits::StorageInfoTrait;
 			use frame_system_benchmarking::Pallet as SystemBench;
-			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
+			use baseline::Pallet as BaselineBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
-
-			list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
-			list_benchmark!(list, extra, pallet_balances, Balances);
-			list_benchmark!(list, extra, pallet_timestamp, Timestamp);
-			list_benchmark!(list, extra, pallet_collator_selection, CollatorSelection);
+			list_benchmarks!(list, extra);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1439,13 +1507,13 @@ impl_runtime_apis! {
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+			use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, TrackedStorageKey};
 
 			use frame_system_benchmarking::Pallet as SystemBench;
-			impl frame_system_benchmarking::Config for Runtime {}
+			use baseline::Pallet as BaselineBench;
 
-			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
-			impl cumulus_pallet_session_benchmarking::Config for Runtime {}
+			impl frame_system_benchmarking::Config for Runtime {}
+			impl baseline::Config for Runtime {}
 
 			let whitelist: Vec<TrackedStorageKey> = vec![
 				// Block Number
@@ -1462,44 +1530,38 @@ impl_runtime_apis! {
 
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
+			add_benchmarks!(params, batches);
 
-			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_balances, Balances);
-			add_benchmark!(params, batches, pallet_session, SessionBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-			add_benchmark!(params, batches, pallet_collator_selection, CollatorSelection);
-
-			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
 		}
 	}
 }
 
-struct CheckInherents;
+// struct CheckInherents;
+//
+// impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
+// 	fn check_inherents(
+// 		block: &Block,
+// 		relay_state_proof: &cumulus_pallet_parachain_system::RelayChainStateProof,
+// 	) -> sp_inherents::CheckInherentsResult {
+// 		let relay_chain_slot = relay_state_proof
+// 			.read_slot()
+// 			.expect("Could not read the relay chain slot from the proof");
+//
+// 		let inherent_data =
+// 			cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
+// 				relay_chain_slot,
+// 				sp_std::time::Duration::from_secs(6),
+// 			)
+// 			.create_inherent_data()
+// 			.expect("Could not create the timestamp inherent data");
+//
+// 		inherent_data.check_extrinsics(block)
+// 	}
+// }
 
-impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
-	fn check_inherents(
-		block: &Block,
-		relay_state_proof: &cumulus_pallet_parachain_system::RelayChainStateProof,
-	) -> sp_inherents::CheckInherentsResult {
-		let relay_chain_slot = relay_state_proof
-			.read_slot()
-			.expect("Could not read the relay chain slot from the proof");
-
-		let inherent_data =
-			cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
-				relay_chain_slot,
-				sp_std::time::Duration::from_secs(6),
-			)
-			.create_inherent_data()
-			.expect("Could not create the timestamp inherent data");
-
-		inherent_data.check_extrinsics(block)
-	}
-}
-
-cumulus_pallet_parachain_system::register_validate_block! {
-	Runtime = Runtime,
-	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
-	CheckInherents = CheckInherents,
-}
+// cumulus_pallet_parachain_system::register_validate_block! {
+// 	Runtime = Runtime,
+// 	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
+// 	CheckInherents = CheckInherents,
+// }

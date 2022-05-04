@@ -6,7 +6,7 @@ use listen_primitives::{
 };
 use listen_runtime::{
 	AccountId, AuraId, CouncilConfig, CurrenciesConfig, ElectionsConfig, ListenConfig, Signature,
-	SudoConfig, TechnicalCommitteeConfig, EXISTENTIAL_DEPOSIT,
+	SudoConfig, TechnicalCommitteeConfig, EXISTENTIAL_DEPOSIT, AuraConfig, GrandpaConfig
 };
 use pallet_currencies::{ListenAssetInfo, ListenAssetMetadata};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -84,12 +84,12 @@ where
 	AccountPublic::from(get_pair_from_seed::<TPublic>(seed)).into_account()
 }
 
-/// Generate the session keys from individual elements.
-///
-/// The input must be a tuple of individual keys (a single arg for now since we have just one key).
-pub fn template_session_keys(keys: AuraId) -> listen_runtime::SessionKeys {
-	listen_runtime::SessionKeys { aura: keys }
-}
+// /// Generate the session keys from individual elements.
+// ///
+// /// The input must be a tuple of individual keys (a single arg for now since we have just one key).
+// pub fn template_session_keys(keys: AuraId) -> listen_runtime::opaque::SessionKeys {
+// 	listen_runtime::opaque::SessionKeys { aura: keys }
+// }
 
 pub fn development_config() -> ChainSpec {
 	ChainSpec::from_genesis(
@@ -312,12 +312,12 @@ fn testnet_genesis(
 			},
 			// balances: endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect(),
 		},
-		parachain_info: listen_runtime::ParachainInfoConfig { parachain_id: id },
-		collator_selection: listen_runtime::CollatorSelectionConfig {
-			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
-			candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
-			..Default::default()
-		},
+		// parachain_info: listen_runtime::ParachainInfoConfig { parachain_id: id },
+		// collator_selection: listen_runtime::CollatorSelectionConfig {
+		// 	invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
+		// 	candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
+		// 	..Default::default()
+		// },
 		elections: ElectionsConfig {
 			members: invulnerables.iter().cloned().map(|(a, _)| (a, STASH)).collect(),
 			// phantom: Default::default(),
@@ -325,24 +325,29 @@ fn testnet_genesis(
 		technical_committee: Default::default(),
 		council: Default::default(),
 		democracy: Default::default(),
-		session: listen_runtime::SessionConfig {
-			keys: invulnerables
-				.iter()
-				.cloned()
-				.map(|(acc, aura)| {
-					(
-						acc.clone(),                 // account id
-						acc,                         // validator id
-						template_session_keys(aura), // session keys
-					)
-				})
-				.collect(),
-		},
+		// session: listen_runtime::SessionConfig {
+		// 	keys: invulnerables
+		// 		.iter()
+		// 		.cloned()
+		// 		.map(|(acc, aura)| {
+		// 			(
+		// 				acc.clone(),                 // account id
+		// 				acc,                         // validator id
+		// 				template_session_keys(aura), // session keys
+		// 			)
+		// 		})
+		// 		.collect(),
+		// },
 		// no need to pass anything to aura, in fact it will panic if we do. Session will take care
 		// of this.
-		aura: Default::default(),
-		aura_ext: Default::default(),
-		parachain_system: Default::default(),
+		aura: AuraConfig {
+			authorities: vec![hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
+							.unchecked_into()],},
+		grandpa: GrandpaConfig {
+			authorities: vec![(hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
+							.unchecked_into(), 1)],},
+		// aura_ext: Default::default(),
+		// parachain_system: Default::default(),
 		tokens: Default::default(),
 		orml_vesting: Default::default(),
 		sudo: SudoConfig { key: Some(get_root()) },

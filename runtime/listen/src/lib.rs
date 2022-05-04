@@ -436,12 +436,12 @@ impl Contains<Call> for BaseCallFilter {
 		!matches!(
 			call,
 			Call::Balances(_) |
-			Call::Listen(pallet_listen::Call::ask_for_disband_room{..}) |
-			Call::Listen(pallet_listen::Call::vote{..}) |
-			Call::Listen(pallet_listen::Call::pay_out{..}) |
-			Call::Listen(pallet_listen::Call::disband_room{..}) |
-			Call::RoomTreasury(_) |
-			Call::Nft(_)
+				Call::Listen(pallet_listen::Call::ask_for_disband_room { .. }) |
+				Call::Listen(pallet_listen::Call::vote { .. }) |
+				Call::Listen(pallet_listen::Call::pay_out { .. }) |
+				Call::Listen(pallet_listen::Call::disband_room { .. }) |
+				Call::RoomTreasury(_) |
+				Call::Nft(_)
 		)
 	}
 }

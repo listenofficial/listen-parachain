@@ -524,7 +524,7 @@ pub mod pallet {
 				create_time: <timestamp::Module<T>>::get(),
 				create_block: Self::now(),
 				consume: vec![],
-				council: vec![who.clone()],  // room owner should be the one of the council members
+				council: vec![who.clone()], // room owner should be the one of the council members
 				black_list: vec![],
 				is_private,
 			};
@@ -958,7 +958,10 @@ pub mod pallet {
 			let who = T::Lookup::lookup(who)?;
 
 			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
-			ensure!(room.group_manager != Some(who.clone()) && !room.council.contains(&who), Error::<T>::RoomManager);
+			ensure!(
+				room.group_manager != Some(who.clone()) && !room.council.contains(&who),
+				Error::<T>::RoomManager
+			);
 			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
 
 			let now = Self::now();
@@ -1366,7 +1369,10 @@ pub mod pallet {
 				.ok_or(Error::<T>::Overflow)?;
 
 			if number > 1 {
-				ensure!(room.group_manager != Some(user.clone()) && !room.council.contains(&user), Error::<T>::RoomManager);
+				ensure!(
+					room.group_manager != Some(user.clone()) && !room.council.contains(&user),
+					Error::<T>::RoomManager
+				);
 				// If you quit halfway, you only get a quarter of the reward.
 				let amount = users_amount /
 					room.now_members_number.saturated_into::<MultiBalanceOf<T>>() /
@@ -1853,7 +1859,6 @@ pub mod pallet {
 				}
 				room_info.consume.insert(index, new_user_consume.clone());
 			}
-
 
 			if Self::is_voting(&room_info) {
 				let mut is_in_vote = false;

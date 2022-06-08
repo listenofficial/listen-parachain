@@ -570,6 +570,7 @@ pub mod pallet {
 		///
 		/// The Origin must be RoomManager.
 		#[pallet::weight(1500_000_000)]
+		#[transactional]
 		pub fn update_join_cost(
 			origin: OriginFor<T>,
 			group_id: RoomId,
@@ -645,6 +646,7 @@ pub mod pallet {
 		///
 		/// The Origin must be room manager.
 		#[pallet::weight(1500_000_000)]
+		#[transactional]
 		pub fn set_room_privacy(
 			origin: OriginFor<T>,
 			room_id: RoomId,
@@ -667,6 +669,7 @@ pub mod pallet {
 		///
 		/// The Origin must be room manager.
 		#[pallet::weight(1500_000_000)]
+		#[transactional]
 		pub fn set_max_number_for_room_members(
 			origin: OriginFor<T>,
 			group_id: RoomId,
@@ -1061,6 +1064,7 @@ pub mod pallet {
 
 			<RemoveInterval<T>>::try_mutate(max_members, |h| -> DispatchResult {
 				ensure!(interval != *h, Error::<T>::NotChange);
+				*h = interval;
 				Ok(())
 			})?;
 			Self::deposit_event(Event::SetKickInterval);
@@ -1686,6 +1690,7 @@ pub mod pallet {
 			let time = Self::now().saturating_sub(last_block);
 			let mut duration_num =
 				time.checked_div(&T::RewardDuration::get()).ok_or(Error::<T>::DivByZero)?;
+			let real_duration_num = duration_num.clone();
 			if duration_num.is_zero() {
 				return Err(Error::<T>::NotRewardTime)?
 			} else {
@@ -1702,7 +1707,7 @@ pub mod pallet {
 					total_reward.saturated_into::<MultiBalanceOf<T>>();
 				let room_proportion_amount =
 					T::RoomProportion::get() * total_reward.saturated_into::<MultiBalanceOf<T>>();
-				last_block = last_block.saturating_add(duration_num * T::RewardDuration::get());
+				last_block = last_block.saturating_add(real_duration_num * T::RewardDuration::get());
 				return Ok((
 					total_reward,
 					manager_proportion_amount,

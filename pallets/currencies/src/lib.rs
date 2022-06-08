@@ -26,7 +26,6 @@ use frame_support::{
 		LockableCurrency as PalletLockableCurrency, ReservableCurrency as PalletReservableCurrency,
 		WithdrawReasons,
 	},
-	// weights::Weight,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use listen_primitives::CurrencyId;
@@ -177,7 +176,8 @@ pub mod module {
 		fn build(&self) {
 			self.assets.iter().for_each(|asset_info| {
 				ListenAssetsInfo::<T>::insert(asset_info.0, asset_info.1.clone());
-				T::MultiCurrency::deposit(asset_info.0, &asset_info.1.owner, asset_info.2).expect("can not deposit");
+				T::MultiCurrency::deposit(asset_info.0, &asset_info.1.owner, asset_info.2)
+					.expect("can not deposit");
 			})
 		}
 	}

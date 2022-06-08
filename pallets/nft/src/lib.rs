@@ -17,19 +17,11 @@
 #![allow(clippy::unused_unit)]
 
 use codec::{Decode, Encode};
-use frame_support::{
-	ensure,
-	pallet_prelude::*,
-	traits::{Get},
-	BoundedVec, Parameter,
-};
+use frame_support::{ensure, pallet_prelude::*, traits::Get, BoundedVec, Parameter};
 use orml_traits::MultiCurrency;
 use scale_info::TypeInfo;
 use sp_runtime::{
-	traits::{
-		AtLeast32BitUnsigned, CheckedAdd, Hash, Member, One,
-		Zero,
-	},
+	traits::{AtLeast32BitUnsigned, CheckedAdd, Hash, Member, One, Zero},
 	ArithmeticError, DispatchError, DispatchResult, RuntimeDebug,
 };
 use sp_std::{

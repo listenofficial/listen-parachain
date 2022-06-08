@@ -26,21 +26,15 @@ use frame_support::{
 		PostDispatchInfo,
 	},
 	ensure,
-	traits::{
-		Contains, EnsureOrigin, Get,
-	},
-	weights::{GetDispatchInfo},
+	traits::{Contains, EnsureOrigin, Get},
+	weights::GetDispatchInfo,
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 use listen_primitives::traits::{CollectiveHandler, ListenHandler};
 use pallet_listen::RoomId;
 use scale_info::TypeInfo;
 use sp_runtime::{traits::Hash, RuntimeDebug};
-use sp_std::{
-	convert::From,
-	prelude::*,
-	result,
-};
+use sp_std::{convert::From, prelude::*, result};
 pub use weights::WeightInfo;
 
 pub mod weights;
@@ -138,11 +132,9 @@ pub struct ListenDaoVotes<AccountId, BlockNumber> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{
-		pallet_prelude::{
-			Blake2_128Concat, IsType, OptionQuery, PhantomData, StorageDoubleMap, StorageMap,
-			ValueQuery,
-		},
+	use frame_support::pallet_prelude::{
+		Blake2_128Concat, IsType, OptionQuery, PhantomData, StorageDoubleMap, StorageMap,
+		ValueQuery,
 	};
 	use frame_system::pallet_prelude::*;
 

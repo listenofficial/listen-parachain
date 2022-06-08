@@ -67,12 +67,8 @@ pub type RoomId = u64;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{
-		pallet_prelude::{
-			Blake2_128Concat, IsType, StorageDoubleMap, StorageMap, StorageValue,
-			ValueQuery,
-		},
-		// traits::Hooks,
+	use frame_support::pallet_prelude::{
+		Blake2_128Concat, IsType, StorageDoubleMap, StorageMap, StorageValue, ValueQuery,
 	};
 	use frame_system::pallet_prelude::*;
 
@@ -1259,7 +1255,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-
 		/// Set the minimum amount for a person in a red envelope
 		#[pallet::weight(1500_000_000)]
 		#[transactional]
@@ -1708,7 +1703,8 @@ pub mod pallet {
 					total_reward.saturated_into::<MultiBalanceOf<T>>();
 				let room_proportion_amount =
 					T::RoomProportion::get() * total_reward.saturated_into::<MultiBalanceOf<T>>();
-				last_block = last_block.saturating_add(real_duration_num * T::RewardDuration::get());
+				last_block =
+					last_block.saturating_add(real_duration_num * T::RewardDuration::get());
 				return Ok((
 					total_reward,
 					manager_proportion_amount,
@@ -1890,7 +1886,9 @@ pub mod pallet {
 			false
 		}
 
-		fn judge_vote_and_update_room(mut room: RoomInfoOf<T>) -> result::Result<RoomInfoOf<T>, DispatchError> {
+		fn judge_vote_and_update_room(
+			mut room: RoomInfoOf<T>,
+		) -> result::Result<RoomInfoOf<T>, DispatchError> {
 			let group_id = room.group_id;
 			let now = Self::now();
 			let vote_result = Self::is_vote_end(room.clone());

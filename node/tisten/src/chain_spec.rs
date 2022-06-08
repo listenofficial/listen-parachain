@@ -1,14 +1,11 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use listen_primitives::{
-	constants::{currency::*},
-	Balance,
-};
-use parachain_template_runtime::{
-	AccountId, AuraId, CurrenciesConfig, ElectionsConfig, ListenConfig, Signature,
-	SudoConfig, EXISTENTIAL_DEPOSIT,
-};
+use listen_primitives::{constants::currency::*, Balance};
 use pallet_currencies::{ListenAssetInfo, ListenAssetMetadata};
+use parachain_template_runtime::{
+	AccountId, AuraId, CurrenciesConfig, ElectionsConfig, ListenConfig, Signature, SudoConfig,
+	EXISTENTIAL_DEPOSIT,
+};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};
 use sc_telemetry::TelemetryEndpoints;
@@ -23,7 +20,8 @@ use sp_runtime::{
 };
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<parachain_template_runtime::GenesisConfig, Extensions>;
+pub type ChainSpec =
+	sc_service::GenericChainSpec<parachain_template_runtime::GenesisConfig, Extensions>;
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_pair_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {

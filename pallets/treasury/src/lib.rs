@@ -27,10 +27,7 @@ pub use crate::pallet::*;
 use codec::{Decode, Encode};
 use frame_support::{
 	ensure,
-	traits::{
-		Currency, EnsureOrigin, Get, OnUnbalanced,
-		ReservableCurrency,
-	},
+	traits::{Currency, EnsureOrigin, Get, OnUnbalanced, ReservableCurrency},
 };
 use frame_system::ensure_signed;
 use listen_primitives::traits::{ListenHandler, RoomTreasuryHandler};
@@ -38,10 +35,7 @@ use pallet_listen::{self, RoomId};
 use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::{
-	traits::{StaticLookup,},
-	Permill, RuntimeDebug, SaturatedConversion,
-};
+use sp_runtime::{traits::StaticLookup, Permill, RuntimeDebug, SaturatedConversion};
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
 

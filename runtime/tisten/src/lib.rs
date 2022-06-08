@@ -9,33 +9,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod parachains;
 mod weights;
 
-use parachains::*;
 pub use cumulus_primitives_core::ParaId;
-pub use listen_primitives::{
-	constants::{currency::*, time::*},
-	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, Hash, Header, Index,
-	Signature,
-};
-pub use orml_xcm_support::{
-	DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
-};
-use pallet_currencies::BasicCurrencyAdapter;
-use smallvec::smallvec;
-use sp_api::impl_runtime_apis;
-use sp_core::{
-	crypto::KeyTypeId,
-	OpaqueMetadata,
-};
-use sp_runtime::{
-	create_runtime_str, generic, impl_opaque_keys,
-	traits::{
-		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, BlockNumberProvider,
-		Convert,
-	},
-	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, Percent,
-};
-use static_assertions::const_assert;
 use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
@@ -43,9 +17,8 @@ use frame_support::{
 		Nothing, U128CurrencyToVote,
 	},
 	weights::{
-		constants::{WEIGHT_PER_SECOND},
-		DispatchClass, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
-		WeightToFeePolynomial, ConstantMultiplier
+		constants::WEIGHT_PER_SECOND, ConstantMultiplier, DispatchClass, Weight,
+		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 	},
 	PalletId,
 };
@@ -53,16 +26,38 @@ use frame_system::{
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot, RawOrigin,
 };
+pub use listen_primitives::{
+	constants::{currency::*, time::*},
+	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, Hash, Header, Index,
+	Signature,
+};
 use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
+pub use orml_xcm_support::{
+	DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
+};
+use pallet_currencies::BasicCurrencyAdapter;
+use parachains::*;
+use smallvec::smallvec;
+use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_runtime::traits::Zero;
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+#[cfg(any(feature = "std", test))]
+pub use sp_runtime::BuildStorage;
+use sp_runtime::{
+	create_runtime_str, generic, impl_opaque_keys,
+	traits::{
+		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, BlockNumberProvider,
+		Convert, Zero,
+	},
+	transaction_validity::{TransactionSource, TransactionValidity},
+	ApplyExtrinsicResult, Percent,
+};
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-#[cfg(any(feature = "std", test))]
-pub use sp_runtime::BuildStorage;
+use static_assertions::const_assert;
 
 // Polkadot Imports
 use pallet_xcm::{EnsureXcm, IsMajorityOfBody, XcmPassthrough};
@@ -70,17 +65,16 @@ use polkadot_parachain::primitives::Sibling;
 use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 // XCM Imports
+use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin,
-	FixedRateOfFungible, FixedWeightBounds, LocationInverter,
-	ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
+	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedRateOfFungible,
+	FixedWeightBounds, LocationInverter, ParentAsSuperuser, ParentIsPreset, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::{Config, XcmExecutor};
-use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
 
@@ -259,7 +253,10 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 			)),
 			kisten::kt::ASSET_ID => Some(MultiLocation::new(
 				1,
-				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::kt::TOKEN_SYMBOL.to_vec())),
+				X2(
+					Parachain(kisten::PARA_ID.into()),
+					GeneralKey(kisten::kt::TOKEN_SYMBOL.to_vec()),
+				),
 			)),
 			_ => None,
 		}
@@ -275,7 +272,8 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } =>
 				match (para_id, &key[..]) {
 					(kico::PARA_ID, kico::kico::TOKEN_SYMBOL) => Some(kico::kico::ASSET_ID.into()),
-					(kisten::PARA_ID, kisten::kt::TOKEN_SYMBOL) => Some(kisten::kt::ASSET_ID.into()),
+					(kisten::PARA_ID, kisten::kt::TOKEN_SYMBOL) =>
+						Some(kisten::kt::ASSET_ID.into()),
 
 					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => match key {
 						native::lt::TOKEN_SYMBOL => Some(native::lt::ASSET_ID.into()),

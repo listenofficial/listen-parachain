@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod primitives;
@@ -24,7 +23,7 @@ use crate::primitives::{
 	vote, AllProps, Audio, AudioPrice, DisbandVote, GroupInfo, GroupMaxMembers, ListenVote,
 	PersonInfo, PropsPrice, RedPacket, RewardStatus, RoomRewardInfo, SessionIndex,
 };
-use codec::{Decode, Encode, FullCodec};
+
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 pub use frame_support::{
@@ -44,21 +43,18 @@ use listen_primitives::{
 	traits::{CollectiveHandler, ListenHandler, RoomTreasuryHandler},
 	*,
 };
-use orml_tokens::{self, BalanceLock};
 use orml_traits::MultiCurrency;
 use pallet_multisig;
 use pallet_timestamp as timestamp;
 pub use room_id::{AccountIdConversion as RoomTreasuryIdConvertor, RoomTreasuryId};
-use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating,
 		StaticLookup, Zero,
 	},
-	DispatchError, DispatchResult, Percent, RuntimeDebug, SaturatedConversion,
+	DispatchError, DispatchResult, Percent, SaturatedConversion,
 };
 use sp_std::{
-	cmp,
 	collections::{btree_map::BTreeMap as BTMap, btree_set::BTreeSet},
 	convert::{TryFrom, TryInto},
 	prelude::*,
@@ -71,13 +67,12 @@ pub type RoomId = u64;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::Error::RewardAmountIsZero;
 	use frame_support::{
 		pallet_prelude::{
-			Blake2_128Concat, IsType, OptionQuery, StorageDoubleMap, StorageMap, StorageValue,
+			Blake2_128Concat, IsType, StorageDoubleMap, StorageMap, StorageValue,
 			ValueQuery,
 		},
-		traits::Hooks,
+		// traits::Hooks,
 	};
 	use frame_system::pallet_prelude::*;
 
@@ -333,22 +328,19 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			/// set server id
 			if let Some(server_id) = &self.server_id {
 				ServerId::<T>::put(server_id);
 			}
 
-			/// set multisig id
 			if self.multisig_members.len() >= 2 {
 				let mut members = self.multisig_members.clone();
 				members.sort();
 				let threshould = 1u16;
 				let multisig_id =
-					<pallet_multisig::Module<T>>::multi_account_id(&members, threshould);
+					<pallet_multisig::Pallet<T>>::multi_account_id(&members, threshould);
 				<Multisig<T>>::put((members, threshould, multisig_id));
 			}
 
-			/// set the create room payment.
 			{
 				CreatePayment::<T>::insert(
 					GroupMaxMembers::Ten,
@@ -372,7 +364,6 @@ pub mod pallet {
 				);
 			}
 
-			/// set remove interval
 			{
 				RemoveInterval::<T>::insert(GroupMaxMembers::Ten, T::BlockNumber::from(7 * DAYS));
 				RemoveInterval::<T>::insert(
@@ -393,7 +384,6 @@ pub mod pallet {
 				);
 			}
 
-			/// set disband interval
 			{
 				DisbandInterval::<T>::insert(GroupMaxMembers::Ten, T::BlockNumber::from(1 * DAYS));
 				DisbandInterval::<T>::insert(
@@ -463,7 +453,6 @@ pub mod pallet {
 			ensure!(who == multisig_id, Error::<T>::NotMultisigId);
 
 			for user in members.iter() {
-				/// the account balances should be zero.
 				ensure!(
 					T::MultiCurrency::total_balance(T::GetNativeCurrencyId::get(), &user).is_zero(),
 					Error::<T>::SomeoneBalanceIsNotZero
@@ -473,7 +462,7 @@ pub mod pallet {
 					&user,
 					T::AirDropAmount::get(),
 				)?;
-				<system::Module<T>>::inc_ref(&user);
+				<system::Pallet<T>>::inc_consumers(&user)?;
 			}
 
 			Self::deposit_event(Event::AirDroped(members.len() as u8, members));
@@ -496,7 +485,7 @@ pub mod pallet {
 
 			let create_payment = Self::create_cost(&Self::members_convert_type(max_members)?);
 
-			/// the create cost transfers to the treasury
+			// the create cost transfers to the treasury
 			let to = Self::treasury_id();
 			T::MultiCurrency::transfer(T::GetNativeCurrencyId::get(), &who, &to, create_payment)?;
 			let group_id = <NextGroupId<T>>::get();
@@ -521,7 +510,7 @@ pub mod pallet {
 				last_remove_someone_block: now,
 				disband_vote_end_block: now,
 				disband_vote: DisbandVote::default(),
-				create_time: <timestamp::Module<T>>::get(),
+				create_time: <timestamp::Pallet<T>>::get(),
 				create_block: Self::now(),
 				consume: vec![],
 				council: vec![who.clone()], // room owner should be the one of the council members
@@ -612,7 +601,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let inviter = ensure_signed(origin)?;
 
-			let mut invitee = match invitee {
+			let invitee = match invitee {
 				None => None,
 				Some(x) => Some(T::Lookup::lookup(x)?),
 			};
@@ -631,7 +620,7 @@ pub mod pallet {
 
 			let invitee = invitee.unwrap_or_else(|| inviter.clone());
 
-			/// people who into the room must be not in blacklist.
+			// people who into the room must be not in blacklist.
 			let black_list = room_info.black_list;
 			if black_list.iter().position(|h| h == &invitee).is_some() {
 				return Err(Error::<T>::InBlackList)?
@@ -703,7 +692,7 @@ pub mod pallet {
 				.saturated_into::<MultiBalanceOf<T>>();
 
 			if add_amount != Zero::zero() {
-				/// transfers amount to the treasury.
+				// transfers amount to the treasury.
 				let to = Self::treasury_id();
 				T::MultiCurrency::transfer(
 					T::GetNativeCurrencyId::get(),
@@ -794,7 +783,7 @@ pub mod pallet {
 
 			T::MultiCurrency::withdraw(T::GetNativeCurrencyId::get(), &who, dollars)?;
 
-			Self::get_like(&who, dollars);
+			Self::get_like(&who, dollars)?;
 			Self::deposit_event(Event::BuyProps(who));
 			Ok(())
 		}
@@ -882,7 +871,7 @@ pub mod pallet {
 
 			T::MultiCurrency::withdraw(T::GetNativeCurrencyId::get(), &who, dollars)?;
 
-			Self::get_like(&who, dollars);
+			Self::get_like(&who, dollars)?;
 			Self::deposit_event(Event::BuyAudio(who));
 			Ok(())
 		}
@@ -925,7 +914,7 @@ pub mod pallet {
 			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
 
 			AllRoom::<T>::try_mutate_exists(group_id, |r| -> DispatchResult {
-				let mut room = r.as_mut().take().ok_or(Error::<T>::RoomNotExists)?;
+				let room = r.as_mut().take().ok_or(Error::<T>::RoomNotExists)?;
 
 				if let Some(pos) = room.black_list.iter().position(|h| h == &who) {
 					room.black_list.remove(pos);
@@ -1022,7 +1011,7 @@ pub mod pallet {
 				.checked_add(&user_consume_amount)
 				.ok_or(Error::<T>::Overflow)?;
 			// It is possible that this person went to cast a vote and passed
-			room = Self::judge_vote_and_update_room(room);
+			room = Self::judge_vote_and_update_room(room)?;
 			AllRoom::<T>::insert(group_id, room);
 
 			Self::deposit_event(Event::AskForDisband(who.clone(), group_id));
@@ -1106,7 +1095,7 @@ pub mod pallet {
 
 			let mut room = Self::room_exists_and_user_in_room(group_id, &who)?;
 			ensure!(!Self::vote_passed_and_pending_disband(group_id)?, Error::<T>::Disbanding);
-			/// the consume amount should not be zero.
+			// the consume amount should not be zero.
 			let user_consume_amount = Self::get_user_consume_amount(&who, &room);
 			if user_consume_amount == <MultiBalanceOf<T>>::from(0u32) {
 				return Err(Error::<T>::ConsumeAmountIsZero)?
@@ -1158,7 +1147,7 @@ pub mod pallet {
 				},
 			}
 
-			room = Self::judge_vote_and_update_room(room);
+			room = Self::judge_vote_and_update_room(room)?;
 			AllRoom::<T>::insert(group_id, room);
 
 			Self::deposit_event(Event::DisbandVote(who.clone(), group_id));
@@ -1229,7 +1218,7 @@ pub mod pallet {
 									T::GetNativeCurrencyId::get(),
 									&who,
 									reward,
-								);
+								)?;
 
 								if let Some(pos) = rooms.iter().position(|h| h.0 == group_id) {
 									rooms_cp.remove(pos);
@@ -1265,7 +1254,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		///
+
 		/// Set the minimum amount for a person in a red envelope
 		#[pallet::weight(1500_000_000)]
 		#[transactional]
@@ -1345,10 +1334,10 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			group_id: RoomId,
 		) -> DispatchResult {
-			let who = ensure_signed(origin)?;
+			let _ = ensure_signed(origin)?;
 
 			let _ = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			Self::remove_redpacket_by_room_id(group_id, false);
+			Self::remove_redpacket_by_room_id(group_id, false)?;
 			Self::deposit_event(Event::ReturnExpiredRedpacket(group_id));
 			Ok(())
 		}
@@ -1385,10 +1374,9 @@ pub mod pallet {
 			} else {
 				let amount = room.total_balances;
 				T::MultiCurrency::deposit(T::GetNativeCurrencyId::get(), &user, amount)?;
-				let listeners = <ListenersOfRoom<T>>::get(group_id);
 				<AllRoom<T>>::remove(group_id);
 				<ListenersOfRoom<T>>::remove(group_id);
-				Self::remove_redpacket_by_room_id(group_id, true);
+				Self::remove_redpacket_by_room_id(group_id, true)?;
 			}
 
 			Self::deposit_event(Event::Exit(user, group_id));
@@ -1407,7 +1395,7 @@ pub mod pallet {
 
 			ensure!(Self::is_can_disband(group_id)?, Error::<T>::NotDisbanding);
 			let room = <AllRoom<T>>::get(group_id).ok_or(Error::<T>::RoomNotExists)?;
-			Self::do_disband(room);
+			Self::do_disband(room)?;
 			Self::deposit_event(Event::DisbandRoom(group_id, who));
 			Ok(())
 		}
@@ -1460,7 +1448,7 @@ pub mod pallet {
 			let mut redpacket = <RedPacketOfRoom<T>>::get(group_id, redpacket_id)
 				.ok_or(Error::<T>::RedPacketNotExists)?;
 			if redpacket.end_time < Self::now() {
-				Self::remove_redpacket(group_id, &redpacket);
+				Self::remove_redpacket(group_id, &redpacket)?;
 				return Err(Error::<T>::Expire)?
 			}
 
@@ -1490,7 +1478,7 @@ pub mod pallet {
 					continue
 				}
 
-				T::MultiCurrency::deposit(redpacket.currency_id.clone(), &who, amount);
+				T::MultiCurrency::deposit(redpacket.currency_id.clone(), &who, amount)?;
 
 				redpacket.already_get_man.insert(who.clone());
 				redpacket.already_get_amount = redpacket
@@ -1499,7 +1487,7 @@ pub mod pallet {
 					.ok_or(Error::<T>::Overflow)?;
 
 				if redpacket.already_get_man.len() == (redpacket.lucky_man_number as usize) {
-					Self::remove_redpacket(group_id, &redpacket);
+					Self::remove_redpacket(group_id, &redpacket)?;
 				} else {
 					<RedPacketOfRoom<T>>::insert(group_id, redpacket_id, redpacket.clone());
 				}
@@ -1508,7 +1496,7 @@ pub mod pallet {
 					<RedPacketOfRoom<T>>::remove(group_id, redpacket_id);
 				}
 
-				total_amount.saturating_add(amount);
+				total_amount = total_amount.saturating_add(amount);
 			}
 
 			Self::deposit_event(Event::GetRedPocket(group_id, redpacket_id, total_amount));
@@ -1516,14 +1504,14 @@ pub mod pallet {
 		}
 	}
 
-	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_initialize(n: T::BlockNumber) -> Weight {
-			Self::remove_expire_disband_info();
-			<NowSessionIndex<T>>::put(Self::get_session_index());
-			0
-		}
-	}
+	// #[pallet::hooks]
+	// impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+	// 	fn on_initialize(_: T::BlockNumber) -> Weight {
+	// 		Self::remove_expire_disband_info();
+	// 		<NowSessionIndex<T>>::put(Self::get_session_index());
+	// 		0
+	// 	}
+	// }
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -1642,24 +1630,24 @@ pub mod pallet {
 			Ok(new_members)
 		}
 
-		fn u128_convert_balance(
-			amount: Balance,
-		) -> result::Result<MultiBalanceOf<T>, DispatchError> {
-			let balances = <MultiBalanceOf<T> as TryFrom<Balance>>::try_from(amount)
-				.map_err(|_| Error::<T>::NumberCanNotConvert)?;
-			Ok(balances)
-		}
+		// fn u128_convert_balance(
+		// 	amount: Balance,
+		// ) -> result::Result<MultiBalanceOf<T>, DispatchError> {
+		// 	let balances = <MultiBalanceOf<T> as TryFrom<Balance>>::try_from(amount)
+		// 		.map_err(|_| Error::<T>::NumberCanNotConvert)?;
+		// 	Ok(balances)
+		// }
 
 		fn block_convert_balance(num: T::BlockNumber) -> MultiBalanceOf<T> {
 			num.saturated_into::<u32>().saturated_into::<MultiBalanceOf<T>>()
 		}
 
 		pub fn treasury_id() -> T::AccountId {
-			T::PalletId::get().into_account()
+			T::PalletId::get().into_account_truncating()
 		}
 
 		pub fn now() -> T::BlockNumber {
-			<system::Module<T>>::block_number()
+			<system::Pallet<T>>::block_number()
 		}
 
 		fn add_new_user_info(yourself: &T::AccountId, group_id: RoomId) {
@@ -1671,7 +1659,7 @@ pub mod pallet {
 
 		fn get_room_consume_amount(room: RoomInfoOf<T>) -> MultiBalanceOf<T> {
 			let mut consume_total_amount = <MultiBalanceOf<T>>::from(0u32);
-			for (account_id, amount) in room.consume.clone().iter() {
+			for (_, amount) in room.consume.clone().iter() {
 				consume_total_amount = consume_total_amount.saturating_add(*amount);
 			}
 
@@ -1880,7 +1868,7 @@ pub mod pallet {
 					is_in_vote = true;
 				}
 				if is_in_vote {
-					room_info = Self::judge_vote_and_update_room(room_info);
+					room_info = Self::judge_vote_and_update_room(room_info)?;
 				}
 			}
 
@@ -1896,16 +1884,16 @@ pub mod pallet {
 			false
 		}
 
-		fn judge_vote_and_update_room(mut room: RoomInfoOf<T>) -> RoomInfoOf<T> {
+		fn judge_vote_and_update_room(mut room: RoomInfoOf<T>) -> result::Result<RoomInfoOf<T>, DispatchError> {
 			let group_id = room.group_id;
 			let now = Self::now();
 			let vote_result = Self::is_vote_end(room.clone());
 
-			if vote_result.0 == End {
-				if vote_result.1 == Pass {
+			if vote_result.0 == END {
+				if vote_result.1 == PASS {
 					// The cost is 0. Dismiss immediately
 					if vote_result.2 == <MultiBalanceOf<T>>::from(0u32) {
-						Self::do_disband(room.clone());
+						Self::do_disband(room.clone())?;
 					} else {
 						room.disband_vote_end_block = now;
 						<PendingDisbandRooms<T>>::mutate(|h| {
@@ -1916,7 +1904,7 @@ pub mod pallet {
 					room = Self::remove_vote_info(room.clone());
 				}
 			}
-			room
+			Ok(room)
 		}
 
 		fn is_vote_end(room_info: RoomInfoOf<T>) -> (bool, bool, MultiBalanceOf<T>) {
@@ -1928,28 +1916,28 @@ pub mod pallet {
 				reject_total_amount * <MultiBalanceOf<T>>::from(2u32) >= consume_total_amount
 			{
 				if approve_total_amount >= reject_total_amount {
-					(End, Pass, consume_total_amount)
+					(END, PASS, consume_total_amount)
 				} else {
-					(End, NotPass, consume_total_amount)
+					(END, NOT_PASS, consume_total_amount)
 				}
 			} else {
 				if end_time >= Self::now() {
-					(NotEnd, NotPass, consume_total_amount)
+					(NOT_END, NOT_PASS, consume_total_amount)
 				} else {
-					(End, NotPass, consume_total_amount)
+					(END, NOT_PASS, consume_total_amount)
 				}
 			}
 		}
 
-		fn do_disband(room: RoomInfoOf<T>) {
+		fn do_disband(room: RoomInfoOf<T>) -> DispatchResult {
 			let group_id = room.group_id;
-			Self::remove_redpacket_by_room_id(group_id, true);
+			Self::remove_redpacket_by_room_id(group_id, true)?;
 			let total_reward = room.total_balances.clone();
 			let manager_reward = match room.group_manager.clone() {
 				None => MultiBalanceOf::<T>::from(0u32),
 				Some(x) => {
 					let amount = room.group_manager_balances.clone();
-					T::MultiCurrency::deposit(T::GetNativeCurrencyId::get(), &x, amount);
+					T::MultiCurrency::deposit(T::GetNativeCurrencyId::get(), &x, amount)?;
 					amount
 				},
 			};
@@ -1971,8 +1959,9 @@ pub mod pallet {
 			<ListenersOfRoom<T>>::remove(group_id);
 			<AllRoom<T>>::remove(group_id);
 			<PendingDisbandRooms<T>>::mutate(|h| h.remove(&group_id.into()));
-			T::CollectiveHandler::remove_room_collective_info(group_id.into());
+			T::CollectiveHandler::remove_room_collective_info(group_id.into())?;
 			T::RoomTreasuryHandler::remove_room_treasury_info(group_id.into());
+			Ok(())
 		}
 
 		fn remove_vote_info(mut room: RoomInfoOf<T>) -> RoomInfoOf<T> {
@@ -1990,21 +1979,22 @@ pub mod pallet {
 			session_index
 		}
 
-		fn remove_redpacket_by_room_id(room_id: RoomId, all: bool) {
+		fn remove_redpacket_by_room_id(room_id: RoomId, all: bool) -> DispatchResult {
 			let redpackets = <RedPacketOfRoom<T>>::iter_prefix(room_id).collect::<Vec<_>>();
 			let now = Self::now();
 
 			if all {
 				for redpacket in redpackets.iter() {
-					Self::remove_redpacket(room_id, &redpacket.1);
+					Self::remove_redpacket(room_id, &redpacket.1)?;
 				}
 			} else {
 				for redpacket in redpackets.iter() {
 					if redpacket.1.end_time < now {
-						Self::remove_redpacket(room_id, &redpacket.1);
+						Self::remove_redpacket(room_id, &redpacket.1)?;
 					}
 				}
 			}
+			Ok(())
 		}
 
 		fn remove_redpacket(
@@ -2016,13 +2006,14 @@ pub mod pallet {
 				T::BlockNumber,
 				CurrencyIdOf<T>,
 			>,
-		) {
+		) -> DispatchResult {
 			let who = redpacket.boss.clone();
 			let currency_id = redpacket.currency_id;
 			let remain = redpacket.total.saturating_sub(redpacket.already_get_amount);
 			let redpacket_id = redpacket.id;
-			T::MultiCurrency::deposit(currency_id, &who, remain);
+			T::MultiCurrency::deposit(currency_id, &who, remain)?;
 			<RedPacketOfRoom<T>>::remove(room_id, redpacket_id);
+			Ok(())
 		}
 
 		fn remove_someone_in_room(who: T::AccountId, mut room: RoomInfoOf<T>) -> RoomInfoOf<T> {
@@ -2052,10 +2043,11 @@ pub mod pallet {
 			room
 		}
 
-		fn get_like(who: &T::AccountId, amount: MultiBalanceOf<T>) {
+		fn get_like(who: &T::AccountId, amount: MultiBalanceOf<T>) -> DispatchResult {
 			let mul_amount =
 				amount.saturated_into::<Balance>().saturated_into::<MultiBalanceOf<T>>();
-			T::MultiCurrency::deposit(T::GetLikeCurrencyId::get(), who, mul_amount);
+			T::MultiCurrency::deposit(T::GetLikeCurrencyId::get(), who, mul_amount)?;
+			Ok(())
 		}
 
 		fn get_user_consume_amount(who: &T::AccountId, room: &RoomInfoOf<T>) -> MultiBalanceOf<T> {
@@ -2079,48 +2071,50 @@ pub mod pallet {
 			Ok(false)
 		}
 
-		/// Delete information about rooms that have been dismissed
-		fn remove_expire_disband_info() {
-			let mut index: u32;
-			let mut info: Vec<(RoomId, RoomRewardInfo<MultiBalanceOf<T>>)>;
-
-			let last_session_index = Self::last_session_index();
-			let now_session = Self::get_session_index();
-
-			if now_session - last_session_index <= Self::depth() {
-				return
-			}
-
-			index = last_session_index;
-			info = <InfoOfDisbandedRoom<T>>::iter_prefix(last_session_index).collect::<Vec<_>>();
-
-			if info.len() == 0 {
-				let next = last_session_index.saturating_add(1);
-				let now_session = Self::get_session_index();
-				if now_session - next <= Self::depth() {
-					return
-				}
-				info = <InfoOfDisbandedRoom<T>>::iter_prefix(next).collect::<Vec<_>>();
-				index = next;
-			}
-
-			info.truncate(200);
-			for i in info.iter() {
-				let group_id = i.0;
-				<ListenersOfRoom<T>>::remove(group_id);
-				let disband_room_info = <InfoOfDisbandedRoom<T>>::get(index, group_id);
-				let remain_reward =
-					disband_room_info.total_reward - disband_room_info.already_get_reward;
-				let teasury_id = Self::treasury_id();
-				T::MultiCurrency::deposit(
-					T::GetNativeCurrencyId::get(),
-					&teasury_id,
-					remain_reward,
-				);
-				<InfoOfDisbandedRoom<T>>::remove(index, group_id);
-			}
-			<LastSessionIndex<T>>::put(index);
-		}
+		// fixme
+		// /// Delete information about rooms that have been dismissed
+		// fn remove_expire_disband_info() -> DispatchResult {
+		// 	let mut index: u32;
+		// 	let mut info: Vec<(RoomId, RoomRewardInfo<MultiBalanceOf<T>>)>;
+		//
+		// 	let last_session_index = Self::last_session_index();
+		// 	let now_session = Self::get_session_index();
+		//
+		// 	if now_session - last_session_index <= Self::depth() {
+		// 		return
+		// 	}
+		//
+		// 	index = last_session_index;
+		// 	info = <InfoOfDisbandedRoom<T>>::iter_prefix(last_session_index).collect::<Vec<_>>();
+		//
+		// 	if info.len() == 0 {
+		// 		let next = last_session_index.saturating_add(1);
+		// 		let now_session = Self::get_session_index();
+		// 		if now_session - next <= Self::depth() {
+		// 			return
+		// 		}
+		// 		info = <InfoOfDisbandedRoom<T>>::iter_prefix(next).collect::<Vec<_>>();
+		// 		index = next;
+		// 	}
+		//
+		// 	info.truncate(200);
+		// 	for i in info.iter() {
+		// 		let group_id = i.0;
+		// 		<ListenersOfRoom<T>>::remove(group_id);
+		// 		let disband_room_info = <InfoOfDisbandedRoom<T>>::get(index, group_id);
+		// 		let remain_reward =
+		// 			disband_room_info.total_reward - disband_room_info.already_get_reward;
+		// 		let teasury_id = Self::treasury_id();
+		// 		T::MultiCurrency::deposit(
+		// 			T::GetNativeCurrencyId::get(),
+		// 			&teasury_id,
+		// 			remain_reward,
+		// 		)?;
+		// 		<InfoOfDisbandedRoom<T>>::remove(index, group_id);
+		// 	}
+		// 	<LastSessionIndex<T>>::put(index);
+		// 	Ok(())
+		// }
 
 		fn members_convert_type(num: u32) -> result::Result<GroupMaxMembers, DispatchError> {
 			match num {

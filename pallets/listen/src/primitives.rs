@@ -1,11 +1,8 @@
 use super::RoomId;
 use codec::{Decode, Encode};
-use frame_system::{self as system};
 use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
-use sp_std::{prelude::*, result};
-
-use listen_primitives::{constants::currency::*, Balance};
+use sp_std::{prelude::*};
 
 pub type SessionIndex = u32;
 
@@ -142,7 +139,7 @@ pub struct GroupInfo<AccountId, Balance, AllProps, Audio, BlockNumber, DisbandVo
 
 	pub consume: Vec<(AccountId, Balance)>,
 
-	pub council: Vec<(AccountId)>,
+	pub council: Vec<AccountId>,
 
 	pub black_list: Vec<AccountId>,
 
@@ -158,9 +155,9 @@ pub struct PersonInfo<AllProps, Audio, Balance, RewardStatus> {
 }
 
 pub mod vote {
-	pub const Pass: bool = true;
-	pub const NotPass: bool = false;
+	pub const PASS: bool = true;
+	pub const NOT_PASS: bool = false;
 
-	pub const End: bool = true;
-	pub const NotEnd: bool = false;
+	pub const END: bool = true;
+	pub const NOT_END: bool = false;
 }

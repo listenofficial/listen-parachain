@@ -37,7 +37,7 @@ use listen_primitives::traits::{CollectiveHandler, ListenHandler};
 use pallet_listen::RoomId;
 use pallet_timestamp;
 use scale_info::TypeInfo;
-use sp_core::u32_trait::Value as U32;
+// use sp_core::u32_trait::Value as u32;
 use sp_io::storage;
 use sp_runtime::{traits::Hash, RuntimeDebug};
 use sp_std::{
@@ -555,27 +555,27 @@ impl<
 	}
 }
 
-pub struct EnsureMembers<N: U32, AccountId, I: 'static>(
-	sp_std::marker::PhantomData<(N, AccountId, I)>,
+pub struct EnsureMembers<AccountId, I: 'static, const N: u32>(
+	sp_std::marker::PhantomData<(AccountId, I)>,
 );
 impl<
 		O: Into<Result<RoomRawOrigin<AccountId, I>, O>> + From<RoomRawOrigin<AccountId, I>>,
-		N: U32,
+		const N: u32,
 		AccountId,
 		I,
-	> EnsureOrigin<O> for EnsureMembers<N, AccountId, I>
+	> EnsureOrigin<O> for EnsureMembers<AccountId, I, N>
 {
 	type Success = (MemberCount, MemberCount);
 	fn try_origin(o: O) -> Result<Self::Success, O> {
 		o.into().and_then(|o| match o {
-			RoomRawOrigin::Members(n, m) if n >= N::VALUE => Ok((n, m)),
+			RoomRawOrigin::Members(n, m) if n >= N => Ok((n, m)),
 			r => Err(O::from(r)),
 		})
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> O {
-		O::from(RoomRawOrigin::Members(N::VALUE, N::VALUE))
+		O::from(RoomRawOrigin::Members(N, N))
 	}
 }
 
@@ -606,13 +606,13 @@ impl<
 	}
 }
 
-pub struct EnsureProportionMoreThan<N: U32, D: U32, AccountId, I: 'static>(
-	sp_std::marker::PhantomData<(N, D, AccountId, I)>,
+pub struct EnsureProportionMoreThan<const N: u32, const D: u32, AccountId, I: 'static>(
+	sp_std::marker::PhantomData<(AccountId, I)>,
 );
 impl<
 		O: Into<Result<RoomRawOrigin<AccountId, I>, O>> + From<RoomRawOrigin<AccountId, I>>,
-		N: U32,
-		D: U32,
+		const N: u32,
+		const D: u32,
 		AccountId,
 		I,
 	> EnsureOrigin<O> for EnsureProportionMoreThan<N, D, AccountId, I>
@@ -620,7 +620,7 @@ impl<
 	type Success = ();
 	fn try_origin(o: O) -> Result<Self::Success, O> {
 		o.into().and_then(|o| match o {
-			RoomRawOrigin::Members(n, m) if n * D::VALUE > N::VALUE * m => Ok(()),
+			RoomRawOrigin::Members(n, m) if n * D > N * m => Ok(()),
 			r => Err(O::from(r)),
 		})
 	}
@@ -631,13 +631,13 @@ impl<
 	}
 }
 
-pub struct EnsureProportionAtLeast<N: U32, D: U32, AccountId, I: 'static>(
-	sp_std::marker::PhantomData<(N, D, AccountId, I)>,
+pub struct EnsureProportionAtLeast<const N: u32, const D: u32, AccountId, I: 'static>(
+	sp_std::marker::PhantomData<(AccountId, I)>,
 );
 impl<
 		O: Into<Result<RoomRawOrigin<AccountId, I>, O>> + From<RoomRawOrigin<AccountId, I>>,
-		N: U32,
-		D: U32,
+		const N: u32,
+		const D: u32,
 		AccountId,
 		I,
 	> EnsureOrigin<O> for EnsureProportionAtLeast<N, D, AccountId, I>
@@ -645,7 +645,7 @@ impl<
 	type Success = ();
 	fn try_origin(o: O) -> Result<Self::Success, O> {
 		o.into().and_then(|o| match o {
-			RoomRawOrigin::Members(n, m) if n * D::VALUE >= N::VALUE * m => Ok(()),
+			RoomRawOrigin::Members(n, m) if n * D >= N * m => Ok(()),
 			r => Err(O::from(r)),
 		})
 	}

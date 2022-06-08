@@ -26,7 +26,7 @@ use frame_support::{
 		LockableCurrency as PalletLockableCurrency, ReservableCurrency as PalletReservableCurrency,
 		WithdrawReasons,
 	},
-	weights::Weight,
+	// weights::Weight,
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 use listen_primitives::CurrencyId;
@@ -177,7 +177,7 @@ pub mod module {
 		fn build(&self) {
 			self.assets.iter().for_each(|asset_info| {
 				ListenAssetsInfo::<T>::insert(asset_info.0, asset_info.1.clone());
-				T::MultiCurrency::deposit(asset_info.0, &asset_info.1.owner, asset_info.2);
+				T::MultiCurrency::deposit(asset_info.0, &asset_info.1.owner, asset_info.2).expect("can not deposit");
 			})
 		}
 	}
@@ -338,7 +338,7 @@ impl<T: Config> CurrenciesHandler<CurrencyId, ListenAssetMetadata, DispatchError
 impl<T: Config> Pallet<T> {
 	fn is_exists_metadata(currency_id: CurrencyId) -> bool {
 		if let Some(x) = ListenAssetsInfo::<T>::get(currency_id) {
-			if let Some(m) = x.metadata {
+			if let Some(_) = x.metadata {
 				return true
 			}
 		}

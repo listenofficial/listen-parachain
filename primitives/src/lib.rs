@@ -17,18 +17,14 @@
 
 //! Low-level types used throughout the Substrate code.
 
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	MultiSignature, OpaqueExtrinsic,
+	MultiSignature,
 };
-
-use codec::{Decode, Encode};
-use sp_runtime::RuntimeDebug;
-use sp_std::convert::TryInto;
 
 pub mod constants;
 pub mod traits;

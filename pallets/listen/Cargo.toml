@@ -3,39 +3,36 @@ name = "pallet-listen"
 version = "1.0.0"
 authors = ["LISTEN TEAM"]
 edition = "2021"
-
 license = "Apache-2.0"
 homepage = "https://github.com/listenofficial/"
 repository = "https://github.com/listenofficial/listen-parachain.git"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 
 # substrate fram
-frame-support = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.17' }
-frame-system = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.17' }
-pallet-multisig = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.17' }
-pallet-timestamp = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.17' }
-pallet-treasury = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.17' }
+frame-support = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.23' }
+frame-system = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.23' }
+pallet-multisig = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.23' }
+pallet-timestamp = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.23' }
+pallet-treasury = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.23' }
 
 #local
-listen-primitives = { path = '../../primitives', default-features = false, version = '1.0.0' }
+listen-primitives = { path = '../../primitives', default-features = false }
 
 #orml
-orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false }
-orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false }
+orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, branch = 'polkadot-v0.9.23' }
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, branch = 'polkadot-v0.9.23' }
 
 #[dev-dependencies]
-sp-runtime = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.17' }
-sp-std = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.17' }
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+sp-runtime = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.23' }
+sp-std = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.23' }
 
 [features]
 default = ['std']
 std = [
-
     "frame-support/std",
     "frame-system/std",
     "pallet-multisig/std",
@@ -47,6 +44,5 @@ std = [
     "listen-primitives/std",
     "orml-tokens/std",
 	"scale-info/std",
-
 ]
 

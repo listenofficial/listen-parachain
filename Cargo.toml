@@ -1,15 +1,15 @@
 [workspace]
+
 members = [
-	"node/*",
-	"runtime/*",
+#	"node/*",
+#	"runtime/*",
 	"pallets/currencies",
-#	"pallets/nicks",
 	"primitives",
 	"pallets/listen",
 	"pallets/dao",
-	"pallets/treasury",
+#	"pallets/treasury",
 	"pallets/nft",
-	"pallets/vesting",
+#	"pallets/vesting",
 ]
 
 [profile.release]

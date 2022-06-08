@@ -20,14 +20,14 @@ use codec::{Decode, Encode};
 use frame_support::{
 	ensure,
 	pallet_prelude::*,
-	traits::{Currency, ExistenceRequirement, Get, WithdrawReasons},
+	traits::{Get},
 	BoundedVec, Parameter,
 };
 use orml_traits::MultiCurrency;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
-		AtLeast32BitUnsigned, CheckedAdd, CheckedSub, Hash, MaybeSerializeDeserialize, Member, One,
+		AtLeast32BitUnsigned, CheckedAdd, Hash, Member, One,
 		Zero,
 	},
 	ArithmeticError, DispatchError, DispatchResult, RuntimeDebug,
@@ -111,7 +111,6 @@ pub struct TokenInfo<AccountId, Data, TokenMetadataOf> {
 }
 
 pub use module::*;
-use sp_runtime::RuntimeString::Owned;
 
 #[frame_support::pallet]
 pub mod module {
@@ -374,11 +373,12 @@ pub mod module {
 		pub fn active(origin: OriginFor<T>, token: (T::ClassId, T::TokenId)) -> DispatchResult {
 			let owner = ensure_signed(origin)?;
 			Self::do_active_or_not(&owner, token, true)?;
-			TokensOf::<T>::get(&owner).iter().for_each(|t| {
-				if token != *t {
-					Self::do_active_or_not(&owner, *t, false);
+			let tokens = TokensOf::<T>::get(&owner);
+			for t in tokens {
+				if t != token {
+					Self::do_active_or_not(&owner, t, false)?;
 				}
-			});
+			}
 
 			Self::deposit_event(Event::<T>::Active(token));
 
@@ -756,7 +756,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn is_in_sale(class_id: T::ClassId, token_id: T::TokenId) -> bool {
-		if let Some(pos) =
+		if let Some(_) =
 			InSaleTokens::<T>::get(class_id).iter().position(|h| h.token_id == token_id)
 		{
 			return true

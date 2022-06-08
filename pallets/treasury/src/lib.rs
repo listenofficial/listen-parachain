@@ -26,13 +26,11 @@ pub mod weights;
 pub use crate::pallet::*;
 use codec::{Decode, Encode};
 use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage, ensure, print,
+	ensure,
 	traits::{
-		Currency, EnsureOrigin, ExistenceRequirement::KeepAlive, Get, Imbalance, OnUnbalanced,
-		ReservableCurrency, WithdrawReasons,
+		Currency, EnsureOrigin, Get, OnUnbalanced,
+		ReservableCurrency,
 	},
-	weights::{DispatchClass, Weight},
-	PalletId,
 };
 use frame_system::ensure_signed;
 use listen_primitives::traits::{ListenHandler, RoomTreasuryHandler};
@@ -41,7 +39,7 @@ use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
-	traits::{AccountIdConversion, Saturating, StaticLookup, Zero},
+	traits::{StaticLookup,},
 	Permill, RuntimeDebug, SaturatedConversion,
 };
 use sp_std::prelude::*;
@@ -274,14 +272,14 @@ pub mod pallet {
 		}
 
 		pub fn now() -> T::BlockNumber {
-			<frame_system::Module<T>>::block_number()
+			<frame_system::Pallet<T>>::block_number()
 		}
 	}
 
 	impl<T: Config> RoomTreasuryHandler<RoomIndex> for Pallet<T> {
 		fn remove_room_treasury_info(room_id: RoomIndex) {
 			<Proposals<T>>::remove_prefix(room_id, None);
-			/// todo Funding bills that have been agreed to pass should not be swept away
+			// todo Funding bills that have been agreed to pass should not be swept away
 			<Approvals<T>>::remove(room_id);
 		}
 	}

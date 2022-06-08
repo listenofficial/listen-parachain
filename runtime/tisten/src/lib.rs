@@ -6,9 +6,10 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-pub mod parachains;
-use parachains::*;
+mod parachains;
+mod weights;
 
+use parachains::*;
 pub use cumulus_primitives_core::ParaId;
 pub use listen_primitives::{
 	constants::{currency::*, time::*},
@@ -23,30 +24,29 @@ use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{
 	crypto::KeyTypeId,
-	u32_trait::{_1, _2, _3, _4},
+	// u32_trait::{_1, _2, _3, _4},
 	OpaqueMetadata,
 };
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, BlockNumberProvider,
-		Convert, ConvertInto, IdentifyAccount, Verify,
+		Convert,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, MultiSignature, Percent,
+	ApplyExtrinsicResult, Percent,
 };
 use static_assertions::const_assert;
-
 use frame_support::{
-	construct_runtime, match_type, parameter_types,
+	construct_runtime, match_types, parameter_types,
 	traits::{
 		Contains, EnsureOneOf, EnsureOrigin, EqualPrivilegeOnly, Everything, LockIdentifier,
 		Nothing, U128CurrencyToVote,
 	},
 	weights::{
-		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
-		DispatchClass, IdentityFee, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
-		WeightToFeePolynomial,
+		constants::{WEIGHT_PER_SECOND},
+		DispatchClass, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
+		WeightToFeePolynomial, ConstantMultiplier
 	},
 	PalletId,
 };
@@ -62,27 +62,26 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
 // Polkadot Imports
 use pallet_xcm::{EnsureXcm, IsMajorityOfBody, XcmPassthrough};
 use polkadot_parachain::primitives::Sibling;
-use polkadot_runtime_common::{BlockHashCount, RocksDbWeight, SlowAdjustingFeeUpdate};
+use polkadot_runtime_common::{BlockHashCount, SlowAdjustingFeeUpdate};
 
 // XCM Imports
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin,
-	FixedRateOfFungible, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset,
+	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin,
+	FixedRateOfFungible, FixedWeightBounds, LocationInverter,
 	ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit, UsingComponents,
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::{Config, XcmExecutor};
-
+use weights::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight};
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, ()>;
 
@@ -118,7 +117,7 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllPallets,
+	AllPalletsWithSystem,
 	OnRuntimeUpgrade,
 >;
 
@@ -154,7 +153,7 @@ construct_runtime!(
 		ParachainSystem: cumulus_pallet_parachain_system::{
 			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
 		} = 1,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
+		// RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
 		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>} = 5,
@@ -191,7 +190,7 @@ construct_runtime!(
 		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage, Config<T>} = 44,
 		RoomTreasury: pallet_treasury::{Pallet, Storage, Call, Event<T>} = 45,
 		Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 47,
-		OrmlVesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 48,
+		// OrmlVesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 48,
 
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} =50,
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 51,
@@ -203,22 +202,22 @@ construct_runtime!(
 	}
 );
 
-/// fixme
+// fixme
 parameter_types! {
 	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
 	pub LIKEerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
-		GeneralKey(native::LT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
+		GeneralKey(native::lt::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
 	pub LIKEPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
-		GeneralKey(native::LIKE::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
+		GeneralKey(native::like::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
 	pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
-		GeneralKey(native::USDT::TokenSymbol.to_vec()))).into(), ksm_per_second() * 100);
+		GeneralKey(native::usdt::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
 	pub KICOPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
-				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec()))
+				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::kico::TOKEN_SYMBOL.to_vec()))
 			).into(), ksm_per_second() * 100);
 	pub KTPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
-				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KT::TokenSymbol.to_vec()))
+				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::kt::TOKEN_SYMBOL.to_vec()))
 			).into(), ksm_per_second() * 100);
 
 }
@@ -234,9 +233,9 @@ pub type Trader = (
 
 fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
 	let token_symbol = match id {
-		native::LT::AssetId => native::LT::TokenSymbol,
-		native::USDT::AssetId => native::USDT::TokenSymbol,
-		native::LIKE::AssetId => native::LIKE::TokenSymbol,
+		native::lt::ASSET_ID => native::lt::TOKEN_SYMBOL,
+		native::usdt::ASSET_ID => native::usdt::TOKEN_SYMBOL,
+		native::like::ASSET_ID => native::like::TOKEN_SYMBOL,
 		_ => return None,
 	};
 	Some(MultiLocation::new(
@@ -250,18 +249,18 @@ pub struct CurrencyIdConvert;
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		match id {
-			kusama::KSM::AssetId => Some(MultiLocation::parent()),
+			kusama::ksm::ASSET_ID => Some(MultiLocation::parent()),
 
-			native::LT::AssetId | native::USDT::AssetId | native::LIKE::AssetId =>
+			native::lt::ASSET_ID | native::usdt::ASSET_ID | native::like::ASSET_ID =>
 				native_currency_location(id),
 
-			kico::KICO::AssetId => Some(MultiLocation::new(
+			kico::kico::ASSET_ID => Some(MultiLocation::new(
 				1,
-				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::KICO::TokenSymbol.to_vec())),
+				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::kico::TOKEN_SYMBOL.to_vec())),
 			)),
-			kisten::KT::AssetId => Some(MultiLocation::new(
+			kisten::kt::ASSET_ID => Some(MultiLocation::new(
 				1,
-				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::KT::TokenSymbol.to_vec())),
+				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::kt::TOKEN_SYMBOL.to_vec())),
 			)),
 			_ => None,
 		}
@@ -271,18 +270,18 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		if location == MultiLocation::parent() {
-			return Some(kusama::KSM::AssetId.into())
+			return Some(kusama::ksm::ASSET_ID.into())
 		}
 		match location {
 			MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } =>
 				match (para_id, &key[..]) {
-					(kico::PARA_ID, kico::KICO::TokenSymbol) => Some(kico::KICO::AssetId.into()),
-					(kisten::PARA_ID, kisten::KT::TokenSymbol) => Some(kisten::KT::AssetId.into()),
+					(kico::PARA_ID, kico::kico::TOKEN_SYMBOL) => Some(kico::kico::ASSET_ID.into()),
+					(kisten::PARA_ID, kisten::kt::TOKEN_SYMBOL) => Some(kisten::kt::ASSET_ID.into()),
 
 					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => match key {
-						native::LT::TokenSymbol => Some(native::LT::AssetId.into()),
-						native::USDT::TokenSymbol => Some(native::USDT::AssetId.into()),
-						native::LIKE::TokenSymbol => Some(native::LIKE::AssetId.into()),
+						native::lt::TOKEN_SYMBOL => Some(native::lt::ASSET_ID.into()),
+						native::usdt::TOKEN_SYMBOL => Some(native::usdt::ASSET_ID.into()),
+						native::like::TOKEN_SYMBOL => Some(native::like::ASSET_ID.into()),
 						_ => None,
 					},
 					_ => None,
@@ -293,7 +292,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 }
 
 parameter_types! {
-	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
 pub struct ToTreasury;
@@ -551,15 +550,15 @@ impl EnsureOrigin<Origin> for EnsureListenFoundation {
 	}
 }
 
-impl orml_vesting::Config for Runtime {
-	type Event = Event;
-	type Currency = pallet_balances::Pallet<Runtime>;
-	type MinVestedTransfer = MinVestedTransfer;
-	type WeightInfo = ();
-	type MaxVestingSchedules = MaxVestingSchedules;
-	type BlockNumberProvider = RelayChainBlockNumberProvider<Runtime>;
-	type VestedTransferOrigin = EnsureListenFoundation;
-}
+// impl orml_vesting::Config for Runtime {
+// 	type Event = Event;
+// 	type Currency = pallet_balances::Pallet<Runtime>;
+// 	type MinVestedTransfer = MinVestedTransfer;
+// 	type WeightInfo = ();
+// 	type MaxVestingSchedules = MaxVestingSchedules;
+// 	type BlockNumberProvider = RelayChainBlockNumberProvider<Runtime>;
+// 	type VestedTransferOrigin = EnsureListenFoundation;
+// }
 
 parameter_types! {
 	pub const UncleGenerations: u32 = 0;
@@ -600,7 +599,8 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
-	type TransactionByteFee = TransactionByteFee;
+	// type TransactionByteFee = TransactionByteFee;
+	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type WeightToFee = WeightToFee;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
@@ -622,7 +622,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 }
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
+// impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl parachain_info::Config for Runtime {}
 
@@ -648,7 +648,7 @@ pub type LocationToAccountId = (
 );
 
 parameter_types! {
-	pub ListenTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+	pub ListenTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 }
 
 pub type LocalAssetTransactor = MultiCurrencyAdapter<
@@ -692,7 +692,7 @@ parameter_types! {
 	pub const MaxInstructions: u32 = 100;
 }
 
-match_type! {
+match_types! {
 	pub type ParentOrParentsExecutivePlurality: impl Contains<MultiLocation> = {
 		MultiLocation { parents: 1, interior: Here } |
 		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
@@ -793,7 +793,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-	// type WeightInfo = ();
+	type WeightInfo = ();
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -889,6 +889,10 @@ impl orml_tokens::Config for Runtime {
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
 	type MaxLocks = TokensMaxLocks;
+	// fixme
+	type MaxReserves = MaxReserves;
+	type ReserveIdentifier = ();
+
 	type DustRemovalWhitelist = DustRemovalWhitelist;
 }
 
@@ -943,10 +947,10 @@ parameter_types! {
 
 }
 
-type HalfRoomCouncil = pallet_dao::EnsureProportionMoreThan<_1, _2, AccountId, RoomCollective>;
+type HalfRoomCouncil = pallet_dao::EnsureProportionMoreThan<AccountId, RoomCollective, 1, 2>;
 type RoomRoot = pallet_dao::EnsureRoomRoot<Runtime, AccountId, RoomCollective>;
 type RoomRootOrHalfRoomCouncil = EnsureOneOf<RoomRoot, HalfRoomCouncil>;
-type SomeCouncil = pallet_dao::EnsureMembers<_2, AccountId, RoomCollective>;
+type SomeCouncil = pallet_dao::EnsureMembers<AccountId, RoomCollective, 2>;
 type HalfRoomCouncilOrSomeRoomCouncil = EnsureOneOf<HalfRoomCouncil, SomeCouncil>;
 type RoomRootOrHalfRoomCouncilOrSomeRoomCouncil =
 	EnsureOneOf<RoomRoot, HalfRoomCouncilOrSomeRoomCouncil>;
@@ -1154,30 +1158,30 @@ impl pallet_democracy::Config for Runtime {
 	type MinimumDeposit = MinimumDeposit;
 	/// A straight majority of the council can decide what their next motion is.
 	type ExternalOrigin =
-		pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
 	/// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
 	type ExternalMajorityOrigin =
-		pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 4>;
 	/// A unanimous council can have the next scheduled referendum be a straight default-carries
 	/// (NTB) vote.
 	type ExternalDefaultOrigin =
-		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 1>;
 	/// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
 	/// be tabled immediately and with a shorter voting/enactment period.
 	type FastTrackOrigin =
-		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>;
 	type InstantOrigin =
-		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>;
 	type InstantAllowed = InstantAllowed;
 	type FastTrackVotingPeriod = FastTrackVotingPeriod;
 	// To cancel a proposal which has been passed, 2/3 of the council must agree to it.
 	type CancellationOrigin =
-		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
 	// To cancel a proposal before it has been passed, the technical committee must be unanimous or
 	// Root must agree.
 	type CancelProposalOrigin = EnsureOneOf<
 		EnsureRoot<AccountId>,
-		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>,
+		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>,
 	>;
 	type BlacklistOrigin = EnsureRoot<AccountId>;
 	// Any single technical committee member may veto a coming council proposal, however they can
@@ -1205,7 +1209,7 @@ parameter_types! {
 
 type EnsureRootOrHalfCouncil = EnsureOneOf<
 	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>,
+	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
 >;
 
 impl pallet_identity::Config for Runtime {
@@ -1250,7 +1254,7 @@ impl orml_unknown_tokens::Config for Runtime {
 
 pub type EnsureRootOrThreeFourthsCouncil = EnsureOneOf<
 	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>,
+	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 4>,
 >;
 
 impl orml_xcm::Config for Runtime {
@@ -1272,11 +1276,11 @@ parameter_types! {
 }
 
 parameter_type_with_key! {
-	pub ParachainMinFee: |location: MultiLocation| -> u128 {
+	pub ParachainMinFee: |location: MultiLocation| -> Option<u128> {
 		#[allow(clippy::match_ref_pats)] // false positive
 		match (location.parents, location.first_interior()) {
-			(1, Some(Parachain(statemine::PARA_ID))) => 4_000_000_000,
-			_ => u128::MAX,
+			(1, Some(Parachain(statemine::PARA_ID))) => Some(4_000_000_000),
+			_ => Some(u128::MAX),
 		}
 	};
 }

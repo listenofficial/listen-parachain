@@ -1,12 +1,12 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use listen_primitives::{
-	constants::{currency::*, time::*},
+	constants::{currency::*},
 	Balance,
 };
-use listen_runtime::{
-	AccountId, AuraId, CouncilConfig, CurrenciesConfig, ElectionsConfig, ListenConfig, Signature,
-	SudoConfig, TechnicalCommitteeConfig, EXISTENTIAL_DEPOSIT,
+use parachain_template_runtime::{
+	AccountId, AuraId, CurrenciesConfig, ElectionsConfig, ListenConfig, Signature,
+	SudoConfig, EXISTENTIAL_DEPOSIT,
 };
 use pallet_currencies::{ListenAssetInfo, ListenAssetMetadata};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -23,7 +23,7 @@ use sp_runtime::{
 };
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<listen_runtime::GenesisConfig, Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<parachain_template_runtime::GenesisConfig, Extensions>;
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_pair_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -87,8 +87,8 @@ where
 /// Generate the session keys from individual elements.
 ///
 /// The input must be a tuple of individual keys (a single arg for now since we have just one key).
-pub fn template_session_keys(keys: AuraId) -> listen_runtime::SessionKeys {
-	listen_runtime::SessionKeys { aura: keys }
+pub fn template_session_keys(keys: AuraId) -> parachain_template_runtime::SessionKeys {
+	parachain_template_runtime::SessionKeys { aura: keys }
 }
 
 pub fn development_config() -> ChainSpec {
@@ -250,14 +250,14 @@ fn testnet_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
 	endowed_accounts: Option<Vec<AccountId>>,
 	id: ParaId,
-) -> listen_runtime::GenesisConfig {
-	listen_runtime::GenesisConfig {
-		system: listen_runtime::SystemConfig {
-			code: listen_runtime::WASM_BINARY
+) -> parachain_template_runtime::GenesisConfig {
+	parachain_template_runtime::GenesisConfig {
+		system: parachain_template_runtime::SystemConfig {
+			code: parachain_template_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
 		},
-		balances: listen_runtime::BalancesConfig {
+		balances: parachain_template_runtime::BalancesConfig {
 			balances: match endowed_accounts {
 				Some(x) => {
 					let mut accounts = x
@@ -312,8 +312,8 @@ fn testnet_genesis(
 			},
 			// balances: endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT)).collect(),
 		},
-		parachain_info: listen_runtime::ParachainInfoConfig { parachain_id: id },
-		collator_selection: listen_runtime::CollatorSelectionConfig {
+		parachain_info: parachain_template_runtime::ParachainInfoConfig { parachain_id: id },
+		collator_selection: parachain_template_runtime::CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
 			candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
 			..Default::default()
@@ -325,7 +325,7 @@ fn testnet_genesis(
 		technical_committee: Default::default(),
 		council: Default::default(),
 		democracy: Default::default(),
-		session: listen_runtime::SessionConfig {
+		session: parachain_template_runtime::SessionConfig {
 			keys: invulnerables
 				.iter()
 				.cloned()
@@ -344,7 +344,7 @@ fn testnet_genesis(
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
 		tokens: Default::default(),
-		orml_vesting: Default::default(),
+		// orml_vesting: Default::default(),
 		sudo: SudoConfig { key: Some(get_root()) },
 		listen: ListenConfig {
 			server_id: Some(get_root()),

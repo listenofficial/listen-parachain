@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-#	"node/*",
+	"node/tisten",
 	"runtime/tisten",
 	"pallets/currencies",
 	"primitives",

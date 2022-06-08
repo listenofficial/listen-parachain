@@ -21,27 +21,22 @@
 pub use crate::pallet::*;
 use frame_support::{
 	codec::{Decode, Encode},
-	decl_error, decl_event, decl_module, decl_storage,
 	dispatch::{
 		DispatchError, DispatchResult, DispatchResultWithPostInfo, Dispatchable, Parameter,
 		PostDispatchInfo,
 	},
 	ensure,
 	traits::{
-		ChangeMembers, Contains, Currency, EnsureOrigin, Get, InitializeMembers, ReservableCurrency,
+		Contains, EnsureOrigin, Get,
 	},
-	weights::{DispatchClass, GetDispatchInfo, Pays, Weight},
+	weights::{GetDispatchInfo},
 };
 use frame_system::{self as system, ensure_root, ensure_signed};
 use listen_primitives::traits::{CollectiveHandler, ListenHandler};
 use pallet_listen::RoomId;
-use pallet_timestamp;
 use scale_info::TypeInfo;
-// use sp_core::u32_trait::Value as u32;
-use sp_io::storage;
 use sp_runtime::{traits::Hash, RuntimeDebug};
 use sp_std::{
-	collections::{btree_map::BTreeMap, btree_set::BTreeSet},
 	convert::From,
 	prelude::*,
 	result,
@@ -146,9 +141,8 @@ pub mod pallet {
 	use frame_support::{
 		pallet_prelude::{
 			Blake2_128Concat, IsType, OptionQuery, PhantomData, StorageDoubleMap, StorageMap,
-			StorageValue, ValueQuery,
+			ValueQuery,
 		},
-		traits::Hooks,
 	};
 	use frame_system::pallet_prelude::*;
 
@@ -340,7 +334,7 @@ pub mod pallet {
 				));
 				Ok(())
 			} else {
-				let active_proposals = <Proposals<T, I>>::try_mutate(
+				let _active_proposals = <Proposals<T, I>>::try_mutate(
 					room_id,
 					|proposals| -> Result<usize, DispatchError> {
 						proposals.push(proposal_hash);
@@ -472,8 +466,8 @@ pub mod pallet {
 			voting: &ListenDaoVotes<T::AccountId, T::BlockNumber>,
 			room_id: RoomIndex,
 		) -> result::Result<(IsEnd, IsPass), DispatchError> {
-			let mut no_votes = voting.nays.len() as MemberCount;
-			let mut yes_votes = voting.ayes.len() as MemberCount;
+			let no_votes = voting.nays.len() as MemberCount;
+			let yes_votes = voting.ayes.len() as MemberCount;
 			let seats = T::ListenHandler::get_room_council(room_id.into())?.len() as MemberCount;
 
 			let approved = yes_votes >= voting.threshold;
@@ -499,7 +493,7 @@ pub mod pallet {
 		) -> u32 {
 			Self::deposit_event(Event::Approved(proposal_hash));
 
-			let dispatch_weight = proposal.get_dispatch_info().weight;
+			let _dispatch_weight = proposal.get_dispatch_info().weight;
 
 			// let origin = RoomRawOrigin::Members(voting.threshold, seats).into();
 			let origin = RoomRawOrigin::Members(voting.ayes.len() as MemberCount, seats).into();
@@ -544,7 +538,7 @@ impl<
 	type Success = AccountId;
 	fn try_origin(o: O) -> Result<Self::Success, O> {
 		o.into().and_then(|o| match o {
-			RoomRawOrigin::Member(id, who) => Ok(who),
+			RoomRawOrigin::Member(_id, who) => Ok(who),
 			r => Err(O::from(r)),
 		})
 	}
@@ -560,9 +554,9 @@ pub struct EnsureMembers<AccountId, I: 'static, const N: u32>(
 );
 impl<
 		O: Into<Result<RoomRawOrigin<AccountId, I>, O>> + From<RoomRawOrigin<AccountId, I>>,
-		const N: u32,
 		AccountId,
 		I,
+		const N: u32,
 	> EnsureOrigin<O> for EnsureMembers<AccountId, I, N>
 {
 	type Success = (MemberCount, MemberCount);
@@ -606,16 +600,16 @@ impl<
 	}
 }
 
-pub struct EnsureProportionMoreThan<const N: u32, const D: u32, AccountId, I: 'static>(
+pub struct EnsureProportionMoreThan<AccountId, I: 'static, const N: u32, const D: u32>(
 	sp_std::marker::PhantomData<(AccountId, I)>,
 );
 impl<
 		O: Into<Result<RoomRawOrigin<AccountId, I>, O>> + From<RoomRawOrigin<AccountId, I>>,
-		const N: u32,
-		const D: u32,
 		AccountId,
 		I,
-	> EnsureOrigin<O> for EnsureProportionMoreThan<N, D, AccountId, I>
+		const N: u32,
+		const D: u32,
+	> EnsureOrigin<O> for EnsureProportionMoreThan<AccountId, I, N, D>
 {
 	type Success = ();
 	fn try_origin(o: O) -> Result<Self::Success, O> {
@@ -631,16 +625,16 @@ impl<
 	}
 }
 
-pub struct EnsureProportionAtLeast<const N: u32, const D: u32, AccountId, I: 'static>(
+pub struct EnsureProportionAtLeast<AccountId, I: 'static, const N: u32, const D: u32>(
 	sp_std::marker::PhantomData<(AccountId, I)>,
 );
 impl<
 		O: Into<Result<RoomRawOrigin<AccountId, I>, O>> + From<RoomRawOrigin<AccountId, I>>,
-		const N: u32,
-		const D: u32,
 		AccountId,
 		I,
-	> EnsureOrigin<O> for EnsureProportionAtLeast<N, D, AccountId, I>
+		const N: u32,
+		const D: u32,
+	> EnsureOrigin<O> for EnsureProportionAtLeast<AccountId, I, N, D>
 {
 	type Success = ();
 	fn try_origin(o: O) -> Result<Self::Success, O> {
@@ -657,7 +651,7 @@ impl<
 }
 
 impl<T: Config<I>, I: 'static> CollectiveHandler<u64, T::BlockNumber, DispatchError>
-	for Module<T, I>
+	for Pallet<T, I>
 {
 	fn remove_room_collective_info(room_id: u64) -> result::Result<(), DispatchError> {
 		<ProposalCount<T, I>>::remove(room_id);
@@ -667,7 +661,7 @@ impl<T: Config<I>, I: 'static> CollectiveHandler<u64, T::BlockNumber, DispatchEr
 		Ok(())
 	}
 
-	fn get_motion_duration(room_id: u64) -> T::BlockNumber {
+	fn get_motion_duration(_room_id: u64) -> T::BlockNumber {
 		T::MotionDuration::get()
 	}
 }

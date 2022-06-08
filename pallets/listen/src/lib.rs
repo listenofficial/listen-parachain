@@ -1082,6 +1082,7 @@ pub mod pallet {
 
 			<DisbandInterval<T>>::try_mutate(max_members, |h| -> DispatchResult {
 				ensure!(interval != *h, Error::<T>::NotChange);
+				*h = interval;
 				Ok(())
 			})?;
 

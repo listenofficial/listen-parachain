@@ -6,10 +6,7 @@ members = [
 	"pallets/currencies",
 	"primitives",
 	"pallets/listen",
-	"pallets/dao",
-#	"pallets/treasury",
 	"pallets/nft",
-#	"pallets/vesting",
 ]
 
 [profile.release]

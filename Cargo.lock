@@ -4278,6 +4278,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "listen-primitives"
+version = "1.0.0"
+source = "git+https://github.com/listenofficial/listen-parachain.git?branch=polkadot-v0.9.23#2c2f6f959f9704b1139cddd2f1e940c3d3c4fb18"
+dependencies = [
+ "frame-system",
+ "parity-scale-codec",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4965,6 +4978,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-vesting"
+version = "1.0.0"
+source = "git+https://github.com/JimYam/listen-tmp.git?branch=polkadot-v0.9.23#0a89a84739f785e1c0f27c682359e381cb90dce8"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "orml-xcm"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git?branch=polkadot-v0.9.23#542a9292a414bb8feafebac7284cdf1fe1eb409b"
@@ -5312,7 +5339,7 @@ version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "listen-primitives",
+ "listen-primitives 1.0.0",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -5328,14 +5355,11 @@ dependencies = [
 [[package]]
 name = "pallet-dao"
 version = "1.0.0"
+source = "git+https://github.com/JimYam/listen-tmp.git?branch=polkadot-v0.9.23#0a89a84739f785e1c0f27c682359e381cb90dce8"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hex-literal",
- "listen-primitives",
- "pallet-balances",
- "pallet-listen",
+ "listen-primitives 1.0.0 (git+https://github.com/listenofficial/listen-parachain.git?branch=polkadot-v0.9.23)",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
@@ -5513,7 +5537,7 @@ version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "listen-primitives",
+ "listen-primitives 1.0.0",
  "orml-tokens",
  "orml-traits",
  "pallet-multisig",
@@ -5947,22 +5971,18 @@ dependencies = [
 [[package]]
 name = "pallet-treasury"
 version = "1.0.0"
+source = "git+https://github.com/JimYam/listen-tmp.git?branch=polkadot-v0.9.23#0a89a84739f785e1c0f27c682359e381cb90dce8"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
- "listen-primitives",
+ "listen-primitives 1.0.0 (git+https://github.com/listenofficial/listen-parachain.git?branch=polkadot-v0.9.23)",
  "pallet-balances",
- "pallet-listen",
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-core",
- "sp-io",
  "sp-runtime",
  "sp-std",
- "sp-storage",
 ]
 
 [[package]]
@@ -10865,7 +10885,7 @@ dependencies = [
  "frame-benchmarking-cli",
  "hex-literal",
  "jsonrpsee",
- "listen-primitives",
+ "listen-primitives 1.0.0",
  "log",
  "pallet-currencies",
  "pallet-transaction-payment-rpc",
@@ -10932,11 +10952,12 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
- "listen-primitives",
+ "listen-primitives 1.0.0",
  "log",
  "orml-tokens",
  "orml-traits",
  "orml-unknown-tokens",
+ "orml-vesting",
  "orml-xcm",
  "orml-xcm-support",
  "orml-xtokens",
@@ -11064,9 +11085,9 @@ checksum = "360dfd1d6d30e05fda32ace2c8c70e9c0a9da713275777f5a4dbb8a1893930c6"
 
 [[package]]
 name = "tracing"
-version = "0.1.34"
+version = "0.1.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d0ecdcb44a79f0fe9844f0c4f33a342cbcbb5117de8001e6ba0dc2351327d09"
+checksum = "a400e31aa60b9d44a52a8ee0343b5b18566b03a8321e0d321f695cf56e940160"
 dependencies = [
  "cfg-if 1.0.0",
  "pin-project-lite 0.2.9",

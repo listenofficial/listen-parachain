@@ -342,7 +342,7 @@ fn testnet_genesis(
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
 		tokens: Default::default(),
-		// orml_vesting: Default::default(),
+		orml_vesting: Default::default(),
 		sudo: SudoConfig { key: Some(get_root()) },
 		listen: ListenConfig {
 			server_id: Some(get_root()),

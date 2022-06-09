@@ -23,15 +23,14 @@ hex-literal = { version = "0.3.4" }
 
 # Local Dependencies
 pallet-currencies = { path = "../../pallets/currencies", default-features = false }
-pallet-dao = { path = "../../pallets/dao", default-features = false }
 pallet-listen = { path = "../../pallets/listen", default-features = false }
-# todo
-pallet-treasury = { path = "../../pallets/treasury", default-features = false }
 listen-primitives = { path = "../../primitives", default-features = false }
 pallet-nft = { path = "../../pallets/nft", default-features = false }
-# todo
-#orml-vesting = { path = "../../pallets/vesting", default-features = false }
 
+# listen-tmp
+pallet-dao = { git = "https://github.com/JimYam/listen-tmp.git", default-features = false, branch = "polkadot-v0.9.23"}
+orml-vesting = { git = "https://github.com/JimYam/listen-tmp.git", default-features = false, branch = "polkadot-v0.9.23" }
+pallet-treasury = { git = "https://github.com/JimYam/listen-tmp.git", default-features = false, branch = "polkadot-v0.9.23" }
 
 # orml
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, branch = "polkadot-v0.9.23" }

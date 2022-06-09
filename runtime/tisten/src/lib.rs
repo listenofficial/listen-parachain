@@ -183,7 +183,7 @@ construct_runtime!(
 		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage, Config<T>} = 44,
 		RoomTreasury: pallet_treasury::{Pallet, Storage, Call, Event<T>} = 45,
 		Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 47,
-		// OrmlVesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 48,
+		OrmlVesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 48,
 
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} =50,
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 51,
@@ -547,15 +547,15 @@ impl EnsureOrigin<Origin> for EnsureListenFoundation {
 	}
 }
 
-// impl orml_vesting::Config for Runtime {
-// 	type Event = Event;
-// 	type Currency = pallet_balances::Pallet<Runtime>;
-// 	type MinVestedTransfer = MinVestedTransfer;
-// 	type WeightInfo = ();
-// 	type MaxVestingSchedules = MaxVestingSchedules;
-// 	type BlockNumberProvider = RelayChainBlockNumberProvider<Runtime>;
-// 	type VestedTransferOrigin = EnsureListenFoundation;
-// }
+impl orml_vesting::Config for Runtime {
+	type Event = Event;
+	type Currency = pallet_balances::Pallet<Runtime>;
+	type MinVestedTransfer = MinVestedTransfer;
+	type WeightInfo = ();
+	type MaxVestingSchedules = MaxVestingSchedules;
+	type BlockNumberProvider = RelayChainBlockNumberProvider<Runtime>;
+	type VestedTransferOrigin = EnsureListenFoundation;
+}
 
 parameter_types! {
 	pub const UncleGenerations: u32 = 0;

@@ -13,6 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Forked from https://github.com/open-web3-stack/open-runtime-module-library/tree/master/currencies.
+// Most of this module uses code from the orml, but due to business differences, we made some feature additions.
+// In this module, wo can create asset, set metadata and burn our tokens.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
 

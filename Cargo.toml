@@ -6,6 +6,10 @@ members = [
 	"pallets/currencies",
 	"pallets/listen",
 	"pallets/nft",
+	"pallets/daos/*",
+]
+exclude = [
+	"pallets/daos",
 ]
 
 [profile.release]

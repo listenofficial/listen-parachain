@@ -27,7 +27,7 @@ jsonrpsee = { version = "0.13.1", features = ["server"] }
 
 # Local Dependencies
 parachain-template-runtime = { path = "../../runtime/tisten", package = "tisten-runtime" }
-listen-primitives = {path = "../../primitives"}
+listen-primitives = { git = "https://github.com/JimYam/listen-tmp.git", default-features = false, branch = "polkadot-v0.9.23" }
 pallet-currencies = { path = "../../pallets/currencies"}
 
 # Substrate

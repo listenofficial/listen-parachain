@@ -4,10 +4,10 @@ members = [
 	"node/tisten",
 	"runtime/tisten",
 	"pallets/currencies",
-	"primitives",
 	"pallets/listen",
 	"pallets/nft",
 ]
 
 [profile.release]
 panic = "unwind"
+

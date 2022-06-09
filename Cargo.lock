@@ -4268,19 +4268,7 @@ checksum = "5284f00d480e1c39af34e72f8ad60b94f47007e3481cd3b731c1d67190ddc7b7"
 [[package]]
 name = "listen-primitives"
 version = "1.0.0"
-dependencies = [
- "frame-system",
- "parity-scale-codec",
- "sp-application-crypto",
- "sp-core",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "listen-primitives"
-version = "1.0.0"
-source = "git+https://github.com/listenofficial/listen-parachain.git?branch=polkadot-v0.9.23#2c2f6f959f9704b1139cddd2f1e940c3d3c4fb18"
+source = "git+https://github.com/JimYam/listen-tmp.git?branch=polkadot-v0.9.23#55fb681a8d57f01d43a31cc69f0ceb384409e67f"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -4980,12 +4968,13 @@ dependencies = [
 [[package]]
 name = "orml-vesting"
 version = "1.0.0"
-source = "git+https://github.com/JimYam/listen-tmp.git?branch=polkadot-v0.9.23#0a89a84739f785e1c0f27c682359e381cb90dce8"
+source = "git+https://github.com/JimYam/listen-tmp.git?branch=polkadot-v0.9.23#55fb681a8d57f01d43a31cc69f0ceb384409e67f"
 dependencies = [
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-io",
  "sp-runtime",
  "sp-std",
@@ -5339,7 +5328,7 @@ version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "listen-primitives 1.0.0",
+ "listen-primitives",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -5355,11 +5344,11 @@ dependencies = [
 [[package]]
 name = "pallet-dao"
 version = "1.0.0"
-source = "git+https://github.com/JimYam/listen-tmp.git?branch=polkadot-v0.9.23#0a89a84739f785e1c0f27c682359e381cb90dce8"
+source = "git+https://github.com/JimYam/listen-tmp.git?branch=polkadot-v0.9.23#55fb681a8d57f01d43a31cc69f0ceb384409e67f"
 dependencies = [
  "frame-support",
  "frame-system",
- "listen-primitives 1.0.0 (git+https://github.com/listenofficial/listen-parachain.git?branch=polkadot-v0.9.23)",
+ "listen-primitives",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
@@ -5537,9 +5526,10 @@ version = "1.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "listen-primitives 1.0.0",
+ "listen-primitives",
  "orml-tokens",
  "orml-traits",
+ "orml-vesting",
  "pallet-multisig",
  "pallet-timestamp",
  "pallet-treasury 4.0.0-dev",
@@ -5971,12 +5961,12 @@ dependencies = [
 [[package]]
 name = "pallet-treasury"
 version = "1.0.0"
-source = "git+https://github.com/JimYam/listen-tmp.git?branch=polkadot-v0.9.23#0a89a84739f785e1c0f27c682359e381cb90dce8"
+source = "git+https://github.com/JimYam/listen-tmp.git?branch=polkadot-v0.9.23#55fb681a8d57f01d43a31cc69f0ceb384409e67f"
 dependencies = [
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
- "listen-primitives 1.0.0 (git+https://github.com/listenofficial/listen-parachain.git?branch=polkadot-v0.9.23)",
+ "listen-primitives",
  "pallet-balances",
  "parity-scale-codec",
  "scale-info",
@@ -10885,7 +10875,7 @@ dependencies = [
  "frame-benchmarking-cli",
  "hex-literal",
  "jsonrpsee",
- "listen-primitives 1.0.0",
+ "listen-primitives",
  "log",
  "pallet-currencies",
  "pallet-transaction-payment-rpc",
@@ -10952,7 +10942,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
  "hex-literal",
- "listen-primitives 1.0.0",
+ "listen-primitives",
  "log",
  "orml-tokens",
  "orml-traits",

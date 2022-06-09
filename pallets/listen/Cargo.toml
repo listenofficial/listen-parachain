@@ -19,8 +19,9 @@ pallet-multisig = { default-features = false,  git = 'https://github.com/parityt
 pallet-timestamp = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.23' }
 pallet-treasury = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.23' }
 
-#local
-listen-primitives = { path = '../../primitives', default-features = false }
+# listen-tmp
+listen-primitives = { git = "https://github.com/JimYam/listen-tmp.git", default-features = false, branch = "polkadot-v0.9.23" }
+orml-vesting = { git = "https://github.com/JimYam/listen-tmp.git", default-features = false, branch = "polkadot-v0.9.23" }
 
 #orml
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, branch = 'polkadot-v0.9.23' }
@@ -44,5 +45,6 @@ std = [
     "listen-primitives/std",
     "orml-tokens/std",
 	"scale-info/std",
+	"orml-vesting/std",
 ]
 

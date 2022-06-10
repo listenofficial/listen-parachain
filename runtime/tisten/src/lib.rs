@@ -127,7 +127,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("listen-parachain"),
 	impl_name: create_runtime_str!("listen-parachain"),
 	authoring_version: 1,
-	spec_version: 2022061001,
+	spec_version: 2022061002,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -173,7 +173,7 @@ construct_runtime!(
 
 		// local
 		Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 40,
-		Room: pallet_room::{Pallet, Storage, Call, Event<T>, Config<T>} = 41,
+		Listen: pallet_room::{Pallet, Storage, Call, Event<T>, Config<T>} = 41,
 		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage, Config<T>} = 42,
 
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} =50,
@@ -433,10 +433,10 @@ impl Contains<Call> for BaseCallFilter {
 		!matches!(
 			call,
 			Call::Balances(_) |
-				Call::Room(pallet_room::Call::ask_for_disband_room { .. }) |
-				Call::Room(pallet_room::Call::vote { .. }) |
-				Call::Room(pallet_room::Call::pay_out { .. }) |
-				Call::Room(pallet_room::Call::disband_room { .. }) |
+				Call::Listen(pallet_room::Call::ask_for_disband_room { .. }) |
+				Call::Listen(pallet_room::Call::vote { .. }) |
+				Call::Listen(pallet_room::Call::pay_out { .. }) |
+				Call::Listen(pallet_room::Call::disband_room { .. }) |
 				Call::RoomTreasury(_) |
 				Call::Nft(_)
 		)
@@ -903,7 +903,7 @@ pub struct DaoBaseCallFilter;
 impl Contains<Call> for DaoBaseCallFilter {
 	fn contains(call: &Call) -> bool {
 		match call {
-			Call::Room(func) => match func {
+			Call::Listen(func) => match func {
 				pallet_room::Call::manager_get_reward { .. } |
 				pallet_room::Call::update_join_cost { .. } |
 				pallet_room::Call::set_room_privacy { .. } |
@@ -926,7 +926,7 @@ impl pallet_dao::Config<RoomCollective> for Runtime {
 	type MaxProposals = RoomMaxProposals;
 	type DefaultVote = pallet_dao::PrimeDefaultVote;
 	type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
-	type ListenHandler = Room;
+	type ListenHandler = Listen;
 	type BaseCallFilter = DaoBaseCallFilter;
 }
 
@@ -1048,7 +1048,7 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBondMinimum = RoomProposalBondMinimum;
 	type SpendPeriod = RoomSpendPeriod;
 	type WeightInfo = ();
-	type ListenHandler = Room;
+	type ListenHandler = Listen;
 }
 
 impl pallet_sudo::Config for Runtime {

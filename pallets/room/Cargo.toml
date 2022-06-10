@@ -1,5 +1,5 @@
 [package]
-name = "pallet-listen"
+name = "pallet-room"
 version = "1.0.0"
 authors = ["LISTEN TEAM"]
 edition = "2021"

@@ -5521,25 +5521,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-listen"
-version = "1.0.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "listen-primitives",
- "orml-tokens",
- "orml-traits",
- "orml-vesting",
- "pallet-multisig",
- "pallet-timestamp",
- "pallet-treasury 4.0.0-dev",
- "parity-scale-codec",
- "scale-info",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "pallet-membership"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.23#6cbe1772bf258793fa9845daa8f43ea0cadee596"
@@ -5751,6 +5732,25 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-room"
+version = "1.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "listen-primitives",
+ "orml-tokens",
+ "orml-traits",
+ "orml-vesting",
+ "pallet-multisig",
+ "pallet-timestamp",
+ "pallet-treasury 4.0.0-dev",
+ "parity-scale-codec",
+ "scale-info",
  "sp-runtime",
  "sp-std",
 ]
@@ -10962,9 +10962,9 @@ dependencies = [
  "pallet-elections-phragmen",
  "pallet-identity",
  "pallet-indices",
- "pallet-listen",
  "pallet-multisig",
  "pallet-nft",
+ "pallet-room",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",

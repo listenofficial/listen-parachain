@@ -4,7 +4,7 @@ members = [
 	"node/tisten",
 	"runtime/tisten",
 	"pallets/currencies",
-	"pallets/listen",
+	"pallets/room",
 	"pallets/nft",
 	"pallets/daos/*",
 ]

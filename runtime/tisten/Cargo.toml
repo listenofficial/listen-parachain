@@ -23,7 +23,7 @@ hex-literal = { version = "0.3.4" }
 
 # Local Dependencies
 pallet-currencies = { path = "../../pallets/currencies", default-features = false }
-pallet-listen = { path = "../../pallets/listen", default-features = false }
+pallet-room = { path = "../../pallets/room", default-features = false }
 pallet-nft = { path = "../../pallets/nft", default-features = false }
 
 # listen-tmp
@@ -158,7 +158,7 @@ std = [
 	"xcm/std",
 	"pallet-currencies/std",
 	"pallet-dao/std",
-	"pallet-listen/std",
+	"pallet-room/std",
 	"pallet-treasury/std",
 	"orml-traits/std",
 	"orml-tokens/std",

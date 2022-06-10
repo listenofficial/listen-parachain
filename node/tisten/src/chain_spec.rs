@@ -3,7 +3,7 @@ use hex_literal::hex;
 use listen_primitives::{constants::currency::*, Balance};
 use pallet_currencies::{ListenAssetInfo, ListenAssetMetadata};
 use parachain_template_runtime::{
-	AccountId, AuraId, CurrenciesConfig, ElectionsConfig, ListenConfig, Signature, SudoConfig,
+	AccountId, AuraId, CurrenciesConfig, ElectionsConfig, RoomConfig, Signature, SudoConfig,
 	EXISTENTIAL_DEPOSIT,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -344,7 +344,7 @@ fn testnet_genesis(
 		tokens: Default::default(),
 		orml_vesting: Default::default(),
 		sudo: SudoConfig { key: Some(get_root()) },
-		listen: ListenConfig {
+		room: RoomConfig {
 			server_id: Some(get_root()),
 			multisig_members: vec![
 				get_account_id_from_seed::<sr25519::Public>("Alice"),

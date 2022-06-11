@@ -509,7 +509,7 @@ pub mod pallet {
 				create_time: <timestamp::Pallet<T>>::get(),
 				create_block: Self::now(),
 				consume: vec![],
-				council: vec![who.clone()], // room owner should be the one of the council members
+				council: vec![],
 				black_list: vec![],
 				is_private,
 			};

@@ -127,7 +127,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("listen-parachain"),
 	impl_name: create_runtime_str!("listen-parachain"),
 	authoring_version: 1,
-	spec_version: 2022061002,
+	spec_version: 2022061003,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -934,9 +934,9 @@ parameter_types! {
 	pub const AirDropAmount: Balance = 1 * UNIT * 99 / 100;
 	pub const VoteExpire: BlockNumber = 1 * DAYS;
 	pub const ProtectTime: BlockNumber = 30 * MINUTES;
-	pub const RedPackExpire: BlockNumber = 1 * DAYS;
-	pub const RewardDuration: BlockNumber = 1 * DAYS;
-	pub const DisbandDelayTime: BlockNumber = 4 * HOURS;
+	pub const RedPackExpire: BlockNumber = 1 * HOURS;// 1 * DAYS;
+	pub const RewardDuration: BlockNumber = 1 * HOURS;//1 * DAYS;
+	pub const DisbandDelayTime: BlockNumber = HOURS / 2;
 	pub const ManagerProportion: Percent = Percent::from_percent(1);
 	pub const RoomProportion: Percent = Percent::from_percent(1);
 	pub const CouncilMaxNumber: u32 = 15;

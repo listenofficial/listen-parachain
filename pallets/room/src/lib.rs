@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-
 pub mod primitives;
 pub mod room_id;
 
@@ -524,6 +523,51 @@ pub mod pallet {
 			Self::deposit_event(Event::CreatedRoom(who, group_id));
 			Ok(())
 		}
+
+
+		#[pallet::weight(1500_000_000)]
+		pub fn set_council_members(origin: OriginFor<T>, group_id: RoomId, members: Vec<T::AccountId>) -> DispatchResult {
+			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
+			ensure!(members.len() as u32 > 0u32, Error::<T>::VecEmpty);
+			AllRoom::<T>::try_mutate_exists(group_id, |room| -> DispatchResult {
+				let mut room_info = room.take().ok_or(Error::<T>::RoomNotExists)?;
+				room_info.council = members;
+				*room = Some(room_info);
+				Ok(())
+			})?;
+			Ok(())
+		}
+
+
+		#[pallet::weight(1500_000_000)]
+		pub fn add_council_member(origin: OriginFor<T>, group_id: RoomId, new_member: T::AccountId) -> DispatchResult {
+			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
+			AllRoom::<T>::try_mutate_exists(group_id, |room| -> DispatchResult {
+				let mut room_info = room.take().ok_or(Error::<T>::RoomNotExists)?;
+				if let None = room_info.council.iter().position(|h| h == &new_member) {
+					room_info.council.push(new_member);
+				} else {
+					return Err(Error::<T>::MemberAlreadyInCouncil)?;
+				}
+				*room = Some(room_info);
+				Ok(())
+			})?;
+			Ok(())
+		}
+
+
+		#[pallet::weight(1500_000_000)]
+		pub fn remove_council_member(origin: OriginFor<T>, group_id: RoomId, new_member: T::AccountId) -> DispatchResult {
+			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
+			AllRoom::<T>::try_mutate_exists(group_id, |room| -> DispatchResult {
+				let mut room_info = room.take().ok_or(Error::<T>::RoomNotExists)?;
+				room_info.council.retain( |h| h != &new_member);
+				*room = Some(room_info);
+				Ok(())
+			})?;
+			Ok(())
+		}
+
 
 		/// The room manager get his reward.
 		/// You should have already created the room.
@@ -1579,6 +1623,8 @@ pub mod pallet {
 		MemberIsEmpty,
 		NotChange,
 		RoomManagerNotExists,
+		MemberAlreadyInCouncil,
+		NotRoomMember,
 	}
 
 	#[pallet::event]

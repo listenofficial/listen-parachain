@@ -444,13 +444,13 @@ pub mod pallet {
 
 			let members = Self::check_accounts(members)?;
 			ensure!(members.len() as u32 <= 100u32, Error::<T>::VecTooLarge);
-			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
+			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigNotExists)?;
 			ensure!(who == multisig_id, Error::<T>::NotMultisigId);
 
 			for user in members.iter() {
 				ensure!(
 					T::MultiCurrency::total_balance(T::GetNativeCurrencyId::get(), &user).is_zero(),
-					Error::<T>::SomeoneBalanceIsNotZero
+					Error::<T>::BalanceIsNotZero
 				);
 				T::MultiCurrency::deposit(
 					T::GetNativeCurrencyId::get(),
@@ -535,6 +535,7 @@ pub mod pallet {
 				*room = Some(room_info);
 				Ok(())
 			})?;
+			Self::deposit_event(Event::SetCouncilMembers(group_id));
 			Ok(())
 		}
 
@@ -545,26 +546,28 @@ pub mod pallet {
 			AllRoom::<T>::try_mutate_exists(group_id, |room| -> DispatchResult {
 				let mut room_info = room.take().ok_or(Error::<T>::RoomNotExists)?;
 				if let None = room_info.council.iter().position(|h| h == &new_member) {
-					room_info.council.push(new_member);
+					room_info.council.push(new_member.clone());
 				} else {
 					return Err(Error::<T>::MemberAlreadyInCouncil)?;
 				}
 				*room = Some(room_info);
 				Ok(())
 			})?;
+			Self::deposit_event(Event::AddCouncilMember(group_id, new_member));
 			Ok(())
 		}
 
 
 		#[pallet::weight(1500_000_000)]
-		pub fn remove_council_member(origin: OriginFor<T>, group_id: RoomId, new_member: T::AccountId) -> DispatchResult {
+		pub fn remove_council_member(origin: OriginFor<T>, group_id: RoomId, who: T::AccountId) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 			AllRoom::<T>::try_mutate_exists(group_id, |room| -> DispatchResult {
 				let mut room_info = room.take().ok_or(Error::<T>::RoomNotExists)?;
-				room_info.council.retain( |h| h != &new_member);
+				room_info.council.retain( |h| h != &who);
 				*room = Some(room_info);
 				Ok(())
 			})?;
+			Self::deposit_event(Event::RemoveCouncilMember(group_id, who));
 			Ok(())
 		}
 
@@ -1486,7 +1489,7 @@ pub mod pallet {
 			}
 			Self::check_accounts(members)?;
 
-			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigIdIsNone)?;
+			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigNotExists)?;
 			ensure!(mul == multisig_id, Error::<T>::NotMultisigId);
 
 			let mut redpacket = <RedPacketOfRoom<T>>::get(group_id, redpacket_id)
@@ -1561,14 +1564,10 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// The Vec is empty.
 		VecEmpty,
-		/// Data type conversion error
-		NumberCanNotConvert,
 		/// The room is not exists.
 		RoomNotExists,
 		/// There was no one in the room.
 		RoomMembersIsZero,
-		/// It's not supposed to be you
-		ShouldNotYourself,
 		Overflow,
 		/// You are already in the room
 		InRoom,
@@ -1588,20 +1587,14 @@ pub mod pallet {
 		Expire,
 		NotMultisigId,
 		VecTooLarge,
-		SomeoneBalanceIsNotZero,
-		MultisigIdIsNone,
-		MustHavePaymentType,
+		BalanceIsNotZero,
+		MultisigNotExists,
 		AmountShouldDifferent,
 		MembersNumberToMax,
-		UnknownRoomType,
-		DuplicateMember,
-		NotServerId,
-		ServerIdNotExists,
 		DivByZero,
 		NotRewardTime,
 		/// You didn't buy anything
 		ConsumeAmountIsZero,
-		MaxMembersUnknown,
 		RoomMembersToMax,
 		RoomMaxNotDiff,
 		InBlackList,
@@ -1661,7 +1654,9 @@ pub mod pallet {
 		CouncilRejectDisband(RoomId),
 		ReturnExpiredRedpacket(RoomId),
 		SetRedpackMinAmount(CurrencyIdOf<T>, MultiBalanceOf<T>),
-		ListenTest,
+		SetCouncilMembers(RoomId),
+		AddCouncilMember(RoomId, T::AccountId),
+		RemoveCouncilMember(RoomId, T::AccountId),
 	}
 
 	impl<T: Config> Pallet<T> {

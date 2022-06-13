@@ -127,7 +127,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("listen-parachain"),
 	impl_name: create_runtime_str!("listen-parachain"),
 	authoring_version: 1,
-	spec_version: 2022061303,
+	spec_version: 2022061304,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -437,9 +437,6 @@ impl Contains<Call> for BaseCallFilter {
 				Call::Listen(pallet_room::Call::vote { .. }) |
 				Call::Listen(pallet_room::Call::pay_out { .. }) |
 				Call::Listen(pallet_room::Call::disband_room { .. }) |
-				Call::Listen(pallet_room::Call::set_council_members { .. }) |
-				Call::Listen(pallet_room::Call::add_council_member { .. }) |
-				Call::Listen(pallet_room::Call::remove_council_member { .. }) |
 				Call::RoomTreasury(_) |
 				Call::Nft(_)
 		)
@@ -912,6 +909,9 @@ impl Contains<Call> for DaoBaseCallFilter {
 				pallet_room::Call::set_room_privacy { .. } |
 				pallet_room::Call::set_max_number_for_room_members { .. } |
 				pallet_room::Call::remove_someone_from_blacklist { .. } |
+				pallet_room::Call::set_council_members { .. } |
+				pallet_room::Call::add_council_member { .. } |
+				pallet_room::Call::remove_council_member { .. } |
 				pallet_room::Call::remove_someone { .. } => true,
 				_ => false,
 			},

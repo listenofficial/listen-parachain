@@ -829,7 +829,7 @@ pub mod pallet {
 
 			T::MultiCurrency::withdraw(T::GetNativeCurrencyId::get(), &who, dollars)?;
 
-			Self::get_like(&who, dollars)?;
+			// Self::get_like(&who, dollars)?;
 			Self::deposit_event(Event::BuyProps(who));
 			Ok(())
 		}
@@ -917,7 +917,7 @@ pub mod pallet {
 
 			T::MultiCurrency::withdraw(T::GetNativeCurrencyId::get(), &who, dollars)?;
 
-			Self::get_like(&who, dollars)?;
+			// Self::get_like(&who, dollars)?;
 			Self::deposit_event(Event::BuyAudio(who));
 			Ok(())
 		}
@@ -2088,12 +2088,12 @@ pub mod pallet {
 			room
 		}
 
-		fn get_like(who: &T::AccountId, amount: MultiBalanceOf<T>) -> DispatchResult {
-			let mul_amount =
-				amount.saturated_into::<Balance>().saturated_into::<MultiBalanceOf<T>>();
-			T::MultiCurrency::deposit(T::GetLikeCurrencyId::get(), who, mul_amount)?;
-			Ok(())
-		}
+		// fn get_like(who: &T::AccountId, amount: MultiBalanceOf<T>) -> DispatchResult {
+		// 	let mul_amount =
+		// 		amount.saturated_into::<Balance>().saturated_into::<MultiBalanceOf<T>>();
+		// 	T::MultiCurrency::deposit(T::GetLikeCurrencyId::get(), who, mul_amount)?;
+		// 	Ok(())
+		// }
 
 		fn get_user_consume_amount(who: &T::AccountId, room: &RoomInfoOf<T>) -> MultiBalanceOf<T> {
 			let mut room = room.clone();

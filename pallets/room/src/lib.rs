@@ -448,15 +448,13 @@ pub mod pallet {
 			ensure!(who == multisig_id, Error::<T>::NotMultisigId);
 
 			for user in members.iter() {
-				ensure!(
-					T::MultiCurrency::total_balance(T::GetNativeCurrencyId::get(), &user).is_zero(),
-					Error::<T>::BalanceIsNotZero
-				);
-				T::MultiCurrency::deposit(
-					T::GetNativeCurrencyId::get(),
-					&user,
-					T::AirDropAmount::get(),
-				)?;
+				if T::MultiCurrency::total_balance(T::GetNativeCurrencyId::get(), &user).is_zero() {
+					T::MultiCurrency::deposit(
+						T::GetNativeCurrencyId::get(),
+						&user,
+						T::AirDropAmount::get(),
+					)?;
+				}
 				<system::Pallet<T>>::inc_consumers(&user)?;
 			}
 
@@ -514,7 +512,7 @@ pub mod pallet {
 			};
 
 			<AllRoom<T>>::insert(group_id, group_info);
-			Self::add_new_user_info(&who, group_id);
+			Self::add_user_extra(&who, group_id);
 			<NextGroupId<T>>::try_mutate(|h| -> DispatchResult {
 				*h = h.checked_add(1u64).ok_or(Error::<T>::Overflow)?;
 				Ok(())
@@ -524,9 +522,12 @@ pub mod pallet {
 			Ok(())
 		}
 
-
 		#[pallet::weight(1500_000_000)]
-		pub fn set_council_members(origin: OriginFor<T>, group_id: RoomId, members: Vec<T::AccountId>) -> DispatchResult {
+		pub fn set_council_members(
+			origin: OriginFor<T>,
+			group_id: RoomId,
+			members: Vec<T::AccountId>,
+		) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 			ensure!(members.len() as u32 > 0u32, Error::<T>::VecEmpty);
 			AllRoom::<T>::try_mutate_exists(group_id, |room| -> DispatchResult {
@@ -539,16 +540,19 @@ pub mod pallet {
 			Ok(())
 		}
 
-
 		#[pallet::weight(1500_000_000)]
-		pub fn add_council_member(origin: OriginFor<T>, group_id: RoomId, new_member: T::AccountId) -> DispatchResult {
+		pub fn add_council_member(
+			origin: OriginFor<T>,
+			group_id: RoomId,
+			new_member: T::AccountId,
+		) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 			AllRoom::<T>::try_mutate_exists(group_id, |room| -> DispatchResult {
 				let mut room_info = room.take().ok_or(Error::<T>::RoomNotExists)?;
 				if let None = room_info.council.iter().position(|h| h == &new_member) {
 					room_info.council.push(new_member.clone());
 				} else {
-					return Err(Error::<T>::MemberAlreadyInCouncil)?;
+					return Err(Error::<T>::MemberAlreadyInCouncil)?
 				}
 				*room = Some(room_info);
 				Ok(())
@@ -557,20 +561,22 @@ pub mod pallet {
 			Ok(())
 		}
 
-
 		#[pallet::weight(1500_000_000)]
-		pub fn remove_council_member(origin: OriginFor<T>, group_id: RoomId, who: T::AccountId) -> DispatchResult {
+		pub fn remove_council_member(
+			origin: OriginFor<T>,
+			group_id: RoomId,
+			who: T::AccountId,
+		) -> DispatchResult {
 			T::RoomRootOrigin::try_origin(origin).map_err(|_| Error::<T>::BadOrigin)?;
 			AllRoom::<T>::try_mutate_exists(group_id, |room| -> DispatchResult {
 				let mut room_info = room.take().ok_or(Error::<T>::RoomNotExists)?;
-				room_info.council.retain( |h| h != &who);
+				room_info.council.retain(|h| h != &who);
 				*room = Some(room_info);
 				Ok(())
 			})?;
 			Self::deposit_event(Event::RemoveCouncilMember(group_id, who));
 			Ok(())
 		}
-
 
 		/// The room manager get his reward.
 		/// You should have already created the room.
@@ -1691,7 +1697,7 @@ pub mod pallet {
 			<system::Pallet<T>>::block_number()
 		}
 
-		fn add_new_user_info(yourself: &T::AccountId, group_id: RoomId) {
+		fn add_user_extra(yourself: &T::AccountId, group_id: RoomId) {
 			<ListenersOfRoom<T>>::mutate(group_id, |h| h.insert(yourself.clone()));
 			<PurchaseSummary<T>>::mutate(yourself.clone(), |h| {
 				h.rooms.push((group_id, RewardStatus::default()))
@@ -1789,7 +1795,7 @@ pub mod pallet {
 				room_info.now_members_number =
 					room_info.now_members_number.checked_add(1u32).ok_or(Error::<T>::Overflow)?;
 
-				Self::add_new_user_info(&invitee, group_id);
+				Self::add_user_extra(&invitee, group_id);
 				*room = Some(room_info);
 				Ok(())
 			})

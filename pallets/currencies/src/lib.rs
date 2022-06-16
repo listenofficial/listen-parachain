@@ -425,6 +425,9 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
 			);
 			T::NativeCurrency::transfer(from, to, amount)?;
 		} else {
+			if T::NativeCurrency::total_balance(&to).is_zero() {
+				T::NativeCurrency::deposit(&to, T::AirDropAmount::get())?;
+			}
 			T::MultiCurrency::transfer(currency_id, from, to, amount)?;
 		}
 		Self::deposit_event(Event::Transferred(currency_id, from.clone(), to.clone(), amount));
@@ -442,6 +445,9 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
 		if currency_id == T::GetNativeCurrencyId::get() {
 			T::NativeCurrency::deposit(who, amount)?;
 		} else {
+			if T::NativeCurrency::total_balance(&who).is_zero() {
+				T::NativeCurrency::deposit(&who, T::AirDropAmount::get())?;
+			}
 			T::MultiCurrency::deposit(currency_id, who, amount)?;
 		}
 		Self::deposit_event(Event::Deposited(currency_id, who.clone(), amount));

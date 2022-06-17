@@ -33,14 +33,14 @@ pub fn migrate<T: crate::Config, N: AsRef<str>>(new_pallet_name: N) -> Weight {
 		storage_version,
 	);
 
-	if storage_version <= 1 {
+	if storage_version <= 0 {
 		log::info!("new prefix: {}", new_pallet_name.as_ref());
 		frame_support::storage::migration::move_pallet(
 			OLD_PREFIX,
 			new_pallet_name.as_ref().as_bytes(),
 		);
 
-		StorageVersion::new(2).put::<crate::Pallet<T>>();
+		StorageVersion::new(1).put::<crate::Pallet<T>>();
 
 		<T as frame_system::Config>::BlockWeights::get().max_block
 	} else {
@@ -78,7 +78,7 @@ pub fn pre_migration<T: crate::Config, N: AsRef<str>>(new: N) {
 		sp_core::hexdisplay::HexDisplay::from(&sp_io::storage::next_key(new.as_bytes()).unwrap())
 	);
 	// ensure storage version is 3.
-	assert_eq!(StorageVersion::get::<crate::Pallet<T>>(), 1);
+	assert_eq!(StorageVersion::get::<crate::Pallet<T>>(), 0);
 }
 
 /// Some checks for after migration. This can be linked to
@@ -88,5 +88,5 @@ pub fn pre_migration<T: crate::Config, N: AsRef<str>>(new: N) {
 pub fn post_migration<T: crate::Config>() {
 	log::info!("post-migration listen");
 	// ensure we've been updated to v4 by the automatic write of crate version -> storage version.
-	assert_eq!(StorageVersion::get::<crate::Pallet<T>>(), 2);
+	assert_eq!(StorageVersion::get::<crate::Pallet<T>>(), 1);
 }

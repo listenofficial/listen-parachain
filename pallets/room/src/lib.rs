@@ -89,7 +89,7 @@ pub mod pallet {
 		<T as timestamp::Config>::Moment,
 	>;
 
-	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(0);
 
 	#[pallet::config]
 	#[pallet::disable_frame_system_supertrait_check]

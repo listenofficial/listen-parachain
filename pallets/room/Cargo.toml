@@ -9,8 +9,12 @@ repository = "https://github.com/listenofficial/listen-parachain.git"
 
 
 [dependencies]
+log = { version = "0.4.14", default-features = false }
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+
+sp-io = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.23' }
+sp-core = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.23' }
 
 # substrate fram
 frame-support = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.23' }
@@ -46,5 +50,8 @@ std = [
     "orml-tokens/std",
 	"scale-info/std",
 	"orml-vesting/std",
+	"sp-io/std",
+	"sp-core/std",
+	"log/std",
 ]
 

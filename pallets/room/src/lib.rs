@@ -16,6 +16,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 pub mod primitives;
 pub mod room_id;
+pub mod migrations;
 
 pub use crate::pallet::*;
 use crate::primitives::{
@@ -31,6 +32,7 @@ pub use frame_support::{
 		BalanceStatus as Status, Currency, EnsureOrigin,
 		ExistenceRequirement::{AllowDeath, KeepAlive},
 		Get, OnUnbalanced, ReservableCurrency, WithdrawReasons,
+		StorageVersion,
 	},
 	transactional,
 	weights::Weight,
@@ -86,6 +88,8 @@ pub mod pallet {
 		DisbandVote<BTreeSet<<T as system::Config>::AccountId>, MultiBalanceOf<T>>,
 		<T as timestamp::Config>::Moment,
 	>;
+
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 
 	#[pallet::config]
 	#[pallet::disable_frame_system_supertrait_check]
@@ -305,6 +309,7 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 

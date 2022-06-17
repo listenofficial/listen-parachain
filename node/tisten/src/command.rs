@@ -284,6 +284,7 @@ pub fn run() -> Result<()> {
 				Err("Try-runtime must be enabled by `--features try-runtime`.".into())
 			}
 		},
+
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			let collator_options = cli.run.collator_options();

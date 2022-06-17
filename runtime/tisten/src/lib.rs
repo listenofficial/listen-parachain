@@ -13,6 +13,7 @@ pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
+		PalletInfo as PalletInfoT,
 		Contains, EnsureOneOf, EnsureOrigin, EqualPrivilegeOnly, Everything, LockIdentifier,
 		Nothing, U128CurrencyToVote,
 	},
@@ -111,7 +112,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	OnRuntimeUpgrade,
+	RemoveListenToRoom,
 >;
 
 pub fn ksm_per_second() -> u128 {
@@ -173,7 +174,7 @@ construct_runtime!(
 
 		// local
 		Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 40,
-		Listen: pallet_room::{Pallet, Storage, Call, Event<T>, Config<T>} = 41,
+		Room: pallet_room::{Pallet, Storage, Call, Event<T>, Config<T>} = 41,
 		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage, Config<T>} = 42,
 
 		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} =50,
@@ -316,14 +317,15 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 	}
 }
 
-pub struct OnRuntimeUpgrade;
-impl frame_support::traits::OnRuntimeUpgrade for OnRuntimeUpgrade {
-	fn on_runtime_upgrade() -> u64 {
-		frame_support::migrations::migrate_from_pallet_version_to_storage_version::<
-			AllPalletsWithSystem,
-		>(&RocksDbWeight::get())
-	}
-}
+// pub struct OnRuntimeUpgrade;
+// impl frame_support::traits::OnRuntimeUpgrade for OnRuntimeUpgrade {
+// 	// 根据storage_version来进行升级 也就是pallet的方式升级
+// 	fn on_runtime_upgrade() -> u64 {
+// 		frame_support::migrations::migrate_from_pallet_version_to_storage_version::<
+// 			AllPalletsWithSystem,
+// 		>(&RocksDbWeight::get())
+// 	}
+// }
 
 /// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
 /// node's balance type.
@@ -433,10 +435,10 @@ impl Contains<Call> for BaseCallFilter {
 		!matches!(
 			call,
 			Call::Balances(_) |
-				Call::Listen(pallet_room::Call::ask_for_disband_room { .. }) |
-				Call::Listen(pallet_room::Call::vote { .. }) |
-				Call::Listen(pallet_room::Call::pay_out { .. }) |
-				Call::Listen(pallet_room::Call::disband_room { .. }) |
+				Call::Room(pallet_room::Call::ask_for_disband_room { .. }) |
+				Call::Room(pallet_room::Call::vote { .. }) |
+				Call::Room(pallet_room::Call::pay_out { .. }) |
+				Call::Room(pallet_room::Call::disband_room { .. }) |
 				Call::RoomTreasury(_) |
 				Call::Nft(_)
 		)
@@ -903,7 +905,7 @@ pub struct DaoBaseCallFilter;
 impl Contains<Call> for DaoBaseCallFilter {
 	fn contains(call: &Call) -> bool {
 		match call {
-			Call::Listen(func) => match func {
+			Call::Room(func) => match func {
 				pallet_room::Call::manager_get_reward { .. } |
 				pallet_room::Call::update_join_cost { .. } |
 				pallet_room::Call::set_room_privacy { .. } |
@@ -929,7 +931,7 @@ impl pallet_dao::Config<RoomCollective> for Runtime {
 	type MaxProposals = RoomMaxProposals;
 	type DefaultVote = pallet_dao::PrimeDefaultVote;
 	type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
-	type ListenHandler = Listen;
+	type ListenHandler = Room;
 	type BaseCallFilter = DaoBaseCallFilter;
 }
 
@@ -1051,7 +1053,7 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBondMinimum = RoomProposalBondMinimum;
 	type SpendPeriod = RoomSpendPeriod;
 	type WeightInfo = ();
-	type ListenHandler = Listen;
+	type ListenHandler = Room;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -1310,7 +1312,53 @@ impl orml_xtokens::Config for Runtime {
 	type ReserveProvider = AbsoluteReserveProvider;
 }
 
+pub struct RemoveListenToRoom;
+
+impl frame_support::traits::OnRuntimeUpgrade for RemoveListenToRoom {
+	fn on_runtime_upgrade() -> Weight {
+		let new_pallet_name = <Runtime as frame_system::Config>::PalletInfo::name::<Room>()
+   .expect("Bounties is part of runtime, so it has a name; qed");
+		pallet_room::migrations::v1::migrate::<Runtime, _>(new_pallet_name)
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		let new_pallet_name = <Runtime as frame_system::Config>::PalletInfo::name::<Room>()
+   .expect("Bounties is part of runtime, so it has a name; qed");
+		pallet_room::migrations::v1::pre_migration::<Runtime, _>(new_pallet_name);
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		pallet_room::migrations::v1::post_migration::<Runtime>();
+		Ok(())
+	}
+
+}
+
+
 impl_runtime_apis! {
+
+	#[cfg(feature = "try-runtime")]
+    impl frame_try_runtime::TryRuntime<Block> for Runtime {
+        fn on_runtime_upgrade() -> (frame_support::weights::Weight, frame_support::weights::Weight) {
+            log::info!("try-runtime::on_runtime_upgrade.");
+            // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+            // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
+            // right here and right now.
+            let weight = Executive::try_runtime_upgrade().map_err(|err|{
+                log::info!("try-runtime::on_runtime_upgrade failed with: {:?}", err);
+                err
+            }).unwrap();
+            (weight, RuntimeBlockWeights::get().max_block)
+        }
+
+        fn execute_block_no_check(block: Block) -> frame_support::weights::Weight {
+            Executive::execute_block_no_check(block)
+        }
+    }
+
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
 		fn slot_duration() -> sp_consensus_aura::SlotDuration {
 			sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())

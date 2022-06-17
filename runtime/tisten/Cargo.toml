@@ -177,6 +177,7 @@ std = [
 	"pallet-nft/std",
 	"pallet-indices/std",
 	"pallet-identity/std",
+	"frame-try-runtime/std",
 ]
 
 runtime-benchmarks = [
@@ -195,4 +196,5 @@ runtime-benchmarks = [
 try-runtime = [
 	"frame-executive/try-runtime",
 	"frame-try-runtime",
+	"frame-system/try-runtime",
 ]

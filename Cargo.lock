@@ -5743,6 +5743,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "listen-primitives",
+ "log",
  "orml-tokens",
  "orml-traits",
  "orml-vesting",
@@ -5751,6 +5752,8 @@ dependencies = [
  "pallet-treasury 4.0.0-dev",
  "parity-scale-codec",
  "scale-info",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]

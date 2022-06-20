@@ -112,7 +112,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	RemoveListenToRoom,
+	()
 >;
 
 pub fn ksm_per_second() -> u128 {
@@ -1340,25 +1340,6 @@ impl frame_support::traits::OnRuntimeUpgrade for RemoveListenToRoom {
 
 impl_runtime_apis! {
 
-	#[cfg(feature = "try-runtime")]
-    impl frame_try_runtime::TryRuntime<Block> for Runtime {
-        fn on_runtime_upgrade() -> (frame_support::weights::Weight, frame_support::weights::Weight) {
-            log::info!("try-runtime::on_runtime_upgrade.");
-            // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
-            // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
-            // right here and right now.
-            let weight = Executive::try_runtime_upgrade().map_err(|err|{
-                log::info!("try-runtime::on_runtime_upgrade failed with: {:?}", err);
-                err
-            }).unwrap();
-            (weight, RuntimeBlockWeights::get().max_block)
-        }
-
-        fn execute_block_no_check(block: Block) -> frame_support::weights::Weight {
-            Executive::execute_block_no_check(block)
-        }
-    }
-
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
 		fn slot_duration() -> sp_consensus_aura::SlotDuration {
 			sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
@@ -1464,6 +1445,22 @@ impl_runtime_apis! {
 			ParachainSystem::collect_collation_info(header)
 		}
 	}
+
+	#[cfg(feature = "try-runtime")]
+    impl frame_try_runtime::TryRuntime<Block> for Runtime {
+        fn on_runtime_upgrade() -> (Weight, Weight) {
+            log::info!("try-runtime::on_runtime_upgrade.");
+            // NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
+            // have a backtrace here. If any of the pre/post migration checks fail, we shall stop
+            // right here and right now.
+            let weight = Executive::try_runtime_upgrade().unwrap();
+            (weight, RuntimeBlockWeights::get().max_block)
+        }
+
+        fn execute_block_no_check(block: Block) -> frame_support::weights::Weight {
+            Executive::execute_block_no_check(block)
+        }
+    }
 
 
 	#[cfg(feature = "runtime-benchmarks")]

@@ -15,3 +15,6 @@ exclude = [
 [profile.release]
 panic = "unwind"
 
+[patch.crates-io]
+syn = { git = "https://github.com/dtolnay/syn", rev = "19b3f0b53525ac7ab0882882a822adbd874dbe8c" }
+

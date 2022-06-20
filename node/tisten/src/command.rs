@@ -1,3 +1,4 @@
+
 use crate::{
 	chain_spec,
 	cli::{Cli, RelayChainCli, Subcommand},
@@ -267,22 +268,21 @@ pub fn run() -> Result<()> {
 					runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())),
 			}
 		},
+
+		#[cfg(feature = "try-runtime")]
 		Some(Subcommand::TryRuntime(cmd)) => {
-			if cfg!(feature = "try-runtime") {
-				let runner = cli.create_runner(cmd)?;
 
-				// grab the task manager.
-				let registry = &runner.config().prometheus_config.as_ref().map(|cfg| &cfg.registry);
-				let task_manager =
-					TaskManager::new(runner.config().tokio_handle.clone(), *registry)
-						.map_err(|e| format!("Error: {:?}", e))?;
+			let runner = cli.create_runner(cmd)?;
 
-				runner.async_run(|config| {
-					Ok((cmd.run::<Block, TemplateRuntimeExecutor>(config), task_manager))
-				})
-			} else {
-				Err("Try-runtime must be enabled by `--features try-runtime`.".into())
-			}
+			// grab the task manager.
+			let registry = &runner.config().prometheus_config.as_ref().map(|cfg| &cfg.registry);
+			let task_manager =
+				TaskManager::new(runner.config().tokio_handle.clone(), *registry)
+					.map_err(|e| format!("Error: {:?}", e))?;
+
+			runner.async_run(|config| {
+				Ok((cmd.run::<Block, TemplateRuntimeExecutor>(config), task_manager))
+			})
 		},
 
 		None => {

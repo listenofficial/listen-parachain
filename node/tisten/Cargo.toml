@@ -27,6 +27,7 @@ jsonrpsee = { version = "0.13.1", features = ["server"] }
 
 # Local Dependencies
 parachain-template-runtime = { path = "../../runtime/tisten", package = "tisten-runtime" }
+
 listen-primitives = { git = "https://github.com/JimYam/listen-tmp.git", default-features = false, branch = "polkadot-v0.9.23" }
 pallet-currencies = { path = "../../pallets/currencies"}
 
@@ -65,7 +66,7 @@ sp-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polk
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.23" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.23" }
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.23" }
-try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.23" }
+try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.23", optional = true }
 
 # Polkadot
 polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.23" }
@@ -91,12 +92,18 @@ cumulus-relay-chain-rpc-interface = { git = 'https://github.com/paritytech/cumul
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.23" }
 
 [features]
-default = []
+default = ["std", "cli"]
+std = []
 runtime-benchmarks = [
 	"parachain-template-runtime/runtime-benchmarks",
 	"polkadot-cli/runtime-benchmarks",
 ]
 
+cli = [
+	"try-runtime-cli",
+]
+
 try-runtime = [
 	"parachain-template-runtime/try-runtime",
+	"try-runtime-cli",
 ]

@@ -50,10 +50,13 @@ curl https://sh.rustup.rs -sSf | sh
 ```buildoutcfg
 git clone https://github.com/listenofficial/listen-parachain.git
 ```
+* Init
+```angular2html
+cd listen-parachain
+make submodule
+```
 * Build
 ```buildoutcfg
-cd listen-parachain
-
 cargo build --release
 ```
 

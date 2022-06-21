@@ -91,9 +91,10 @@ cumulus-relay-chain-rpc-interface = { git = 'https://github.com/paritytech/cumul
 [build-dependencies]
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.23" }
 
+
 [features]
-default = ["std", "cli"]
-std = []
+default = ["cli"]
+
 runtime-benchmarks = [
 	"parachain-template-runtime/runtime-benchmarks",
 	"polkadot-cli/runtime-benchmarks",

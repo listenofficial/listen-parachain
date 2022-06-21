@@ -172,7 +172,7 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				]),
-				PARA_ID.into(),
+				2022u32.into(),
 			)
 		},
 		// Bootnodes
@@ -187,7 +187,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: PARA_ID.into(),
+			para_id: 2022u32.into(),
 		},
 	)
 }

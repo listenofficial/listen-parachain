@@ -112,7 +112,8 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	RemoveListenToRoom,
+	(),
+	// RemoveListenToRoom,
 >;
 
 pub fn ksm_per_second() -> u128 {
@@ -128,7 +129,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("listen-parachain"),
 	impl_name: create_runtime_str!("listen-parachain"),
 	authoring_version: 1,
-	spec_version: 2022062101,
+	spec_version: 202206201,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -892,8 +893,9 @@ impl orml_tokens::Config for Runtime {
 	// fixme
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = ();
-
 	type DustRemovalWhitelist = DustRemovalWhitelist;
+	type OnNewTokenAccount = ();
+	type OnKilledTokenAccount = ();
 }
 
 parameter_types! {

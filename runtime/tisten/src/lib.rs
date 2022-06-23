@@ -112,7 +112,8 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(),
+	OnRuntimeUpgrade,
+	// (),
 	// RemoveListenToRoom,
 >;
 
@@ -317,15 +318,14 @@ impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 	}
 }
 
-// pub struct OnRuntimeUpgrade;
-// impl frame_support::traits::OnRuntimeUpgrade for OnRuntimeUpgrade {
-// 	// 根据storage_version来进行升级 也就是pallet的方式升级
-// 	fn on_runtime_upgrade() -> u64 {
-// 		frame_support::migrations::migrate_from_pallet_version_to_storage_version::<
-// 			AllPalletsWithSystem,
-// 		>(&RocksDbWeight::get())
-// 	}
-// }
+pub struct OnRuntimeUpgrade;
+impl frame_support::traits::OnRuntimeUpgrade for OnRuntimeUpgrade {
+	fn on_runtime_upgrade() -> u64 {
+		frame_support::migrations::migrate_from_pallet_version_to_storage_version::<
+			AllPalletsWithSystem,
+		>(&RocksDbWeight::get())
+	}
+}
 
 /// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
 /// node's balance type.

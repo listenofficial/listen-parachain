@@ -3,7 +3,7 @@ use hex_literal::hex;
 use listen_primitives::{constants::currency::*, Balance};
 use pallet_currencies::{ListenAssetInfo, ListenAssetMetadata};
 use parachain_template_runtime::{
-	AccountId, AuraId, CurrenciesConfig, ElectionsConfig, RoomConfig, Signature, SudoConfig,
+	AccountId, AuraId, CurrenciesConfig, RoomConfig, Signature, SudoConfig,
 	EXISTENTIAL_DEPOSIT,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -315,10 +315,6 @@ fn testnet_genesis(
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
 			candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
 			..Default::default()
-		},
-		elections: ElectionsConfig {
-			members: invulnerables.iter().cloned().map(|(a, _)| (a, STASH)).collect(),
-			// phantom: Default::default(),
 		},
 		technical_committee: Default::default(),
 		council: Default::default(),

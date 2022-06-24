@@ -5,14 +5,14 @@ pub struct RemoveListenToRoom;
 impl frame_support::traits::OnRuntimeUpgrade for RemoveListenToRoom {
 	fn on_runtime_upgrade() -> Weight {
 		let new_pallet_name = <Runtime as frame_system::Config>::PalletInfo::name::<Room>()
-   .expect("Bounties is part of runtime, so it has a name; qed");
+			.expect("Bounties is part of runtime, so it has a name; qed");
 		pallet_room::migrations::v1::migrate::<Runtime, _>(new_pallet_name)
 	}
 
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<(), &'static str> {
 		let new_pallet_name = <Runtime as frame_system::Config>::PalletInfo::name::<Room>()
-   .expect("Bounties is part of runtime, so it has a name; qed");
+			.expect("Bounties is part of runtime, so it has a name; qed");
 		pallet_room::migrations::v1::pre_migration::<Runtime, _>(new_pallet_name);
 		Ok(())
 	}
@@ -23,7 +23,6 @@ impl frame_support::traits::OnRuntimeUpgrade for RemoveListenToRoom {
 		assert!(Room::server_id().is_some());
 		Ok(())
 	}
-
 }
 
 pub struct OnRuntimeUpgrade;

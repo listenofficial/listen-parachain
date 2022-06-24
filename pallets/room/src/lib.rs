@@ -14,9 +14,9 @@
 // limitations under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+pub mod migrations;
 pub mod primitives;
 pub mod room_id;
-pub mod migrations;
 
 pub use crate::pallet::*;
 use crate::primitives::{
@@ -31,8 +31,7 @@ pub use frame_support::{
 	traits::{
 		BalanceStatus as Status, Currency, EnsureOrigin,
 		ExistenceRequirement::{AllowDeath, KeepAlive},
-		Get, OnUnbalanced, ReservableCurrency, WithdrawReasons,
-		StorageVersion,
+		Get, OnUnbalanced, ReservableCurrency, StorageVersion, WithdrawReasons,
 	},
 	transactional,
 	weights::Weight,

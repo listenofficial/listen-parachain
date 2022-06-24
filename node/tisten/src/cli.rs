@@ -46,7 +46,6 @@ pub enum Subcommand {
 	/// Try some command against runtime state. Note: `try-runtime` feature must be enabled.
 	#[cfg(not(feature = "try-runtime"))]
 	TryRuntime,
-
 }
 
 /// Command for exporting the genesis state of the parachain

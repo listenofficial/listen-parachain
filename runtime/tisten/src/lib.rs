@@ -6,24 +6,20 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+mod call_filters;
+mod migrations;
+mod origin;
 mod parachains;
 mod weights;
 mod xcm_config;
-mod origin;
-mod migrations;
-mod call_filters;
 
 use call_filters::*;
-use migrations::*;
-use origin::*;
-use xcm_config::*;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
-		PalletInfo as PalletInfoT,
 		Contains, EnsureOneOf, EnsureOrigin, EqualPrivilegeOnly, Everything, LockIdentifier,
-		Nothing,
+		Nothing, PalletInfo as PalletInfoT,
 	},
 	weights::{
 		constants::WEIGHT_PER_SECOND, ConstantMultiplier, DispatchClass, Weight,
@@ -40,6 +36,8 @@ pub use listen_primitives::{
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, Hash, Header, Index,
 	Signature,
 };
+use migrations::*;
+use origin::*;
 use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
 pub use orml_xcm_support::{
 	DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
@@ -67,6 +65,7 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
+use xcm_config::*;
 
 // Polkadot Imports
 use pallet_xcm::{EnsureXcm, IsMajorityOfBody, XcmPassthrough};
@@ -134,7 +133,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	transaction_version: 1,
 	state_version: 1,
 };
-
 
 /// Handles converting a weight scalar to a fee value, based on the scale and granularity of the
 /// node's balance type.
@@ -206,7 +204,6 @@ pub fn native_version() -> NativeVersion {
 	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
 }
 
-
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -267,7 +264,6 @@ construct_runtime!(
 		OrmlVesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 72,
 	}
 );
-
 
 parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
@@ -437,13 +433,11 @@ impl pallet_transaction_payment::Config for Runtime {
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
 }
 
-
 // impl pallet_randomness_collective_flip::Config for Runtime {}
 
 impl parachain_info::Config for Runtime {}
 
 impl cumulus_pallet_aura_ext::Config for Runtime {}
-
 
 parameter_types! {
 	pub const IndexDeposit: Balance = 1 * UNIT;
@@ -495,7 +489,6 @@ parameter_types! {
 	pub const ExecutiveBody: BodyId = BodyId::Executive;
 }
 
-
 impl pallet_collator_selection::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
@@ -511,7 +504,6 @@ impl pallet_collator_selection::Config for Runtime {
 	type ValidatorRegistration = Session;
 	type WeightInfo = ();
 }
-
 
 parameter_types! {
 	pub const RoomMotionDuration: BlockNumber = 5 * DAYS;
@@ -545,7 +537,6 @@ parameter_types! {
 	pub const GetLikeCurrencyId: CurrencyId = 1;
 
 }
-
 
 impl pallet_room::Config for Runtime {
 	type Event = Event;
@@ -850,14 +841,12 @@ impl orml_tokens::Config for Runtime {
 	type OnKilledTokenAccount = ();
 }
 
-
 impl pallet_utility::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 	type PalletsOrigin = OriginCaller;
 	type WeightInfo = ();
 }
-
 
 impl_runtime_apis! {
 

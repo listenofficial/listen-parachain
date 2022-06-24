@@ -3,8 +3,7 @@ use hex_literal::hex;
 use listen_primitives::{constants::currency::*, Balance};
 use pallet_currencies::{ListenAssetInfo, ListenAssetMetadata};
 use parachain_template_runtime::{
-	AccountId, AuraId, CurrenciesConfig, RoomConfig, Signature, SudoConfig,
-	EXISTENTIAL_DEPOSIT,
+	AccountId, AuraId, CurrenciesConfig, RoomConfig, Signature, SudoConfig, EXISTENTIAL_DEPOSIT,
 };
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::{ChainType, Properties};

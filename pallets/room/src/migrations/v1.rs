@@ -1,9 +1,8 @@
-
 #![allow(dead_code)]
 use frame_support::{
+	runtime_print,
 	traits::{Get, StorageVersion},
 	weights::Weight,
-	runtime_print,
 };
 use log;
 use sp_io;

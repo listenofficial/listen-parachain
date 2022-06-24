@@ -285,7 +285,6 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 }
 
-
 impl orml_unknown_tokens::Config for Runtime {
 	type Event = Event;
 }

@@ -242,7 +242,6 @@ pub fn staging_config() -> ChainSpec {
 }
 
 pub const ENDOWMENT: Balance = 10_000_000 * UNIT;
-pub const STASH: Balance = 100 * UNIT;
 
 fn testnet_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,

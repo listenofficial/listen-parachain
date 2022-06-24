@@ -7,7 +7,6 @@ use frame_support::{
 };
 use log;
 use sp_io;
-use sp_core;
 
 /// The old prefix.
 pub const OLD_PREFIX: &[u8] = b"Listen";

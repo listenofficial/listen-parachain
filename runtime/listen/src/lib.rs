@@ -18,8 +18,8 @@ pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
-		Contains, EnsureOneOf, EnsureOrigin, EqualPrivilegeOnly, Everything,
-		Nothing, PalletInfo as PalletInfoT,
+		Contains, EnsureOneOf, EnsureOrigin, EqualPrivilegeOnly, Everything, Nothing,
+		PalletInfo as PalletInfoT,
 	},
 	weights::{
 		constants::WEIGHT_PER_SECOND, ConstantMultiplier, DispatchClass, Weight,

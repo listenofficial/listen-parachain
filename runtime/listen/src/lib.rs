@@ -18,7 +18,7 @@ pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
-		Contains, EnsureOneOf, EnsureOrigin, EqualPrivilegeOnly, Everything, LockIdentifier,
+		Contains, EnsureOneOf, EnsureOrigin, EqualPrivilegeOnly, Everything,
 		Nothing, PalletInfo as PalletInfoT,
 	},
 	weights::{
@@ -64,7 +64,6 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use static_assertions::const_assert;
 use xcm_config::*;
 
 // Polkadot Imports
@@ -359,7 +358,6 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-	pub MinVestedTransfer: Balance = 0;
 	pub const MaxVestingSchedules: u32 = 100;
 }
 
@@ -380,7 +378,7 @@ impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider
 impl orml_vesting::Config for Runtime {
 	type Event = Event;
 	type Currency = pallet_balances::Pallet<Runtime>;
-	type MinVestedTransfer = MinVestedTransfer;
+	type MinVestedTransfer = ExistentialDeposit;
 	type WeightInfo = ();
 	type MaxVestingSchedules = MaxVestingSchedules;
 	type BlockNumberProvider = RelayChainBlockNumberProvider<Runtime>;
@@ -527,11 +525,11 @@ parameter_types! {
 	pub const AirDropAmount: Balance = 1 * UNIT * 99 / 100;
 	pub const VoteExpire: BlockNumber = 1 * DAYS;
 	pub const ProtectTime: BlockNumber = 30 * MINUTES;
-	pub const RedPackExpire: BlockNumber = 1 * HOURS;// 1 * DAYS;
-	pub const RewardDuration: BlockNumber = 1 * HOURS;//1 * DAYS;
+	pub const RedPackExpire: BlockNumber = 1 * DAYS;
+	pub const RewardDuration: BlockNumber = 7 * DAYS;
 	pub const DisbandDelayTime: BlockNumber = HOURS / 2;
 	pub const ManagerProportion: Percent = Percent::from_percent(1);
-	pub const RoomProportion: Percent = Percent::from_percent(1);
+	pub const RoomProportion: Percent = Percent::from_percent(2);
 	pub const CouncilMaxNumber: u32 = 15;
 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
 	pub const GetLikeCurrencyId: CurrencyId = 1;
@@ -659,21 +657,6 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
-// Make sure that there are no more than `MaxMembers` members elected via elections-phragmen.
-const_assert!(DesiredMembers::get() <= CouncilMaxMembers::get());
-
-parameter_types! {
-	pub const CandidacyBond: Balance = 10 * UNIT;
-	// 1 storage item created, key size is 32 bytes, value size is 16+16.
-	pub const VotingBondBase: Balance = 1 * UNIT;
-	// additional data per vote is 32 bytes (account id).
-	pub const VotingBondFactor: Balance = 1 * UNIT;
-	pub const TermDuration: BlockNumber = 7 * DAYS;
-	pub const DesiredMembers: u32 = 13;
-	pub const DesiredRunnersUp: u32 = 7;
-	pub const ElectionsPhragmenPalletId: LockIdentifier = *b"phrelect";
-}
-
 parameter_types! {
 	pub const TechnicalMotionDuration: BlockNumber = 5 * DAYS;
 	pub const TechnicalMaxProposals: u32 = 100;
@@ -693,13 +676,13 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 }
 
 parameter_types! {
-	pub const LaunchPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-	pub const VotingPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
+	pub const LaunchPeriod: BlockNumber = 28 * 24 * 60 * MINUTES / 2;
+	pub const VotingPeriod: BlockNumber = 28 * 24 * 60 * MINUTES / 2;
 	pub const FastTrackVotingPeriod: BlockNumber = 3 * 24 * 60 * MINUTES;
 	pub const InstantAllowed: bool = true;
 	pub const MinimumDeposit: Balance = 100 * UNIT;
-	pub const EnactmentPeriod: BlockNumber = 30 * 24 * 60 * MINUTES;
-	pub const CooloffPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
+	pub const EnactmentPeriod: BlockNumber = 30 * 24 * 60 * MINUTES / 6;  // delay
+	pub const CooloffPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;  // blacklist
 	pub const VoteLockingPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
 	// One cent: $10,000 / MB
 	pub const PreimageByteDeposit: Balance = 1 * MILLIUNIT;

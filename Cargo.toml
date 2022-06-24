@@ -1,6 +1,8 @@
 [workspace]
 
 members = [
+	"node/listen",
+	"runtime/listen",
 	"node/tisten",
 	"runtime/tisten",
 	"pallets/currencies",

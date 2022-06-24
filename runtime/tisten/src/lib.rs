@@ -11,7 +11,9 @@ mod weights;
 mod xcm_config;
 mod origin;
 mod migrations;
+mod call_filters;
 
+use call_filters::*;
 use migrations::*;
 use origin::*;
 use xcm_config::*;
@@ -297,24 +299,6 @@ parameter_types! {
 	pub const SS58Prefix: u16 = 42;
 }
 
-// Configure FRAME pallets to include in runtime.
-
-pub struct BaseCallFilter;
-impl Contains<Call> for BaseCallFilter {
-	fn contains(call: &Call) -> bool {
-		!matches!(
-			call,
-			Call::Balances(_) |
-				Call::Room(pallet_room::Call::ask_for_disband_room { .. }) |
-				Call::Room(pallet_room::Call::vote { .. }) |
-				Call::Room(pallet_room::Call::pay_out { .. }) |
-				Call::Room(pallet_room::Call::disband_room { .. }) |
-				Call::RoomTreasury(_) |
-				Call::Nft(_)
-		)
-	}
-}
-
 impl frame_system::Config for Runtime {
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
@@ -351,7 +335,7 @@ impl frame_system::Config for Runtime {
 	/// The weight of database operations that the runtime can invoke.
 	type DbWeight = RocksDbWeight;
 	/// The basic call filter to use in dispatchable.
-	type BaseCallFilter = BaseCallFilter;
+	type BaseCallFilter = SystemBaseCallFilter;
 	/// Weight information for the extrinsics of this pallet.
 	type SystemWeightInfo = ();
 	/// Block & extrinsics weights: base values and limits.
@@ -532,27 +516,6 @@ impl pallet_collator_selection::Config for Runtime {
 parameter_types! {
 	pub const RoomMotionDuration: BlockNumber = 5 * DAYS;
 	pub const RoomMaxProposals: u32 = 100;
-}
-
-pub struct DaoBaseCallFilter;
-impl Contains<Call> for DaoBaseCallFilter {
-	fn contains(call: &Call) -> bool {
-		match call {
-			Call::Room(func) => match func {
-				pallet_room::Call::manager_get_reward { .. } |
-				pallet_room::Call::update_join_cost { .. } |
-				pallet_room::Call::set_room_privacy { .. } |
-				pallet_room::Call::set_max_number_for_room_members { .. } |
-				pallet_room::Call::remove_someone_from_blacklist { .. } |
-				pallet_room::Call::set_council_members { .. } |
-				pallet_room::Call::add_council_member { .. } |
-				pallet_room::Call::remove_council_member { .. } |
-				pallet_room::Call::remove_someone { .. } => true,
-				_ => false,
-			},
-			_ => false,
-		}
-	}
 }
 
 type RoomCollective = pallet_dao::Instance1;

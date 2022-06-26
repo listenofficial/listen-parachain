@@ -216,7 +216,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn multisig)]
-	pub type Multisig<T: Config> = StorageValue<_, (Vec<T::AccountId>, u16, T::AccountId)>;
+	pub type Multisig<T: Config> = StorageValue<_, T::AccountId>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn server_id)]
@@ -337,7 +337,7 @@ pub mod pallet {
 				let threshould = 1u16;
 				let multisig_id =
 					<pallet_multisig::Pallet<T>>::multi_account_id(&members, threshould);
-				<Multisig<T>>::put((members, threshould, multisig_id));
+				<Multisig<T>>::put(multisig_id);
 			}
 
 			{
@@ -413,23 +413,11 @@ pub mod pallet {
 		#[pallet::weight(1500_000_000)]
 		pub fn set_multisig(
 			origin: OriginFor<T>,
-			members: Vec<<T::Lookup as StaticLookup>::Source>,
-			threshould: u16,
+			multisig_id: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
 			T::SetMultisigOrigin::ensure_origin(origin)?;
 
-			let len = members.len();
-			ensure!(
-				len > 1 && len <= 20 && threshould > 0u16 && threshould <= len as u16,
-				Error::<T>::ThreshouldOrLenErr
-			);
-
-			let mut members = Self::check_accounts(members)?;
-			members.sort();
-			ensure!(Self::is_unique(members.clone()), Error::<T>::NotUnique);
-
-			let multisig_id = pallet_multisig::Pallet::<T>::multi_account_id(&members, threshould);
-			<Multisig<T>>::put((members, threshould, multisig_id));
+			<Multisig<T>>::put(T::Lookup::lookup(multisig_id)?);
 
 			Self::deposit_event(Event::SetMultisig);
 			Ok(())
@@ -448,7 +436,7 @@ pub mod pallet {
 
 			let members = Self::check_accounts(members)?;
 			ensure!(members.len() as u32 <= 100u32, Error::<T>::VecTooLarge);
-			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigNotExists)?;
+			let multisig_id = <Multisig<T>>::get().ok_or(Error::<T>::MultisigNotExists)?;
 			ensure!(who == multisig_id, Error::<T>::NotMultisigId);
 
 			for user in members.iter() {
@@ -1499,7 +1487,7 @@ pub mod pallet {
 			}
 			Self::check_accounts(members)?;
 
-			let (_, _, multisig_id) = <Multisig<T>>::get().ok_or(Error::<T>::MultisigNotExists)?;
+			let multisig_id = <Multisig<T>>::get().ok_or(Error::<T>::MultisigNotExists)?;
 			ensure!(mul == multisig_id, Error::<T>::NotMultisigId);
 
 			let mut redpacket = <RedPacketOfRoom<T>>::get(group_id, redpacket_id)
@@ -1610,7 +1598,6 @@ pub mod pallet {
 		InBlackList,
 		NotInBlackList,
 		InProtectedDuration,
-		ThreshouldOrLenErr,
 		NotUnique,
 		BadOrigin,
 		PrivateRoom,
@@ -1803,22 +1790,6 @@ pub mod pallet {
 				*room = Some(room_info);
 				Ok(())
 			})
-		}
-
-		fn is_unique(members: Vec<T::AccountId>) -> bool {
-			let members_cp = members.clone();
-			for who in members {
-				let mut index = 0u32;
-				for member in members_cp.clone() {
-					if member == who {
-						index += 1;
-					}
-					if index > 1 {
-						return false
-					}
-				}
-			}
-			true
 		}
 
 		fn pay_for(

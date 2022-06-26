@@ -6,6 +6,7 @@ use frame_support::{
 };
 use log;
 use sp_io;
+use crate::Multisig;
 
 /// The old prefix.
 pub const OLD_PREFIX: &[u8] = b"Listen";
@@ -39,6 +40,7 @@ pub fn migrate<T: crate::Config, N: AsRef<str>>(new_pallet_name: N) -> Weight {
 			new_pallet_name.as_ref().as_bytes(),
 		);
 
+		Multisig::<T>::take();
 		StorageVersion::new(1).put::<crate::Pallet<T>>();
 
 		<T as frame_system::Config>::BlockWeights::get().max_block

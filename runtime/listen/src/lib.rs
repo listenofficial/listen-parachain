@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
-
+#![allow(unused_must_use)]
 // Make the WASM binary available.
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
@@ -66,7 +66,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use xcm_config::*;
 use orml_traits::Happened;
-use frame_support::traits::Currency;
+use frame_support::traits::{Currency, tokens::fungible::Balanced};
 
 // Polkadot Imports
 use pallet_xcm::{EnsureXcm, IsMajorityOfBody, XcmPassthrough};
@@ -809,6 +809,17 @@ parameter_types! {
 	pub const TokensMaxLocks: u32 = 50;
 }
 
+pub struct OnNewTokenAccount;
+impl Happened<(AccountId, CurrencyId)> for OnNewTokenAccount {
+	fn happened(t: &(AccountId, CurrencyId)) {
+		if t.1.clone() != 0u32 {
+			if Balances::total_balance(&t.0.clone()).is_zero() {
+				Balances::deposit(&t.0.clone(), UNIT * 99 / 100);
+			}
+		}
+	}
+}
+
 impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
@@ -822,7 +833,7 @@ impl orml_tokens::Config for Runtime {
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = ();
 	type DustRemovalWhitelist = DustRemovalWhitelist;
-	type OnNewTokenAccount = ();
+	type OnNewTokenAccount = OnNewTokenAccount;
 	type OnKilledTokenAccount = ();
 }
 

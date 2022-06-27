@@ -12,7 +12,7 @@ pub fn migrate<T: crate::Config>() -> Weight {
 }
 
 pub fn pre_migration<T: crate::Config>() {
-	// assert_eq!(StorageVersion::get::<crate::Pallet<T>>(), 1);
+	assert_eq!(StorageVersion::get::<crate::Pallet<T>>(), 1);
 }
 
 pub fn post_migration<T: crate::Config>() {

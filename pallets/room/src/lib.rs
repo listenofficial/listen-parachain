@@ -218,10 +218,6 @@ pub mod pallet {
 	#[pallet::getter(fn multisig)]
 	pub type Multisig<T: Config> = StorageValue<_, T::AccountId>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn server_id)]
-	pub type ServerId<T: Config> = StorageValue<_, T::AccountId>;
-
 	/// Vote on dissolution has been passed by the group
 	#[pallet::storage]
 	#[pallet::getter(fn pending_disband_rooms)]
@@ -327,9 +323,6 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			if let Some(server_id) = &self.server_id {
-				ServerId::<T>::put(server_id);
-			}
 
 			if self.multisig_members.len() >= 2 {
 				let mut members = self.multisig_members.clone();
@@ -1641,7 +1634,6 @@ pub mod pallet {
 		SetDisbandInterval,
 		SetKickInterval,
 		SetCreateCost,
-		SetServerId(T::AccountId),
 		Exit(T::AccountId, RoomId),
 		ManagerGetReward(T::AccountId, MultiBalanceOf<T>),
 		SetMaxNumberOfRoomMembers(T::AccountId, u32),

@@ -4326,6 +4326,7 @@ dependencies = [
  "hex-literal",
  "jsonrpsee",
  "listen-primitives",
+ "listen-runtime",
  "log",
  "pallet-currencies",
  "pallet-transaction-payment-rpc",
@@ -4367,7 +4368,6 @@ dependencies = [
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
- "tisten-runtime",
  "try-runtime-cli",
  "xcm",
 ]

@@ -1,7 +1,6 @@
 use super::*;
 
 pub struct RemoveListenToRoom;
-
 impl frame_support::traits::OnRuntimeUpgrade for RemoveListenToRoom {
 	fn on_runtime_upgrade() -> Weight {
 		let new_pallet_name = <Runtime as frame_system::Config>::PalletInfo::name::<Room>()
@@ -20,10 +19,29 @@ impl frame_support::traits::OnRuntimeUpgrade for RemoveListenToRoom {
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade() -> Result<(), &'static str> {
 		pallet_room::migrations::v1::post_migration::<Runtime>();
-		assert!(Room::server_id().is_some());
 		Ok(())
 	}
 }
+
+pub struct ModifyMultisig;
+impl frame_support::traits::OnRuntimeUpgrade for ModifyMultisig {
+	fn on_runtime_upgrade() -> Weight {
+		pallet_room::migrations::v2::migrate::<Runtime>()
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		pallet_room::migrations::v2::pre_migration::<Runtime>();
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		pallet_room::migrations::v2::post_migration::<Runtime>();
+		Ok(())
+	}
+}
+
 
 pub struct OnRuntimeUpgrade;
 impl frame_support::traits::OnRuntimeUpgrade for OnRuntimeUpgrade {

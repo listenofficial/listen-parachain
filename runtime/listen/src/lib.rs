@@ -66,7 +66,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use xcm_config::*;
 use orml_traits::Happened;
-use frame_support::traits::{Currency, tokens::fungible::Balanced};
+use frame_support::traits::{Currency, tokens::fungible::Balanced, OnNewAccount, OnKilledAccount};
 
 // Polkadot Imports
 use pallet_xcm::{EnsureXcm, IsMajorityOfBody, XcmPassthrough};
@@ -296,6 +296,21 @@ parameter_types! {
 	pub const SS58Prefix: u16 = 42;
 }
 
+pub struct NewAccount;
+impl OnNewAccount<AccountId> for NewAccount {
+	fn on_new_account(_who: &AccountId) {
+		pallet_currencies::UsersNumber::<Runtime>::mutate(0 as CurrencyId, |i| *i = i.saturating_add(1u32));
+
+	}
+}
+
+pub struct KilledAccount;
+impl OnKilledAccount<AccountId> for KilledAccount {
+	fn on_killed_account(_who: &AccountId) {
+		pallet_currencies::UsersNumber::<Runtime>::mutate(0 as CurrencyId, |i| *i = i.saturating_sub(1u32));
+	}
+}
+
 impl frame_system::Config for Runtime {
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
@@ -326,9 +341,9 @@ impl frame_system::Config for Runtime {
 	/// The data to be stored in an account.
 	type AccountData = pallet_balances::AccountData<Balance>;
 	/// What to do if a new account is created.
-	type OnNewAccount = ();
+	type OnNewAccount = NewAccount;
 	/// What to do if an account is fully reaped from the system.
-	type OnKilledAccount = ();
+	type OnKilledAccount = KilledAccount;
 	/// The weight of database operations that the runtime can invoke.
 	type DbWeight = RocksDbWeight;
 	/// The basic call filter to use in dispatchable.

@@ -122,7 +122,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	ModifyMultisig,
+	OnRuntimeUpgrade,
 >;
 
 #[sp_version::runtime_version]
@@ -130,7 +130,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("listen-parachain"),
 	impl_name: create_runtime_str!("listen-parachain"),
 	authoring_version: 1,
-	spec_version: 2022062701,
+	spec_version: 2022062801,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -834,7 +834,15 @@ impl Happened<(AccountId, CurrencyId)> for OnNewTokenAccount {
 			if Balances::total_balance(&t.0.clone()).is_zero() {
 				Balances::deposit(&t.0.clone(), UNIT * 99 / 100);
 			}
+			pallet_currencies::UsersNumber::<Runtime>::mutate(&t.1.clone(), |i| *i = i.saturating_add(1u32));
 		}
+	}
+}
+
+pub struct OnKilledTokenAccount;
+impl Happened<(AccountId, CurrencyId)> for OnKilledTokenAccount {
+	fn happened(t: &(AccountId, CurrencyId)) {
+		pallet_currencies::UsersNumber::<Runtime>::mutate(&t.1.clone(), |i| *i = i.saturating_sub(1u32));
 	}
 }
 
@@ -852,7 +860,7 @@ impl orml_tokens::Config for Runtime {
 	type ReserveIdentifier = ();
 	type DustRemovalWhitelist = DustRemovalWhitelist;
 	type OnNewTokenAccount = OnNewTokenAccount;
-	type OnKilledTokenAccount = ();
+	type OnKilledTokenAccount = OnKilledTokenAccount;
 }
 
 impl pallet_utility::Config for Runtime {

@@ -155,6 +155,9 @@ pub mod module {
 		ListenAssetInfo<T::AccountId, ListenAssetMetadata>,
 	>;
 
+	#[pallet::storage]
+	pub type UsersNumber<T: Config> = StorageMap<_, Identity, CurrencyId, u32, ValueQuery>;
+
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);

@@ -820,6 +820,13 @@ impl Happened<(AccountId, CurrencyId)> for OnNewTokenAccount {
 	}
 }
 
+pub struct OnKilledTokenAccount;
+impl Happened<(AccountId, CurrencyId)> for OnKilledTokenAccount {
+	fn happened(t: &(AccountId, CurrencyId)) {
+		pallet_currencies::UsersNumber::<Runtime>::mutate(&t.1.clone(), |i| *i = i.saturating_sub(1u32));
+	}
+}
+
 impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
@@ -834,7 +841,7 @@ impl orml_tokens::Config for Runtime {
 	type ReserveIdentifier = ();
 	type DustRemovalWhitelist = DustRemovalWhitelist;
 	type OnNewTokenAccount = OnNewTokenAccount;
-	type OnKilledTokenAccount = ();
+	type OnKilledTokenAccount = OnKilledTokenAccount;
 }
 
 impl pallet_utility::Config for Runtime {

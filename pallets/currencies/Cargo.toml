@@ -20,6 +20,9 @@ sp-std = { default-features = false,  git = 'https://github.com/paritytech/subst
 sp-io = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
 serde = { version = "1.0.132", optional = true }
 
+# xcm
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.24", default-features = false }
+
 # orml
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, branch = 'polkadot-v0.9.24' }
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, branch = 'polkadot-v0.9.24' }
@@ -46,6 +49,7 @@ std = [
 	"scale-info/std",
 	"orml-tokens/std",
 	"listen-primitives/std",
+	"xcm/std",
 
 ]
 try-runtime = ["frame-support/try-runtime"]

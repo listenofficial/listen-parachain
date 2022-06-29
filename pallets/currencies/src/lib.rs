@@ -54,6 +54,11 @@ use sp_std::{
 	vec::Vec,
 };
 pub use weights::WeightInfo;
+use xcm::{
+	v1::{Junction, Junctions::*, MultiLocation},
+	VersionedMultiLocation,
+};
+
 pub mod currencies_trait;
 mod weights;
 
@@ -157,6 +162,14 @@ pub mod module {
 
 	#[pallet::storage]
 	pub type UsersNumber<T: Config> = StorageMap<_, Identity, CurrencyId, u32, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn asset_locations)]
+	pub type AssetLocations<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MultiLocation, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn location_to_currency_ids)]
+	pub type LocationToCurrencyIds<T: Config> = StorageMap<_, Twox64Concat, MultiLocation, CurrencyId, OptionQuery>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]

@@ -1,7 +1,5 @@
-use frame_support::weights::Weight;
-use crate::Multisig;
-use frame_support::traits::Get;
-use crate::StorageVersion;
+use crate::{Multisig, StorageVersion};
+use frame_support::{traits::Get, weights::Weight};
 
 pub fn migrate<T: crate::Config>() -> Weight {
 	if Multisig::<T>::get().is_some() {

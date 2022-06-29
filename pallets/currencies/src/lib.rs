@@ -21,7 +21,7 @@
 #![allow(clippy::unused_unit)]
 
 use codec::Codec;
-use currencies_trait::CurrenciesHandler;
+use currencies_trait::{AssetIdMapping, CurrenciesHandler};
 use frame_support::{
 	ensure,
 	pallet_prelude::*,
@@ -55,10 +55,7 @@ use sp_std::{
 	vec::Vec,
 };
 pub use weights::WeightInfo;
-use xcm::{
-	v1::{MultiLocation},
-	VersionedMultiLocation,
-};
+use xcm::{v1::MultiLocation, VersionedMultiLocation};
 
 pub mod currencies_trait;
 mod weights;
@@ -141,7 +138,6 @@ pub mod module {
 		BadLocation,
 		MultiLocationExisted,
 		AssetIdExisted,
-
 	}
 
 	#[pallet::event]
@@ -166,6 +162,10 @@ pub mod module {
 			currency_id: CurrencyId,
 			location: MultiLocation,
 		},
+		SetWeightRateMultiple {
+			currency_id: CurrencyId,
+			multiple: u128,
+		},
 	}
 
 	#[pallet::storage]
@@ -182,11 +182,22 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn asset_locations)]
-	pub type AssetLocations<T: Config> = StorageMap<_, Twox64Concat, CurrencyId, MultiLocation, OptionQuery>;
+	pub type AssetLocations<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyId, MultiLocation, OptionQuery>;
+
+	#[pallet::type_value]
+	pub fn WeightRateMultipleOnEmpty<T: Config>() -> u128 {
+		1000u128
+	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn weight_rate_multiple)]
+	pub type WeightRateMultiple<T: Config> = StorageMap<_, Identity, CurrencyId, u128, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn location_to_currency_ids)]
-	pub type LocationToCurrencyIds<T: Config> = StorageMap<_, Twox64Concat, MultiLocation, CurrencyId, OptionQuery>;
+	pub type LocationToCurrencyIds<T: Config> =
+		StorageMap<_, Twox64Concat, MultiLocation, CurrencyId, OptionQuery>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -248,35 +259,60 @@ pub mod module {
 
 		/// After setting location, cross-chain transfers can be made
 		#[pallet::weight(1500_000_000)]
-		pub fn set_location(origin: OriginFor<T>, currency_id: CurrencyId, location: Box<VersionedMultiLocation>) -> DispatchResultWithPostInfo {
+		pub fn set_location(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			location: Box<VersionedMultiLocation>,
+		) -> DispatchResultWithPostInfo {
 			T::SetLocationOrigin::ensure_origin(origin)?;
-			let location: MultiLocation = (*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
+			let location: MultiLocation =
+				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
 			ensure!(ListenAssetsInfo::<T>::contains_key(currency_id), Error::<T>::AssetNotExists);
 
-			ensure!(!AssetLocations::<T>::contains_key(currency_id), Error::<T>::MultiLocationExisted);
-			ensure!(!LocationToCurrencyIds::<T>::contains_key(location.clone()), Error::<T>::AssetIdExisted);
+			ensure!(
+				!AssetLocations::<T>::contains_key(currency_id),
+				Error::<T>::MultiLocationExisted
+			);
+			ensure!(
+				!LocationToCurrencyIds::<T>::contains_key(location.clone()),
+				Error::<T>::AssetIdExisted
+			);
 
 			AssetLocations::<T>::insert(currency_id, location.clone());
 			LocationToCurrencyIds::<T>::insert(location.clone(), currency_id);
-			Self::deposit_event(Event::SetLocation {
-				currency_id,
-				location: location,
-			});
+			Self::deposit_event(Event::SetLocation { currency_id, location });
+			Ok(().into())
+		}
+
+		#[pallet::weight(1500_000_000)]
+		pub fn set_weight_rate_multiple(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			multiple: u128,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let info = ListenAssetsInfo::<T>::get(currency_id).ok_or(Error::<T>::AssetNotExists)?;
+			ensure!(who == info.owner, Error::<T>::NotOwner);
+			WeightRateMultiple::<T>::insert(currency_id, multiple);
+			Self::deposit_event(Event::SetWeightRateMultiple { currency_id, multiple });
+
 			Ok(().into())
 		}
 
 		/// After setting location, cross-chain transfers can be made
 		#[pallet::weight(1500_000_000)]
-		pub fn force_set_location(origin: OriginFor<T>, currency_id: CurrencyId, location: Box<VersionedMultiLocation>) -> DispatchResultWithPostInfo {
+		pub fn force_set_location(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			location: Box<VersionedMultiLocation>,
+		) -> DispatchResultWithPostInfo {
 			T::ForceSetLocationOrigin::ensure_origin(origin)?;
-			let location: MultiLocation = (*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
+			let location: MultiLocation =
+				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
 			ensure!(ListenAssetsInfo::<T>::contains_key(currency_id), Error::<T>::AssetNotExists);
 			AssetLocations::<T>::insert(currency_id, location.clone());
 			LocationToCurrencyIds::<T>::insert(location.clone(), currency_id);
-			Self::deposit_event(Event::ForceSetLocation {
-				currency_id,
-				location: location,
-			});
+			Self::deposit_event(Event::ForceSetLocation { currency_id, location });
 			Ok(().into())
 		}
 
@@ -1016,14 +1052,21 @@ where
 	}
 }
 
-// impl<T: Config> TransferAll<T::AccountId> for Pallet<T> {
-// 	fn transfer_all(source: &T::AccountId, dest: &T::AccountId) -> DispatchResult {
-// 		with_transaction_result(|| {
-// 			// transfer non-native free to dest
-// 			T::MultiCurrency::transfer_all(source, dest)?;
-//
-// 			// transfer all free to dest
-// 			T::NativeCurrency::transfer(source, dest, T::NativeCurrency::free_balance(source))
-// 		})
-// 	}
-// }
+pub struct AssetIdMaps<T>(sp_std::marker::PhantomData<T>);
+impl<T: Config> AssetIdMapping<CurrencyId, MultiLocation> for AssetIdMaps<T> {
+	fn get_multi_location(asset_id: CurrencyId) -> Option<MultiLocation> {
+		Pallet::<T>::asset_locations(asset_id)
+	}
+
+	fn get_currency_id(multi_location: MultiLocation) -> Option<CurrencyId> {
+		Pallet::<T>::location_to_currency_ids(multi_location)
+	}
+
+	fn get_weight_rate_multiple(location: MultiLocation) -> Option<u128> {
+		if let Some(id) = Self::get_currency_id(location.clone()) {
+			Some(WeightRateMultiple::<T>::get(id))
+		} else {
+			None
+		}
+	}
+}

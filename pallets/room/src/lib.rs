@@ -323,7 +323,6 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-
 			if self.multisig_members.len() >= 2 {
 				let mut members = self.multisig_members.clone();
 				members.sort();

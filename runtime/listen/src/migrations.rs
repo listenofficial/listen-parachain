@@ -42,7 +42,6 @@ impl frame_support::traits::OnRuntimeUpgrade for ModifyMultisig {
 	}
 }
 
-
 pub struct OnRuntimeUpgrade;
 impl frame_support::traits::OnRuntimeUpgrade for OnRuntimeUpgrade {
 	fn on_runtime_upgrade() -> u64 {

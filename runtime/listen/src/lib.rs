@@ -12,13 +12,15 @@ mod origin;
 mod parachains;
 mod weights;
 mod xcm_config;
+mod xcm_impls;
 
 use call_filters::*;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
-		Contains, EnsureOneOf, EnsureOrigin, EqualPrivilegeOnly, Everything, Nothing,
+		tokens::fungible::Balanced, Contains, Currency, EnsureOneOf, EnsureOrigin,
+		EqualPrivilegeOnly, Everything, Nothing, OnKilledAccount, OnNewAccount,
 		PalletInfo as PalletInfoT,
 	},
 	weights::{
@@ -38,7 +40,9 @@ pub use listen_primitives::{
 };
 use migrations::*;
 use origin::*;
-use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
+use orml_traits::{
+	location::AbsoluteReserveProvider, parameter_type_with_key, Happened, MultiCurrency,
+};
 pub use orml_xcm_support::{
 	DepositToAlternative, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset,
 };
@@ -65,8 +69,7 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use xcm_config::*;
-use orml_traits::Happened;
-use frame_support::traits::{Currency, tokens::fungible::Balanced, OnNewAccount, OnKilledAccount};
+use xcm_impls::*;
 
 // Polkadot Imports
 use pallet_xcm::{EnsureXcm, IsMajorityOfBody, XcmPassthrough};
@@ -299,15 +302,18 @@ parameter_types! {
 pub struct NewAccount;
 impl OnNewAccount<AccountId> for NewAccount {
 	fn on_new_account(_who: &AccountId) {
-		pallet_currencies::UsersNumber::<Runtime>::mutate(0 as CurrencyId, |i| *i = i.saturating_add(1u32));
-
+		pallet_currencies::UsersNumber::<Runtime>::mutate(0 as CurrencyId, |i| {
+			*i = i.saturating_add(1u32)
+		});
 	}
 }
 
 pub struct KilledAccount;
 impl OnKilledAccount<AccountId> for KilledAccount {
 	fn on_killed_account(_who: &AccountId) {
-		pallet_currencies::UsersNumber::<Runtime>::mutate(0 as CurrencyId, |i| *i = i.saturating_sub(1u32));
+		pallet_currencies::UsersNumber::<Runtime>::mutate(0 as CurrencyId, |i| {
+			*i = i.saturating_sub(1u32)
+		});
 	}
 }
 
@@ -841,7 +847,9 @@ impl Happened<(AccountId, CurrencyId)> for OnNewTokenAccount {
 pub struct OnKilledTokenAccount;
 impl Happened<(AccountId, CurrencyId)> for OnKilledTokenAccount {
 	fn happened(t: &(AccountId, CurrencyId)) {
-		pallet_currencies::UsersNumber::<Runtime>::mutate(&t.1.clone(), |i| *i = i.saturating_sub(1u32));
+		pallet_currencies::UsersNumber::<Runtime>::mutate(&t.1.clone(), |i| {
+			*i = i.saturating_sub(1u32)
+		});
 	}
 }
 

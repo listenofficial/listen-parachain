@@ -1,4 +1,6 @@
 use super::*;
+use crate::xcm_impls::FixedRateOfAsset;
+use pallet_currencies::currencies_trait::AssetIdMapping;
 
 pub fn ksm_per_second() -> u128 {
 	let base_weight = Balance::from(ExtrinsicBaseWeight::get());
@@ -25,7 +27,7 @@ parameter_types! {
 				1,
 				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::kt::TOKEN_SYMBOL.to_vec()))
 			).into(), ksm_per_second() * 100);
-
+	pub BaseRate: u128 = ksm_per_second();
 }
 
 pub type Trader = (
@@ -35,6 +37,7 @@ pub type Trader = (
 	FixedRateOfFungible<USDTPerSecond, ToTreasury>,
 	FixedRateOfFungible<KICOPerSecond, ToTreasury>,
 	FixedRateOfFungible<KTPerSecond, ToTreasury>,
+	FixedRateOfAsset<BaseRate, ToTreasury, pallet_currencies::AssetIdMaps<Runtime>>,
 );
 
 fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
@@ -71,7 +74,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 					GeneralKey(kisten::kt::TOKEN_SYMBOL.to_vec()),
 				),
 			)),
-			_ => None,
+			d => pallet_currencies::AssetIdMaps::<Runtime>::get_multi_location(d),
 		}
 	}
 }
@@ -96,7 +99,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 					},
 					_ => None,
 				},
-			_ => None,
+			l => pallet_currencies::AssetIdMaps::<Runtime>::get_currency_id(l),
 		}
 	}
 }
@@ -104,6 +107,16 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 impl Convert<MultiAsset, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(asset: MultiAsset) -> Option<CurrencyId> {
 		if let MultiAsset { id: Concrete(location), .. } = asset {
+			Self::convert(location)
+		} else {
+			None
+		}
+	}
+}
+
+impl Convert<AssetId, Option<CurrencyId>> for CurrencyIdConvert {
+	fn convert(a: AssetId) -> Option<CurrencyId> {
+		if let AssetId::Concrete(location) = a {
 			Self::convert(location)
 		} else {
 			None

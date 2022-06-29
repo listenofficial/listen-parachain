@@ -633,6 +633,8 @@ impl pallet_currencies::Config for Runtime {
 	type WeightInfo = ();
 
 	type AirDropAmount = AirDropAmount;
+	type SetLocationOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
+	type ForceSetLocationOrigin = EnsureRootOrHalfCouncil;
 }
 
 parameter_types! {

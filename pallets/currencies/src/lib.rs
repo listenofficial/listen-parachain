@@ -48,6 +48,7 @@ use sp_runtime::{
 	DispatchError, DispatchResult,
 };
 use sp_std::{
+	boxed::Box,
 	convert::{TryFrom, TryInto},
 	fmt::Debug,
 	marker, result,
@@ -55,7 +56,7 @@ use sp_std::{
 };
 pub use weights::WeightInfo;
 use xcm::{
-	v1::{Junction, Junctions::*, MultiLocation},
+	v1::{MultiLocation},
 	VersionedMultiLocation,
 };
 
@@ -107,6 +108,10 @@ pub mod module {
 			> + BasicLockableCurrency<Self::AccountId, Balance = BalanceOf<Self>>
 			+ BasicReservableCurrency<Self::AccountId, Balance = BalanceOf<Self>>;
 
+		type SetLocationOrigin: EnsureOrigin<Self::Origin>;
+
+		type ForceSetLocationOrigin: EnsureOrigin<Self::Origin>;
+
 		#[pallet::constant]
 		type GetNativeCurrencyId: Get<CurrencyId>;
 
@@ -133,6 +138,10 @@ pub mod module {
 		MetadataNotExists,
 		NativeCurrency,
 		RemainAmountLessThanAirdrop,
+		BadLocation,
+		MultiLocationExisted,
+		AssetIdExisted,
+
 	}
 
 	#[pallet::event]
@@ -149,6 +158,14 @@ pub mod module {
 		CreateAsset(T::AccountId, CurrencyId, BalanceOf<T>),
 		SetMetadata(T::AccountId, CurrencyId, ListenAssetMetadata),
 		Burn(T::AccountId, CurrencyId, BalanceOf<T>),
+		SetLocation {
+			currency_id: CurrencyId,
+			location: MultiLocation,
+		},
+		ForceSetLocation {
+			currency_id: CurrencyId,
+			location: MultiLocation,
+		},
 	}
 
 	#[pallet::storage]
@@ -226,6 +243,40 @@ pub mod module {
 			);
 
 			Self::deposit_event(Event::CreateAsset(user.clone(), currency_id, amount));
+			Ok(().into())
+		}
+
+		/// After setting location, cross-chain transfers can be made
+		#[pallet::weight(1500_000_000)]
+		pub fn set_location(origin: OriginFor<T>, currency_id: CurrencyId, location: Box<VersionedMultiLocation>) -> DispatchResultWithPostInfo {
+			T::SetLocationOrigin::ensure_origin(origin)?;
+			let location: MultiLocation = (*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
+			ensure!(ListenAssetsInfo::<T>::contains_key(currency_id), Error::<T>::AssetNotExists);
+
+			ensure!(!AssetLocations::<T>::contains_key(currency_id), Error::<T>::MultiLocationExisted);
+			ensure!(!LocationToCurrencyIds::<T>::contains_key(location.clone()), Error::<T>::AssetIdExisted);
+
+			AssetLocations::<T>::insert(currency_id, location.clone());
+			LocationToCurrencyIds::<T>::insert(location.clone(), currency_id);
+			Self::deposit_event(Event::SetLocation {
+				currency_id,
+				location: location,
+			});
+			Ok(().into())
+		}
+
+		/// After setting location, cross-chain transfers can be made
+		#[pallet::weight(1500_000_000)]
+		pub fn force_set_location(origin: OriginFor<T>, currency_id: CurrencyId, location: Box<VersionedMultiLocation>) -> DispatchResultWithPostInfo {
+			T::ForceSetLocationOrigin::ensure_origin(origin)?;
+			let location: MultiLocation = (*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
+			ensure!(ListenAssetsInfo::<T>::contains_key(currency_id), Error::<T>::AssetNotExists);
+			AssetLocations::<T>::insert(currency_id, location.clone());
+			LocationToCurrencyIds::<T>::insert(location.clone(), currency_id);
+			Self::deposit_event(Event::ForceSetLocation {
+				currency_id,
+				location: location,
+			});
 			Ok(().into())
 		}
 

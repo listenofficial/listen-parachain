@@ -34,6 +34,7 @@ pub type SomeCouncil = pallet_dao::EnsureMembers<AccountId, RoomCollective, 2>;
 pub type HalfRoomCouncilOrSomeRoomCouncil = EnsureOneOf<HalfRoomCouncil, SomeCouncil>;
 pub type RoomRootOrHalfRoomCouncilOrSomeRoomCouncil =
 	EnsureOneOf<RoomRoot, HalfRoomCouncilOrSomeRoomCouncil>;
+
 pub type EnsureRootOrHalfCouncil = EnsureOneOf<
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,

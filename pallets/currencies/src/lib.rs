@@ -522,7 +522,7 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
 		}
 		if currency_id == T::GetNativeCurrencyId::get() {
 			ensure!(
-				Self::total_balance(T::GetNativeCurrencyId::get(), &from).saturating_sub(amount) >
+				Self::free_balance(T::GetNativeCurrencyId::get(), &from).saturating_sub(amount) >
 					T::AirDropAmount::get(),
 				Error::<T>::RemainAmountLessThanAirdrop
 			);
@@ -560,6 +560,11 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
 			return Ok(())
 		}
 		if currency_id == T::GetNativeCurrencyId::get() {
+			ensure!(
+				Self::free_balance(T::GetNativeCurrencyId::get(), &who).saturating_sub(amount) >
+					T::AirDropAmount::get(),
+				Error::<T>::RemainAmountLessThanAirdrop
+			);
 			T::NativeCurrency::withdraw(who, amount)?;
 		} else {
 			T::MultiCurrency::withdraw(currency_id, who, amount)?;

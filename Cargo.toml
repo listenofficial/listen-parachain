@@ -13,7 +13,6 @@ members = [
 exclude = [
 	"pallets/daos",
 	"runtime/listen",
-	"runtime/kisten",
 ]
 
 [profile.release]

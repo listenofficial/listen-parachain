@@ -59,9 +59,8 @@ pub struct CurrencyIdConvert;
 
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-
 		if let Some(i) = pallet_currencies::AssetIdMaps::<Runtime>::get_multi_location(id) {
-			return Some(i);
+			return Some(i)
 		}
 		match id {
 			kusama::ksm::ASSET_ID => Some(MultiLocation::parent()),
@@ -91,8 +90,10 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			return Some(kusama::ksm::ASSET_ID.into())
 		}
 
-		if let Some(l) = pallet_currencies::AssetIdMaps::<Runtime>::get_currency_id(location.clone()) {
-			return Some(l);
+		if let Some(l) =
+			pallet_currencies::AssetIdMaps::<Runtime>::get_currency_id(location.clone())
+		{
+			return Some(l)
 		}
 
 		match location {
@@ -111,16 +112,11 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 					_ => None,
 				},
 
-			MultiLocation {
-				parents: 0,
-				interior: X1(GeneralKey(key)),
-			} => {
-				match &key[..] {
-					native::lt::TOKEN_SYMBOL => Some(native::lt::ASSET_ID),
-					native::like::TOKEN_SYMBOL => Some(native::like::ASSET_ID),
-					native::usdt::TOKEN_SYMBOL => Some(native::usdt::ASSET_ID),
-					_ => None,
-				}
+			MultiLocation { parents: 0, interior: X1(GeneralKey(key)) } => match &key[..] {
+				native::lt::TOKEN_SYMBOL => Some(native::lt::ASSET_ID),
+				native::like::TOKEN_SYMBOL => Some(native::like::ASSET_ID),
+				native::usdt::TOKEN_SYMBOL => Some(native::usdt::ASSET_ID),
+				_ => None,
 			},
 			_ => None,
 		}
@@ -180,7 +176,6 @@ pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	CurrencyIdConvert,
 	DepositToAlternative<ListenTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
-
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can

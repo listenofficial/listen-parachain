@@ -8,7 +8,7 @@ members = [
 	"pallets/currencies",
 	"pallets/room",
 	"pallets/nft",
-	"pallets/daos/*",
+#	"pallets/daos/*",
 ]
 exclude = [
 	"pallets/daos",

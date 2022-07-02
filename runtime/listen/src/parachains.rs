@@ -5,11 +5,6 @@ pub mod native {
 		pub const TOKEN_SYMBOL: &[u8] = "LT".as_bytes();
 	}
 
-	pub mod usdt {
-		pub const ASSET_ID: u32 = 5;
-		pub const TOKEN_SYMBOL: &[u8] = "USDT".as_bytes();
-	}
-
 	pub mod like {
 		pub const ASSET_ID: u32 = 1;
 		pub const TOKEN_SYMBOL: &[u8] = "LIKE".as_bytes();

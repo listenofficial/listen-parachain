@@ -17,8 +17,6 @@ parameter_types! {
 		X1(GeneralKey(native::lt::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
 	pub LIKEPerSecond: (AssetId, u128) = (MultiLocation::new(0,
 		X1(GeneralKey(native::like::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
-	pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(0,
-		X1(GeneralKey(native::usdt::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
 
 	pub KICOPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
@@ -35,7 +33,6 @@ pub type Trader = (
 	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
 	FixedRateOfFungible<LTPerSecond, ToTreasury>,
 	FixedRateOfFungible<LIKEPerSecond, ToTreasury>,
-	FixedRateOfFungible<USDTPerSecond, ToTreasury>,
 	FixedRateOfFungible<KICOPerSecond, ToTreasury>,
 	FixedRateOfFungible<KTPerSecond, ToTreasury>,
 	FixedRateOfAsset<BaseRate, ToTreasury, pallet_currencies::AssetIdMaps<Runtime>>,
@@ -44,7 +41,6 @@ pub type Trader = (
 fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
 	let token_symbol = match id {
 		native::lt::ASSET_ID => native::lt::TOKEN_SYMBOL,
-		native::usdt::ASSET_ID => native::usdt::TOKEN_SYMBOL,
 		native::like::ASSET_ID => native::like::TOKEN_SYMBOL,
 		_ => return None,
 	};
@@ -64,8 +60,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 		match id {
 			kusama::ksm::ASSET_ID => Some(MultiLocation::parent()),
 
-			native::lt::ASSET_ID | native::usdt::ASSET_ID | native::like::ASSET_ID =>
-				native_currency_location(id),
+			native::lt::ASSET_ID | native::like::ASSET_ID => native_currency_location(id),
 
 			kico::kico::ASSET_ID => Some(MultiLocation::new(
 				1,
@@ -104,7 +99,6 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 
 					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => match key {
 						native::lt::TOKEN_SYMBOL => Some(native::lt::ASSET_ID.into()),
-						native::usdt::TOKEN_SYMBOL => Some(native::usdt::ASSET_ID.into()),
 						native::like::TOKEN_SYMBOL => Some(native::like::ASSET_ID.into()),
 						_ => None,
 					},
@@ -114,7 +108,6 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 			MultiLocation { parents: 0, interior: X1(GeneralKey(key)) } => match &key[..] {
 				native::lt::TOKEN_SYMBOL => Some(native::lt::ASSET_ID),
 				native::like::TOKEN_SYMBOL => Some(native::like::ASSET_ID),
-				native::usdt::TOKEN_SYMBOL => Some(native::usdt::ASSET_ID),
 				_ => None,
 			},
 			_ => None,

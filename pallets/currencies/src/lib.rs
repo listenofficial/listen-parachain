@@ -15,7 +15,8 @@
 
 // Forked from https://github.com/open-web3-stack/open-runtime-module-library/tree/master/currencies.
 // Most of this module uses code from the orml, but due to business differences, we made some feature additions.
-// In this module, wo can create asset, set metadata and burn our tokens.
+// In this module, we can create asset, set metadata and burn our tokens, open cross transfer function
+// and set cross-chain transfer weight for assets.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]

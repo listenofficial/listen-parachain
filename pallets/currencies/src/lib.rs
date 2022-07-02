@@ -559,7 +559,9 @@ impl<T: Config> MultiCurrency<T::AccountId> for Pallet<T> {
 		if amount.is_zero() {
 			return Ok(())
 		}
+
 		if currency_id == T::GetNativeCurrencyId::get() {
+			// This only applies to cross-chain transfers
 			ensure!(
 				Self::free_balance(T::GetNativeCurrencyId::get(), &who).saturating_sub(amount) >
 					T::AirDropAmount::get(),

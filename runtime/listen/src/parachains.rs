@@ -25,7 +25,7 @@ pub mod kusama {
 
 /// kico
 pub mod kico {
-	pub const PARA_ID: u32 = 2017;
+	pub const PARA_ID: u32 = 2000;
 	pub mod kico {
 		pub const ASSET_ID: u32 = 10;
 		pub const TOKEN_SYMBOL: &[u8] = "KICO".as_bytes();

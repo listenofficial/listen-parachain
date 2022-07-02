@@ -12,12 +12,14 @@ pub fn ksm_per_second() -> u128 {
 // fixme
 parameter_types! {
 	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
-	pub LIKEerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
-		GeneralKey(native::lt::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
-	pub LIKEPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
-		GeneralKey(native::like::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
-	pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(1, X2(Parachain(ParachainInfo::parachain_id().into()),
-		GeneralKey(native::usdt::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
+
+	pub LTPerSecond: (AssetId, u128) = (MultiLocation::new(0,
+		X1(GeneralKey(native::lt::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
+	pub LIKEPerSecond: (AssetId, u128) = (MultiLocation::new(0,
+		X1(GeneralKey(native::like::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
+	pub USDTPerSecond: (AssetId, u128) = (MultiLocation::new(0,
+		X1(GeneralKey(native::usdt::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
+
 	pub KICOPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
 				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::kico::TOKEN_SYMBOL.to_vec()))
@@ -31,7 +33,7 @@ parameter_types! {
 
 pub type Trader = (
 	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
-	FixedRateOfFungible<LIKEerSecond, ToTreasury>,
+	FixedRateOfFungible<LTPerSecond, ToTreasury>,
 	FixedRateOfFungible<LIKEPerSecond, ToTreasury>,
 	FixedRateOfFungible<USDTPerSecond, ToTreasury>,
 	FixedRateOfFungible<KICOPerSecond, ToTreasury>,
@@ -56,6 +58,10 @@ pub struct CurrencyIdConvert;
 
 impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
+
+		if let Some(i) = pallet_currencies::AssetIdMaps::<Runtime>::get_multi_location(id) {
+			return Some(i);
+		}
 		match id {
 			kusama::ksm::ASSET_ID => Some(MultiLocation::parent()),
 
@@ -73,7 +79,7 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 					GeneralKey(kisten::kt::TOKEN_SYMBOL.to_vec()),
 				),
 			)),
-			d => pallet_currencies::AssetIdMaps::<Runtime>::get_multi_location(d),
+			_ => None,
 		}
 	}
 }
@@ -83,6 +89,11 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 		if location == MultiLocation::parent() {
 			return Some(kusama::ksm::ASSET_ID.into())
 		}
+
+		if let Some(l) = pallet_currencies::AssetIdMaps::<Runtime>::get_currency_id(location.clone()) {
+			return Some(l);
+		}
+
 		match location {
 			MultiLocation { parents: 1, interior: X2(Parachain(para_id), GeneralKey(key)) } =>
 				match (para_id, &key[..]) {
@@ -98,7 +109,19 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 					},
 					_ => None,
 				},
-			l => pallet_currencies::AssetIdMaps::<Runtime>::get_currency_id(l),
+
+			MultiLocation {
+				parents: 0,
+				interior: X1(GeneralKey(key)),
+			} => {
+				match &key[..] {
+					native::lt::TOKEN_SYMBOL => Some(native::lt::ASSET_ID),
+					native::like::TOKEN_SYMBOL => Some(native::like::ASSET_ID),
+					native::usdt::TOKEN_SYMBOL => Some(native::usdt::ASSET_ID),
+					_ => None,
+				}
+			},
+			_ => None,
 		}
 	}
 }

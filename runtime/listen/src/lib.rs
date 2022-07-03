@@ -57,7 +57,7 @@ pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, BlockNumberProvider,
+		AccountIdConversion, BlakeTwo256, Block as BlockT, BlockNumberProvider,
 		Convert, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
@@ -88,7 +88,7 @@ use xcm_builder::{
 };
 use xcm_executor::{Config, XcmExecutor};
 /// The address format for describing accounts.
-pub type Address = MultiAddress<AccountId, ()>;
+pub type Address = MultiAddress<AccountId, AccountIndex>;
 
 /// Block type as expected by this runtime.
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
@@ -323,7 +323,7 @@ impl frame_system::Config for Runtime {
 	/// The aggregated dispatch type that is available for extrinsics.
 	type Call = Call;
 	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
-	type Lookup = AccountIdLookup<AccountId, ()>;
+	type Lookup = Indices;
 	/// The index type for storing how many extrinsics an account has signed.
 	type Index = Index;
 	/// The index type for blocks.
@@ -837,9 +837,12 @@ pub struct OnNewTokenAccount;
 impl Happened<(AccountId, CurrencyId)> for OnNewTokenAccount {
 	fn happened(t: &(AccountId, CurrencyId)) {
 		if t.1.clone() != 0u32 {
-			if Balances::total_balance(&t.0.clone()).is_zero() {
+			if Balances::total_balance(&t.0.clone()).is_zero() && Currencies::white_list().contains(&t.1) {
 				Balances::deposit(&t.0.clone(), UNIT * 99 / 100);
 			}
+			pallet_currencies::UsersNumber::<Runtime>::mutate(&t.1.clone(), |i| {
+				*i = i.saturating_add(1u32)
+			});
 		}
 	}
 }

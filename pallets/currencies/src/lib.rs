@@ -49,6 +49,7 @@ use sp_runtime::{
 	DispatchError, DispatchResult,
 };
 use sp_std::{
+	collections::btree_set::BTreeSet,
 	boxed::Box,
 	convert::{TryFrom, TryInto},
 	fmt::Debug,
@@ -81,6 +82,7 @@ pub struct ListenAssetInfo<AccountId, ListenAssetMetadata> {
 
 #[frame_support::pallet]
 pub mod module {
+	use crate::Event::AddAssetToWhiteList;
 	use super::*;
 
 	pub(crate) type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
@@ -139,6 +141,7 @@ pub mod module {
 		BadLocation,
 		MultiLocationExisted,
 		AssetIdExisted,
+		AlreadyInWhiteList,
 	}
 
 	#[pallet::event]
@@ -167,6 +170,9 @@ pub mod module {
 			currency_id: CurrencyId,
 			multiple: u128,
 		},
+		AddAssetToWhiteList {
+			currency_id: CurrencyId,
+		}
 	}
 
 	#[pallet::storage]
@@ -194,6 +200,10 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn weight_rate_multiple)]
 	pub type WeightRateMultiple<T: Config> = StorageMap<_, Identity, CurrencyId, u128, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn white_list)]
+	pub type WhiteList<T: Config> = StorageValue<_, BTreeSet<CurrencyId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn location_to_currency_ids)]
@@ -314,6 +324,24 @@ pub mod module {
 			AssetLocations::<T>::insert(currency_id, location.clone());
 			LocationToCurrencyIds::<T>::insert(location.clone(), currency_id);
 			Self::deposit_event(Event::ForceSetLocation { currency_id, location });
+			Ok(().into())
+		}
+
+
+		#[pallet::weight(1500_000_000)]
+		pub fn add_asset_to_white_list(origin: OriginFor<T>,
+			currency_id: CurrencyId,) -> DispatchResultWithPostInfo {
+			T::ForceSetLocationOrigin::ensure_origin(origin)?;
+			let mut white_list = WhiteList::<T>::get();
+			let result = white_list.insert(currency_id);
+			if result == false {
+				return Err(Error::<T>::AlreadyInWhiteList)?;
+			}
+			WhiteList::<T>::put(white_list);
+			Self::deposit_event(AddAssetToWhiteList {
+				currency_id
+			});
+
 			Ok(().into())
 		}
 

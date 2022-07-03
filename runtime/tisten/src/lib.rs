@@ -837,7 +837,6 @@ parameter_type_with_key! {
 	};
 }
 
-
 pub fn get_all_module_accounts() -> Vec<AccountId> {
 	vec![PotId::get().into_account_truncating(), TreasuryPalletId::get().into_account_truncating()]
 }

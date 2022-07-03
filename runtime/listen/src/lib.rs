@@ -812,8 +812,8 @@ impl pallet_scheduler::Config for Runtime {
 }
 
 parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: u32| -> Balance {
-		Zero::zero()
+	pub ExistentialDeposits: |currency_id: u32| -> Balance {
+		pallet_currencies::ExistentialDeposits::<Runtime>::get(currency_id)
 	};
 }
 

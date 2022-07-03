@@ -50,7 +50,6 @@ use sp_runtime::{
 };
 use sp_std::{
 	boxed::Box,
-	collections::btree_set::BTreeSet,
 	convert::{TryFrom, TryInto},
 	fmt::Debug,
 	marker, result,
@@ -83,6 +82,7 @@ pub struct ListenAssetInfo<AccountId, ListenAssetMetadata> {
 #[frame_support::pallet]
 pub mod module {
 	use super::*;
+	use crate::Event::SetExistenialDepposit;
 
 	pub(crate) type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 		<T as frame_system::Config>::AccountId,
@@ -141,6 +141,7 @@ pub mod module {
 		MultiLocationExisted,
 		AssetIdExisted,
 		AlreadyInWhiteList,
+		CrossTransferNotOpen,
 	}
 
 	#[pallet::event]
@@ -172,6 +173,10 @@ pub mod module {
 		SetAirDropNumber {
 			currency_id: CurrencyId,
 			number: u32,
+		},
+		SetExistenialDepposit {
+			currency_id: CurrencyId,
+			existenial_deposit: BalanceOf<T>,
 		},
 	}
 
@@ -205,6 +210,11 @@ pub mod module {
 	#[pallet::storage]
 	#[pallet::getter(fn air_drop_number_of_asset)]
 	pub type AirDropNumberOfAsset<T: Config> = StorageMap<_, Identity, CurrencyId, u32, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn existenial_deposits)]
+	pub type ExistentialDeposits<T: Config> =
+		StorageMap<_, Identity, CurrencyId, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn location_to_currency_ids)]
@@ -305,6 +315,10 @@ pub mod module {
 			let who = ensure_signed(origin)?;
 			let info = ListenAssetsInfo::<T>::get(currency_id).ok_or(Error::<T>::AssetNotExists)?;
 			ensure!(who == info.owner, Error::<T>::NotOwner);
+			ensure!(
+				AssetLocations::<T>::contains_key(currency_id),
+				Error::<T>::CrossTransferNotOpen
+			);
 			WeightRateMultiple::<T>::insert(currency_id, multiple);
 			Self::deposit_event(Event::SetWeightRateMultiple { currency_id, multiple });
 
@@ -340,6 +354,21 @@ pub mod module {
 			Ok(().into())
 		}
 
+		#[pallet::weight(1500_000_000)]
+		pub fn set_existenial_deposit(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			existenial_deposit: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let info = ListenAssetsInfo::<T>::get(currency_id).ok_or(Error::<T>::AssetNotExists)?;
+			ensure!(who == info.owner, Error::<T>::NotOwner);
+
+			ExistentialDeposits::<T>::insert(currency_id, existenial_deposit);
+			Self::deposit_event(SetExistenialDepposit { currency_id, existenial_deposit });
+
+			Ok(().into())
+		}
 		/// Users set the asset metadata.
 		///
 		/// You should have created the asset first.

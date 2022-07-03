@@ -131,7 +131,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("listen-parachain"),
 	impl_name: create_runtime_str!("listen-parachain"),
 	authoring_version: 1,
-	spec_version: 2022070302,
+	spec_version: 2022070303,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -828,8 +828,8 @@ impl pallet_scheduler::Config for Runtime {
 }
 
 parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: u32| -> Balance {
-		Zero::zero()
+	pub ExistentialDeposits: |currency_id: u32| -> Balance {
+		pallet_currencies::ExistentialDeposits::<Runtime>::get(currency_id)
 	};
 }
 

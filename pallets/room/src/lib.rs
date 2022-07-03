@@ -439,7 +439,7 @@ pub mod pallet {
 						T::AirDropAmount::get(),
 					)?;
 				}
-				<system::Pallet<T>>::inc_consumers(&user)?;
+				<system::Pallet<T>>::inc_providers(&user);
 			}
 
 			Self::deposit_event(Event::AirDroped(members.len() as u8, members));

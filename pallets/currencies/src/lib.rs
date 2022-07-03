@@ -49,8 +49,8 @@ use sp_runtime::{
 	DispatchError, DispatchResult,
 };
 use sp_std::{
-	collections::btree_set::BTreeSet,
 	boxed::Box,
+	collections::btree_set::BTreeSet,
 	convert::{TryFrom, TryInto},
 	fmt::Debug,
 	marker, result,
@@ -82,7 +82,6 @@ pub struct ListenAssetInfo<AccountId, ListenAssetMetadata> {
 
 #[frame_support::pallet]
 pub mod module {
-	use crate::Event::AddAssetToWhiteList;
 	use super::*;
 
 	pub(crate) type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
@@ -170,9 +169,10 @@ pub mod module {
 			currency_id: CurrencyId,
 			multiple: u128,
 		},
-		AddAssetToWhiteList {
+		SetAirDropNumber {
 			currency_id: CurrencyId,
-		}
+			number: u32,
+		},
 	}
 
 	#[pallet::storage]
@@ -185,6 +185,7 @@ pub mod module {
 	>;
 
 	#[pallet::storage]
+	#[pallet::getter(fn users_number)]
 	pub type UsersNumber<T: Config> = StorageMap<_, Identity, CurrencyId, u32, ValueQuery>;
 
 	#[pallet::storage]
@@ -202,8 +203,8 @@ pub mod module {
 	pub type WeightRateMultiple<T: Config> = StorageMap<_, Identity, CurrencyId, u128, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn white_list)]
-	pub type WhiteList<T: Config> = StorageValue<_, BTreeSet<CurrencyId>, ValueQuery>;
+	#[pallet::getter(fn air_drop_number_of_asset)]
+	pub type AirDropNumberOfAsset<T: Config> = StorageMap<_, Identity, CurrencyId, u32, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn location_to_currency_ids)]
@@ -327,21 +328,15 @@ pub mod module {
 			Ok(().into())
 		}
 
-
 		#[pallet::weight(1500_000_000)]
-		pub fn add_asset_to_white_list(origin: OriginFor<T>,
-			currency_id: CurrencyId,) -> DispatchResultWithPostInfo {
+		pub fn set_air_drop_numer(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			number: u32,
+		) -> DispatchResultWithPostInfo {
 			T::ForceSetLocationOrigin::ensure_origin(origin)?;
-			let mut white_list = WhiteList::<T>::get();
-			let result = white_list.insert(currency_id);
-			if result == false {
-				return Err(Error::<T>::AlreadyInWhiteList)?;
-			}
-			WhiteList::<T>::put(white_list);
-			Self::deposit_event(AddAssetToWhiteList {
-				currency_id
-			});
-
+			AirDropNumberOfAsset::<T>::insert(currency_id, number);
+			Self::deposit_event(Event::SetAirDropNumber { currency_id, number });
 			Ok(().into())
 		}
 

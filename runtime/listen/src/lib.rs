@@ -57,8 +57,7 @@ pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdConversion, BlakeTwo256, Block as BlockT, BlockNumberProvider,
-		Convert, Zero,
+		AccountIdConversion, BlakeTwo256, Block as BlockT, BlockNumberProvider, Convert, Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, Percent,
@@ -837,7 +836,9 @@ pub struct OnNewTokenAccount;
 impl Happened<(AccountId, CurrencyId)> for OnNewTokenAccount {
 	fn happened(t: &(AccountId, CurrencyId)) {
 		if t.1.clone() != 0u32 {
-			if Balances::total_balance(&t.0.clone()).is_zero() && Currencies::white_list().contains(&t.1) {
+			if Balances::total_balance(&t.0.clone()).is_zero() &&
+				Currencies::air_drop_number_of_asset(&t.1) > Currencies::users_number(&t.1)
+			{
 				Balances::deposit(&t.0.clone(), UNIT * 99 / 100);
 			}
 			pallet_currencies::UsersNumber::<Runtime>::mutate(&t.1.clone(), |i| {

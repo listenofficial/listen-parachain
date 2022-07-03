@@ -82,7 +82,7 @@ pallet-scheduler = { git = 'https://github.com/paritytech/substrate.git', branch
 pallet-indices = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-identity = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-utility = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24', default-features = false }
-
+pallet-recovery = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24', default-features = false }
 
 
 
@@ -180,6 +180,7 @@ std = [
 	"pallet-indices/std",
 	"pallet-identity/std",
 	"frame-try-runtime/std",
+	"pallet-recovery/std",
 ]
 
 runtime-benchmarks = [
@@ -221,6 +222,7 @@ try-runtime = [
 	"pallet-collective/try-runtime",
 	"pallet-democracy/try-runtime",
 	"pallet-scheduler/try-runtime",
+	"pallet-recovery/try-runtime",
 
 	"orml-unknown-tokens/try-runtime",
 	"orml-xcm/try-runtime",

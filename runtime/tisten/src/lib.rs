@@ -131,7 +131,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("listen-parachain"),
 	impl_name: create_runtime_str!("listen-parachain"),
 	authoring_version: 1,
-	spec_version: 2022070303,
+	spec_version: 2022070305,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -231,6 +231,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
 		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 12,
+		Recovery: pallet_recovery::{Pallet, Call, Storage, Event<T>} = 13,
 
 		// Collator support. The order of these 4 are important and shall not change.
 		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
@@ -378,6 +379,25 @@ impl pallet_timestamp::Config for Runtime {
 	type OnTimestampSet = ();
 	type MinimumPeriod = MinimumPeriod;
 	type WeightInfo = ();
+}
+
+
+parameter_types! {
+	pub const ConfigDepositBase: Balance = 5 * UNIT;
+	pub const FriendDepositFactor: Balance = 1 * UNIT;
+	pub const MaxFriends: u16 = 9;
+	pub const RecoveryDeposit: Balance = 5 * UNIT;
+}
+
+impl pallet_recovery::Config for Runtime {
+	type Event = Event;
+	type WeightInfo = pallet_recovery::weights::SubstrateWeight<Runtime>;
+	type Call = Call;
+	type Currency = Balances;
+	type ConfigDepositBase = ConfigDepositBase;
+	type FriendDepositFactor = FriendDepositFactor;
+	type MaxFriends = MaxFriends;
+	type RecoveryDeposit = RecoveryDeposit;
 }
 
 parameter_types! {

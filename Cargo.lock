@@ -11210,6 +11210,7 @@ dependencies = [
  "pallet-indices",
  "pallet-multisig",
  "pallet-nft",
+ "pallet-recovery",
  "pallet-room",
  "pallet-scheduler",
  "pallet-session",

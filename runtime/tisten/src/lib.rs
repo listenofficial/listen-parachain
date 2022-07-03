@@ -381,7 +381,6 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
-
 parameter_types! {
 	pub const ConfigDepositBase: Balance = 5 * UNIT;
 	pub const FriendDepositFactor: Balance = 1 * UNIT;
@@ -703,21 +702,6 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
-// Make sure that there are no more than `MaxMembers` members elected via elections-phragmen.
-const_assert!(DesiredMembers::get() <= CouncilMaxMembers::get());
-
-parameter_types! {
-	pub const CandidacyBond: Balance = 10 * UNIT;
-	// 1 storage item created, key size is 32 bytes, value size is 16+16.
-	pub const VotingBondBase: Balance = 1 * UNIT;
-	// additional data per vote is 32 bytes (account id).
-	pub const VotingBondFactor: Balance = 1 * UNIT;
-	pub const TermDuration: BlockNumber = 7 * DAYS;
-	pub const DesiredMembers: u32 = 13;
-	pub const DesiredRunnersUp: u32 = 7;
-	pub const ElectionsPhragmenPalletId: LockIdentifier = *b"phrelect";
-}
-
 parameter_types! {
 	pub const TechnicalMotionDuration: BlockNumber = 5 * DAYS;
 	pub const TechnicalMaxProposals: u32 = 100;
@@ -853,8 +837,9 @@ parameter_type_with_key! {
 	};
 }
 
+
 pub fn get_all_module_accounts() -> Vec<AccountId> {
-	vec![]
+	vec![PotId::get().into_account_truncating(), TreasuryPalletId::get().into_account_truncating()]
 }
 
 pub struct DustRemovalWhitelist;

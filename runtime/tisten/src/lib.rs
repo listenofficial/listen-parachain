@@ -21,7 +21,7 @@ use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
 		tokens::fungible::Balanced, Contains, Currency, EnsureOneOf, EnsureOrigin,
-		EqualPrivilegeOnly, Everything, LockIdentifier, Nothing, OnKilledAccount, OnNewAccount,
+		EqualPrivilegeOnly, Everything, Nothing, OnKilledAccount, OnNewAccount,
 		PalletInfo as PalletInfoT,
 	},
 	weights::{
@@ -68,7 +68,6 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use static_assertions::const_assert;
 use xcm_config::*;
 
 // Polkadot Imports
@@ -131,7 +130,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("listen-parachain"),
 	impl_name: create_runtime_str!("listen-parachain"),
 	authoring_version: 1,
-	spec_version: 2022070305,
+	spec_version: 2022070401,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,

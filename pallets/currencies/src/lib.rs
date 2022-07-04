@@ -336,6 +336,9 @@ pub mod module {
 			let location: MultiLocation =
 				(*location).try_into().map_err(|()| Error::<T>::BadLocation)?;
 			ensure!(ListenAssetsInfo::<T>::contains_key(currency_id), Error::<T>::AssetNotExists);
+			if let Some(l) = AssetLocations::<T>::get(currency_id) {
+				LocationToCurrencyIds::<T>::take(l);
+			}
 			AssetLocations::<T>::insert(currency_id, location.clone());
 			LocationToCurrencyIds::<T>::insert(location.clone(), currency_id);
 			Self::deposit_event(Event::ForceSetLocation { currency_id, location });

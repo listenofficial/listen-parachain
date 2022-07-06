@@ -53,12 +53,10 @@ pub type Trader = (
 	FixedRateOfFungible<LIKEPerSecond, ToTreasury>,
 	FixedRateOfFungible<KICOPerSecond, ToTreasury>,
 	FixedRateOfFungible<KTPerSecond, ToTreasury>,
-
 	FixedRateOfFungible<KUSDPerSecond, ToTreasury>,
 	FixedRateOfFungible<AUSDPerSecond, ToTreasury>,
 	FixedRateOfFungible<KARPerSecond, ToTreasury>,
 	FixedRateOfFungible<LKSMPerSecond, ToTreasury>,
-
 	FixedRateOfAsset<BaseRate, ToTreasury, pallet_currencies::AssetIdMaps<Runtime>>,
 );
 

@@ -44,7 +44,7 @@ pub mod karura {
 	pub mod lksm {
 		pub const ASSET_ID: u32 = 131;
 		pub const KEY: &[u8] = &[0, 131];
-}
+	}
 }
 
 /// kisten (Test)

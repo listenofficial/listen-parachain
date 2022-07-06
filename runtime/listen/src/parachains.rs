@@ -20,18 +20,38 @@ pub mod kusama {
 
 /// kico
 pub mod kico {
-	pub const PARA_ID: u32 = 2000;
+	pub const PARA_ID: u32 = 2020;
 	pub mod kico {
 		pub const ASSET_ID: u32 = 10;
 		pub const TOKEN_SYMBOL: &[u8] = "KICO".as_bytes();
 	}
 }
 
+pub mod karura {
+	pub const PARA_ID: u32 = 2000;
+	pub mod ausd {
+		pub const ASSET_ID: u32 = 101;
+		pub const KEY: &[u8] = &[0, 1];
+	}
+	pub mod kar {
+		pub const ASSET_ID: u32 = 128;
+		pub const KEY: &[u8] = &[0, 128];
+	}
+	pub mod kusd {
+		pub const ASSET_ID: u32 = 129;
+		pub const KEY: &[u8] = &[0, 129];
+	}
+	pub mod lksm {
+		pub const ASSET_ID: u32 = 131;
+		pub const KEY: &[u8] = &[0, 131];
+}
+}
+
 /// kisten (Test)
 pub mod kisten {
 	pub const PARA_ID: u32 = 2025;
 	pub mod kt {
-		pub const ASSET_ID: u32 = 100;
+		pub const ASSET_ID: u32 = 10000;
 		pub const TOKEN_SYMBOL: &[u8] = "KT".as_bytes();
 	}
 }

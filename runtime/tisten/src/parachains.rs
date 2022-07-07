@@ -29,15 +29,12 @@ pub mod kico {
 
 pub mod karura {
 	pub const PARA_ID: u32 = 2000;
-	pub mod ausd {
-		pub const ASSET_ID: u32 = 101;
-		pub const KEY: &[u8] = &[0, 1];
-	}
+
 	pub mod kar {
 		pub const ASSET_ID: u32 = 128;
 		pub const KEY: &[u8] = &[0, 128];
 	}
-	pub mod kusd {
+	pub mod ausd {
 		pub const ASSET_ID: u32 = 129;
 		pub const KEY: &[u8] = &[0, 129];
 	}

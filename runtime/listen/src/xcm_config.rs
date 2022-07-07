@@ -27,10 +27,6 @@ parameter_types! {
 				X2(Parachain(kisten::PARA_ID.into()), GeneralKey(kisten::kt::TOKEN_SYMBOL.to_vec()))
 			).into(), ksm_per_second() * 100);
 
-	pub KUSDPerSecond: (AssetId, u128) = (MultiLocation::new(
-				1,
-				X2(Parachain(karura::PARA_ID.into()), GeneralKey(karura::kusd::KEY.to_vec()))
-			).into(), ksm_per_second() * 100);
 	pub AUSDPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
 				X2(Parachain(karura::PARA_ID.into()), GeneralKey(karura::ausd::KEY.to_vec()))
@@ -53,7 +49,6 @@ pub type Trader = (
 	FixedRateOfFungible<LIKEPerSecond, ToTreasury>,
 	FixedRateOfFungible<KICOPerSecond, ToTreasury>,
 	FixedRateOfFungible<KTPerSecond, ToTreasury>,
-	FixedRateOfFungible<KUSDPerSecond, ToTreasury>,
 	FixedRateOfFungible<AUSDPerSecond, ToTreasury>,
 	FixedRateOfFungible<KARPerSecond, ToTreasury>,
 	FixedRateOfFungible<LKSMPerSecond, ToTreasury>,
@@ -100,10 +95,6 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 				1,
 				X2(Parachain(karura::PARA_ID.into()), GeneralKey(karura::ausd::KEY.to_vec())),
 			)),
-			karura::kusd::ASSET_ID => Some(MultiLocation::new(
-				1,
-				X2(Parachain(karura::PARA_ID.into()), GeneralKey(karura::kusd::KEY.to_vec())),
-			)),
 			karura::kar::ASSET_ID => Some(MultiLocation::new(
 				1,
 				X2(Parachain(karura::PARA_ID.into()), GeneralKey(karura::kar::KEY.to_vec())),
@@ -139,7 +130,6 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 
 					(karura::PARA_ID, karura::ausd::KEY) => Some(karura::ausd::ASSET_ID.into()),
 					(karura::PARA_ID, karura::kar::KEY) => Some(karura::kar::ASSET_ID.into()),
-					(karura::PARA_ID, karura::kusd::KEY) => Some(karura::kusd::ASSET_ID.into()),
 					(karura::PARA_ID, karura::lksm::KEY) => Some(karura::lksm::ASSET_ID.into()),
 
 					(id, key) if id == u32::from(ParachainInfo::parachain_id()) => match key {

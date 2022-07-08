@@ -20,7 +20,7 @@ pub mod kusama {
 
 /// kico
 pub mod kico {
-	pub const PARA_ID: u32 = 2020;
+	pub const PARA_ID: u32 = 2107;
 	pub mod kico {
 		pub const ASSET_ID: u32 = 10;
 		pub const TOKEN_SYMBOL: &[u8] = "KICO".as_bytes();
@@ -41,15 +41,6 @@ pub mod karura {
 	pub mod lksm {
 		pub const ASSET_ID: u32 = 131;
 		pub const KEY: &[u8] = &[0, 131];
-	}
-}
-
-/// kisten (Test)
-pub mod kisten {
-	pub const PARA_ID: u32 = 2025;
-	pub mod kt {
-		pub const ASSET_ID: u32 = 10000;
-		pub const TOKEN_SYMBOL: &[u8] = "KT".as_bytes();
 	}
 }
 

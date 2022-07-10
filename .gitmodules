@@ -1,6 +1,4 @@
-[submodule "pallets/listen-tmp"]
-	path = pallets/listen-tmp
-	url = https://github.com/JimYam/listen-tmp.git
+
 [submodule "pallets/daos"]
 	path = pallets/daos
-	url = https://github.com/LISTEN-DAOS/daos.git
+	url = https://github.com/daos-org/daos.git

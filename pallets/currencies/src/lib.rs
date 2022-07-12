@@ -205,7 +205,7 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn weight_rate_multiple)]
-	pub type WeightRateMultiple<T: Config> = StorageMap<_, Identity, CurrencyId, u128, ValueQuery>;
+	pub type WeightRateMultiple<T: Config> = StorageMap<_, Identity, CurrencyId, u128, ValueQuery, WeightRateMultipleOnEmpty<T>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn air_drop_number_of_asset)]

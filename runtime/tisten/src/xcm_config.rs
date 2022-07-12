@@ -16,8 +16,17 @@ parameter_types! {
 
 	pub LTPerSecond: (AssetId, u128) = (MultiLocation::new(0,
 		X1(GeneralKey(native::lt::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
+	pub LT1PerSecond: (AssetId, u128) = (MultiLocation::new(
+			1,
+			X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(native::lt::TOKEN_SYMBOL.to_vec()))
+		).into(), ksm_per_second() * 100);
+
 	pub LIKEPerSecond: (AssetId, u128) = (MultiLocation::new(0,
 		X1(GeneralKey(native::like::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
+	pub LIKE1PerSecond: (AssetId, u128) = (MultiLocation::new(
+				1,
+				X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(native::like::TOKEN_SYMBOL.to_vec()))
+			).into(), ksm_per_second() * 100);
 
 	pub KICOPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
@@ -42,8 +51,12 @@ parameter_types! {
 
 pub type Trader = (
 	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
+	// native
 	FixedRateOfFungible<LTPerSecond, ToTreasury>,
+	FixedRateOfFungible<LT1PerSecond, ToTreasury>,
 	FixedRateOfFungible<LIKEPerSecond, ToTreasury>,
+	FixedRateOfFungible<LIKE1PerSecond, ToTreasury>,
+	//
 	FixedRateOfFungible<KICOPerSecond, ToTreasury>,
 	FixedRateOfFungible<AUSDPerSecond, ToTreasury>,
 	FixedRateOfFungible<KARPerSecond, ToTreasury>,

@@ -303,7 +303,7 @@ pub struct NewAccount;
 impl OnNewAccount<AccountId> for NewAccount {
 	fn on_new_account(_who: &AccountId) {
 		pallet_currencies::UsersNumber::<Runtime>::mutate(0 as CurrencyId, |i| {
-			*i = i.saturating_add(1u32)
+			*i = i.saturating_add(1u32);
 		});
 	}
 }
@@ -312,7 +312,7 @@ pub struct KilledAccount;
 impl OnKilledAccount<AccountId> for KilledAccount {
 	fn on_killed_account(_who: &AccountId) {
 		pallet_currencies::UsersNumber::<Runtime>::mutate(0 as CurrencyId, |i| {
-			*i = i.saturating_sub(1u32)
+			*i = i.saturating_sub(1u32);
 		});
 	}
 }
@@ -854,16 +854,14 @@ parameter_types! {
 pub struct OnNewTokenAccount;
 impl Happened<(AccountId, CurrencyId)> for OnNewTokenAccount {
 	fn happened(t: &(AccountId, CurrencyId)) {
-		if t.1.clone() != 0u32 {
-			if Balances::total_balance(&t.0.clone()).is_zero() &&
-				Currencies::air_drop_number_of_asset(&t.1) > Currencies::users_number(&t.1)
-			{
-				Balances::deposit(&t.0.clone(), UNIT * 99 / 100);
-			}
-			pallet_currencies::UsersNumber::<Runtime>::mutate(&t.1.clone(), |i| {
-				*i = i.saturating_add(1u32)
-			});
+		if Balances::total_balance(&t.0.clone()).is_zero() &&
+			Currencies::air_drop_number_of_asset(&t.1) > Currencies::users_number(&t.1)
+		{
+			Balances::deposit(&t.0.clone(), UNIT * 99 / 100);
 		}
+		pallet_currencies::UsersNumber::<Runtime>::mutate(&t.1.clone(), |i| {
+			*i = i.saturating_add(1u32);
+		});
 	}
 }
 
@@ -871,7 +869,7 @@ pub struct OnKilledTokenAccount;
 impl Happened<(AccountId, CurrencyId)> for OnKilledTokenAccount {
 	fn happened(t: &(AccountId, CurrencyId)) {
 		pallet_currencies::UsersNumber::<Runtime>::mutate(&t.1.clone(), |i| {
-			*i = i.saturating_sub(1u32)
+			*i = i.saturating_sub(1u32);
 		});
 	}
 }

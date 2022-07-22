@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use listen_primitives::{constants::currency::*, Balance};
@@ -29,16 +31,12 @@ pub fn get_pair_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair
 		.public()
 }
 
-pub fn testnet_config() -> Result<ChainSpec, String> {
-	ChainSpec::from_json_bytes(&include_bytes!("../res/localspec.json")[..])
-}
-
 pub fn mainnet_config() -> Result<ChainSpec, String> {
 	ChainSpec::from_json_bytes(&include_bytes!("../res/mainnet.json")[..])
 }
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const PARA_ID: u32 = 2117;
+const PARA_ID: u32 = 2118;
 
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
@@ -88,53 +86,13 @@ pub fn template_session_keys(keys: AuraId) -> parachain_template_runtime::Sessio
 	parachain_template_runtime::SessionKeys { aura: keys }
 }
 
-pub fn development_config() -> ChainSpec {
-	ChainSpec::from_genesis(
-		// Name
-		"Development",
-		// ID
-		"dev",
-		ChainType::Development,
-		move || {
-			testnet_genesis(
-				// initial collators.
-				vec![
-					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						get_collator_keys_from_seed("Alice"),
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
-						get_collator_keys_from_seed("Bob"),
-					),
-				],
-				Some(vec![
-					get_account_id_from_seed::<sr25519::Public>("Alice"),
-					get_account_id_from_seed::<sr25519::Public>("Bob"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie"),
-					get_account_id_from_seed::<sr25519::Public>("Dave"),
-					get_account_id_from_seed::<sr25519::Public>("Eve"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie"),
-					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
-					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-				]),
-				PARA_ID.into(),
-			)
-		},
-		vec![],
-		get_telemetry_endpoints(),
-		Some("listen-dev"),
-		None,
-		Some(get_properties()),
-		Extensions {
-			relay_chain: "rococo-dev".into(), // You MUST set this to the correct network!
-			para_id: PARA_ID.into(),
-		},
-	)
+pub fn get_collective_members() -> Vec<AccountId> {
+	vec![
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		get_account_id_from_seed::<sr25519::Public>("Bob"),
+		get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		get_account_id_from_seed::<sr25519::Public>("Dave"),
+	]
 }
 
 pub fn local_testnet_config() -> ChainSpec {
@@ -171,7 +129,7 @@ pub fn local_testnet_config() -> ChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 				]),
-				2022u32.into(),
+				PARA_ID.into(),
 			)
 		},
 		// Bootnodes
@@ -186,59 +144,11 @@ pub fn local_testnet_config() -> ChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 2022u32.into(),
+			para_id: PARA_ID.into(),
 		},
 	)
 }
 
-pub fn staging_config() -> ChainSpec {
-	let mainnet_para_id: u32 = 2118;
-	ChainSpec::from_genesis(
-		// Name
-		"Listen Network",
-		// ID
-		"listen",
-		ChainType::Live,
-		move || {
-			testnet_genesis(
-				// initial collators.
-				vec![
-					(
-						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
-							.into(),
-						hex!["5efa522a64c7e849a7173290b35b81906de6adfe2dad6c26bd816efcd9aac13d"]
-							.unchecked_into(),
-					),
-					(
-						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"]
-							.into(),
-						hex!["aa91623c66a0e0e434eb6bdcd316978b28660909ed5b9064981346c54d23b35e"]
-							.unchecked_into(),
-					),
-				],
-				None,
-				mainnet_para_id.into(),
-			)
-		},
-		// Bootnodes
-		vec![
-			String::from("/dns/rpc.mainnet.listen.io/tcp/30333/p2p/12D3KooWD2WGGRfDk33d3bncnKs9xfVq1Coy2L473UAeoYvsuA6i").try_into().unwrap(),
-			String::from("/dns/wss.mainnet.listen.io/tcp/30333/p2p/12D3KooW9yvBWUGkKKu56CPh9KhYacp1koez1ASbdYt2xdXrPoCb").try_into().unwrap(),
-		],
-		// Telemetry
-		get_telemetry_endpoints(),
-		// Protocol ID
-		Some("listen"),
-		// Properties
-		None,
-		Some(get_properties()),
-		// Extensions
-		Extensions {
-			relay_chain: "kusama".into(), // You MUST set this to the correct network!
-			para_id: mainnet_para_id.into(),
-		},
-	)
-}
 
 pub const ENDOWMENT: Balance = 10_000_000 * UNIT;
 
@@ -314,8 +224,14 @@ fn testnet_genesis(
 			candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
 			..Default::default()
 		},
-		technical_committee: Default::default(),
-		council: Default::default(),
+		technical_committee: parachain_template_runtime::TechnicalCommitteeConfig {
+			members: get_collective_members(),
+			..Default::default()
+		},
+		council: parachain_template_runtime::CouncilConfig {
+			members: get_collective_members(),
+			..Default::default()
+		},
 		democracy: Default::default(),
 		session: parachain_template_runtime::SessionConfig {
 			keys: invulnerables
@@ -422,5 +338,6 @@ fn get_properties() -> Properties {
 }
 
 fn get_root() -> AccountId {
-	AccountId32::from_string("5FQyoSCbcnodfunhcC7ZpwKkad8JSFxLaZ54aoZyb7HXoX3h").unwrap()
+	// AccountId32::from_string("5FQyoSCbcnodfunhcC7ZpwKkad8JSFxLaZ54aoZyb7HXoX3h").unwrap()
+	get_account_id_from_seed::<sr25519::Public>("Alice")
 }

@@ -36,7 +36,7 @@ wget -O- https://github.com/listenofficial/listen-parachain/releases/latest  | g
 ```
 * Run (Connect to the main network)
 ```buildoutcfg
-./listen-collator --collator --base-path db --pruning archive --state-cache-size=0 -- --execution wasm --chain kusama --unsafe-pruning --pruning=1000 --state-cache-size=0
+./listen --collator --base-path db --pruning archive --state-cache-size=0 -- --execution wasm --chain kusama --unsafe-pruning --pruning=1000 --state-cache-size=0
 ```
 ***
 ### ***option 2 (For developers)***
@@ -66,7 +66,7 @@ cargo build --release
 cd target/release
 ```
 ```buildoutcfg
-./listen-collator --collator --base-path db --pruning archive --state-cache-size=0 -- --execution wasm --chain kusama --unsafe-pruning --pruning=1000 --state-cache-size=0
+./listen --collator --base-path db --pruning archive --state-cache-size=0 -- --execution wasm --chain kusama --unsafe-pruning --pruning=1000 --state-cache-size=0
 ```
 ## 3. Learn More
 * [***Listen Official Website***](https://listen.io)

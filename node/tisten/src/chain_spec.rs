@@ -161,12 +161,11 @@ fn testnet_genesis(
 		balances: parachain_template_runtime::BalancesConfig {
 			balances: match endowed_accounts {
 				Some(x) => {
-					let mut accounts = x
+					let accounts = x
 						.iter()
 						.cloned()
 						.map(|k| (k, ENDOWMENT))
 						.collect::<Vec<(AccountId, Balance)>>();
-					accounts.push((get_root(), 1000 * UNIT));
 					accounts
 				},
 				_ => vec![

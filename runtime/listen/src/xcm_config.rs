@@ -339,7 +339,7 @@ impl orml_unknown_tokens::Config for Runtime {
 
 impl orml_xcm::Config for Runtime {
 	type Event = Event;
-	type SovereignOrigin = EnsureRootOrThreeFourthsCouncil;
+	type SovereignOrigin = EnsureRootOrHalfCouncil;
 }
 
 pub struct AccountIdToMultiLocation;

@@ -266,8 +266,7 @@ pub mod module {
 			let user = ensure_signed(origin)?;
 
 			ensure!(
-				!Self::is_exists_metadata(currency_id) &&
-					T::MultiCurrency::total_issuance(currency_id) == BalanceOf::<T>::from(0u32),
+				!Self::is_exists_metadata(currency_id),
 				Error::<T>::AssetAlreadyExists
 			);
 			T::MultiCurrency::deposit(currency_id, &user, amount)?;

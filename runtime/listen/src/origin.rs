@@ -42,7 +42,7 @@ pub type EnsureRootOrHalfCouncil = EnsureOneOf<
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
 >;
-pub type EnsureRootOrThreeFourthsCouncil = EnsureOneOf<
-	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 4>,
->;
+// pub type EnsureRootOrThreeFourthsCouncil = EnsureOneOf<
+// 	EnsureRoot<AccountId>,
+// 	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 4>,
+// >;

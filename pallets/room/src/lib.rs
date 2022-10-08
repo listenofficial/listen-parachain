@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-pub mod migrations;
 pub mod primitives;
 pub mod room_id;
 

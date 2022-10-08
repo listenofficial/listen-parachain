@@ -1,10 +1,10 @@
 [workspace]
 
 members = [
-	"node/listen",
-	"runtime/listen",
-	"node/tisten",
-	"runtime/tisten",
+#	"node/listen",
+#	"node/tisten",
+#	"runtime/listen",
+#	"runtime/tisten",
 	"pallets/currencies",
 	"pallets/room",
 	"pallets/nft",
@@ -12,7 +12,6 @@ members = [
 ]
 exclude = [
 	"pallets/daos",
-	"runtime/listen",
 ]
 
 [profile.release]

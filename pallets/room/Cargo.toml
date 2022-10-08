@@ -13,27 +13,27 @@ log = { version = "0.4.14", default-features = false }
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 
-sp-io = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
-sp-core = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
+sp-io = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.29' }
+sp-core = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.29' }
 
 # substrate fram
-frame-support = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
-frame-system = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
-pallet-multisig = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
-pallet-timestamp = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
-pallet-treasury = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
+frame-support = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.29' }
+frame-system = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.29' }
+pallet-multisig = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.29' }
+pallet-timestamp = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.29' }
+pallet-treasury = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.29' }
 
 # listen-tmp
-listen-primitives = { git = "https://github.com/JimYam/listen-tmp.git", default-features = false, branch = "polkadot-v0.9.24" }
-orml-vesting = { git = "https://github.com/JimYam/listen-tmp.git", default-features = false, branch = "polkadot-v0.9.24" }
+listen-primitives = { git = "https://github.com/JimYam/listen-tmp.git", default-features = false, branch = "polkadot-v0.9.29" }
+orml-vesting = { git = "https://github.com/JimYam/listen-tmp.git", default-features = false, branch = "polkadot-v0.9.29" }
 
 #orml
-orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, branch = 'polkadot-v0.9.24' }
-orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, branch = 'polkadot-v0.9.24' }
+orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, branch = 'polkadot-v0.9.29' }
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, branch = 'polkadot-v0.9.29' }
 
 #[dev-dependencies]
-sp-runtime = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
-sp-std = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
+sp-runtime = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.29' }
+sp-std = { default-features = false,  git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.29' }
 
 [features]
 default = ['std']

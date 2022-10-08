@@ -95,7 +95,7 @@ pub mod module {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		type MultiCurrency: MultiCurrency<CurrencyId = CurrencyId, Self::AccountId>
+		type MultiCurrency: MultiCurrency<Self::AccountId, CurrencyId = CurrencyId>
 			+ MultiCurrencyExtended<Self::AccountId>
 			+ MultiLockableCurrency<Self::AccountId>
 			+ MultiReservableCurrency<Self::AccountId>;

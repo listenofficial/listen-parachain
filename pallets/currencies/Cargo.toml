@@ -21,7 +21,7 @@ sp-io = { default-features = false,  git = 'https://github.com/paritytech/substr
 serde = { version = "1.0.132", optional = true }
 
 # xcm
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.24", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.29", default-features = false }
 
 # orml
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library.git', default-features = false, branch = 'polkadot-v0.9.29' }

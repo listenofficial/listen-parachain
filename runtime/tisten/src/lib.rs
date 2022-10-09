@@ -8,7 +8,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod call_filters;
-mod migrations;
+// mod migrations;
 mod origin;
 mod parachains;
 mod weights;
@@ -39,7 +39,7 @@ pub use listen_primitives::{
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, Hash, Header, Index,
 	Signature,
 };
-use migrations::*;
+// use migrations::*;
 use origin::*;
 use orml_traits::{
 	location::AbsoluteReserveProvider, parameter_type_with_key, Happened, MultiCurrency,
@@ -86,6 +86,7 @@ use xcm_builder::{
 	SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::{Config, XcmExecutor};
+
 /// The address format for describing accounts.
 pub type Address = MultiAddress<AccountId, AccountIndex>;
 
@@ -122,7 +123,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	OnRuntimeUpgrade,
+	(),
 >;
 
 #[sp_version::runtime_version]
@@ -154,7 +155,7 @@ impl WeightToFeePolynomial for WeightToFee {
 		// in Rococo, extrinsic base weight (smallest non-zero weight) is mapped to 1 MILLIUNIT:
 		// in our template, we map to 1/10 of that, or 1/10 MILLIUNIT
 		let p = MILLIUNIT / 10;
-		let q = 100 * Balance::from(ExtrinsicBaseWeight::get());
+		let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
 		smallvec![WeightToFeeCoefficient {
 			degree: 1,
 			negative: false,
@@ -199,7 +200,7 @@ const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_div(2);
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -215,57 +216,55 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		// System support stuff.
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-		ParachainSystem: cumulus_pallet_parachain_system::{
-			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
-		} = 1,
+		System: frame_system,
+		ParachainSystem: cumulus_pallet_parachain_system,
 		// RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
-		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>} = 5,
-		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 6,
-		Utility: pallet_utility::{Pallet, Call, Event} = 7,
+		Timestamp: pallet_timestamp,
+		ParachainInfo: parachain_info,
+		Indices: pallet_indices,
+		Multisig: pallet_multisig,
+		Utility: pallet_utility,
 
 		// Monetary stuff.
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
-		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 12,
-		Recovery: pallet_recovery::{Pallet, Call, Storage, Event<T>} = 13,
+		Balances: pallet_balances,
+		TransactionPayment: pallet_transaction_payment,
+		Identity: pallet_identity,
+		Recovery: pallet_recovery,
 
 		// Collator support. The order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
-		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
+		Authorship: pallet_authorship,
+		CollatorSelection: pallet_collator_selection,
+		Session: pallet_session,
+		Aura: pallet_aura,
+		AuraExt: cumulus_pallet_aura_ext,
 
 		// XCM helpers.
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Storage} = 31,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin, Storage} = 32,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
+		XcmpQueue: cumulus_pallet_xcmp_queue,
+		PolkadotXcm: pallet_xcm,
+		CumulusXcm: cumulus_pallet_xcm,
+		DmpQueue: cumulus_pallet_dmp_queue,
 
 		// local
-		Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 40,
-		Room: pallet_room::{Pallet, Storage, Call, Event<T>, Config<T>} = 41,
-		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage, Config<T>} = 42,
+		Nft: pallet_nft,
+		Room: pallet_room,
+		Currencies: pallet_currencies,
 
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} =50,
-		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 51,
-		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 52,
-		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 53,
-		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 54,
+		Sudo: pallet_sudo,
+		Council: pallet_collective::<Instance1>,
+		TechnicalCommittee: pallet_collective::<Instance2>,
+		Democracy: pallet_democracy,
+		Scheduler: pallet_scheduler,
 
 		// orml
-		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 60,
-		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 61,
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 62,
-		Tokens: orml_tokens::{Pallet, Config<T>, Storage, Event<T>} = 63,
+		UnknownTokens: orml_unknown_tokens,
+		OrmlXcm: orml_xcm,
+		XTokens: orml_xtokens,
+		Tokens: orml_tokens,
 
 		// listen-tmp
-		Dao: pallet_dao::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>} = 70,
-		RoomTreasury: pallet_treasury::{Pallet, Storage, Call, Event<T>} = 71,
-		OrmlVesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 72,
+		Dao: pallet_dao::<Instance1>,
+		RoomTreasury: pallet_treasury,
+		OrmlVesting: orml_vesting,
 	}
 );
 
@@ -465,8 +464,8 @@ parameter_types! {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
+	type Event = Event;
 	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
-	// type TransactionByteFee = TransactionByteFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 	type WeightToFee = WeightToFee;
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;

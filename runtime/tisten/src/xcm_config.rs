@@ -1,49 +1,58 @@
 use super::*;
 use crate::xcm_impls::FixedRateOfAsset;
 use pallet_currencies::currencies_trait::AssetIdMapping;
+use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use sp_runtime::{traits::{Get, ConstU32}, WeakBoundedVec};
+
+type Old_Weight = u64;
 
 pub fn ksm_per_second() -> u128 {
-	let base_weight = Balance::from(ExtrinsicBaseWeight::get());
+	let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time());
 	let base_tx_fee = UNIT / 1000;
-	let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
+	let base_tx_per_second = (WEIGHT_PER_SECOND.ref_time()) as u128 / base_weight;
 	let fee_per_second = base_tx_per_second * base_tx_fee;
 	fee_per_second / 100
 }
 
+
+type KeyBoundedVec = WeakBoundedVec<u8, ConstU32<32>>;
+
+
 // fixme
 parameter_types! {
+
 	pub KsmPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), ksm_per_second());
 
 	pub LTPerSecond: (AssetId, u128) = (MultiLocation::new(0,
-		X1(GeneralKey(native::lt::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
+		X1(GeneralKey(KeyBoundedVec::force_from(native::lt::TOKEN_SYMBOL.to_vec(), None)))).into(), ksm_per_second() * 100);
 	pub LT1PerSecond: (AssetId, u128) = (MultiLocation::new(
 			1,
-			X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(native::lt::TOKEN_SYMBOL.to_vec()))
+			X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(KeyBoundedVec::force_from(native::lt::TOKEN_SYMBOL.to_vec(), None)))
 		).into(), ksm_per_second() * 100);
 
 	pub LIKEPerSecond: (AssetId, u128) = (MultiLocation::new(0,
-		X1(GeneralKey(native::like::TOKEN_SYMBOL.to_vec()))).into(), ksm_per_second() * 100);
+		X1(GeneralKey(KeyBoundedVec::force_from(native::like::TOKEN_SYMBOL.to_vec(), None)))).into(), ksm_per_second() * 100);
 	pub LIKE1PerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
-				X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(native::like::TOKEN_SYMBOL.to_vec()))
+				X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(KeyBoundedVec::force_from(native::like::TOKEN_SYMBOL.to_vec(), None)))
 			).into(), ksm_per_second() * 100);
 
 	pub KICOPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
-				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::kico::TOKEN_SYMBOL.to_vec()))
+				X2(Parachain(kico::PARA_ID.into()), GeneralKey(KeyBoundedVec::force_from(kico::kico::TOKEN_SYMBOL.to_vec(), None)))
 			).into(), ksm_per_second() * 100);
 
 	pub AUSDPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
-				X2(Parachain(karura::PARA_ID.into()), GeneralKey(karura::ausd::KEY.to_vec()))
+				X2(Parachain(karura::PARA_ID.into()), GeneralKey(KeyBoundedVec::force_from(karura::ausd::KEY.to_vec(), None)))
 			).into(), ksm_per_second() * 100);
 	pub KARPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
-				X2(Parachain(karura::PARA_ID.into()), GeneralKey(karura::kar::KEY.to_vec()))
+				X2(Parachain(karura::PARA_ID.into()), GeneralKey(KeyBoundedVec::force_from(karura::kar::KEY.to_vec(), None)))
 			).into(), ksm_per_second() * 100);
 	pub LKSMPerSecond: (AssetId, u128) = (MultiLocation::new(
 				1,
-				X2(Parachain(karura::PARA_ID.into()), GeneralKey(karura::lksm::KEY.to_vec()))
+				X2(Parachain(karura::PARA_ID.into()), GeneralKey(KeyBoundedVec::force_from(karura::lksm::KEY.to_vec(), None)))
 			).into(), ksm_per_second() * 100);
 
 	pub BaseRate: u128 = ksm_per_second();
@@ -72,7 +81,7 @@ fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
 	};
 	Some(MultiLocation::new(
 		1,
-		X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(token_symbol.to_vec())),
+		X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(KeyBoundedVec::force_from(token_symbol.to_vec(), None))),
 	))
 }
 
@@ -90,20 +99,20 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 
 			kico::kico::ASSET_ID => Some(MultiLocation::new(
 				1,
-				X2(Parachain(kico::PARA_ID.into()), GeneralKey(kico::kico::TOKEN_SYMBOL.to_vec())),
+				X2(Parachain(kico::PARA_ID.into()), GeneralKey(KeyBoundedVec::force_from(kico::kico::TOKEN_SYMBOL.to_vec(), None))),
 			)),
 
 			karura::ausd::ASSET_ID => Some(MultiLocation::new(
 				1,
-				X2(Parachain(karura::PARA_ID.into()), GeneralKey(karura::ausd::KEY.to_vec())),
+				X2(Parachain(karura::PARA_ID.into()), GeneralKey(KeyBoundedVec::force_from(karura::ausd::KEY.to_vec(), None))),
 			)),
 			karura::kar::ASSET_ID => Some(MultiLocation::new(
 				1,
-				X2(Parachain(karura::PARA_ID.into()), GeneralKey(karura::kar::KEY.to_vec())),
+				X2(Parachain(karura::PARA_ID.into()), GeneralKey(KeyBoundedVec::force_from(karura::kar::KEY.to_vec(), None))),
 			)),
 			karura::lksm::ASSET_ID => Some(MultiLocation::new(
 				1,
-				X2(Parachain(karura::PARA_ID.into()), GeneralKey(karura::lksm::KEY.to_vec())),
+				X2(Parachain(karura::PARA_ID.into()), GeneralKey(KeyBoundedVec::force_from(karura::lksm::KEY.to_vec(), None))),
 			)),
 
 			_ => None,
@@ -230,7 +239,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 parameter_types! {
 	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
-	pub UnitWeightCost: Weight = 200_000_000;
+	pub UnitWeightCost: u64 = 200_000_000;
 	pub const MaxInstructions: u32 = 100;
 }
 
@@ -362,7 +371,7 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 }
 
 parameter_types! {
-	pub const BaseXcmWeight: Weight = 100_000_000;
+	pub const BaseXcmWeight: Old_Weight = 100_000_000;
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
 	pub const MaxAssetsForTransfer: usize = 2;
 }
@@ -395,8 +404,8 @@ impl orml_xtokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
-	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
+	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
+	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
@@ -408,4 +417,5 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type OutboundXcmpMessageSource = XcmpQueue;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
+	type CheckAssociatedRelayNumber = RelayNumberStrictlyIncreases;
 }

@@ -24,6 +24,8 @@ use sp_runtime::{
 pub type ChainSpec =
 	sc_service::GenericChainSpec<parachain_template_runtime::GenesisConfig, Extensions>;
 
+const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
+
 /// Helper function to generate a crypto pair from seed
 pub fn get_pair_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
 	TPublic::Pair::from_string(&format!("//{}", seed), None)
@@ -227,6 +229,13 @@ fn testnet_genesis(
 			..Default::default()
 		},
 		democracy: Default::default(),
+
+		indices: Default::default(),
+		polkadot_xcm: parachain_template_runtime::PolkadotXcmConfig {
+			safe_xcm_version: Some(SAFE_XCM_VERSION),
+		},
+		transaction_payment: Default::default(),
+
 		session: parachain_template_runtime::SessionConfig {
 			keys: invulnerables
 				.iter()

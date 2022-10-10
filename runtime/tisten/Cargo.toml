@@ -228,6 +228,6 @@ try-runtime = [
 	"orml-xcm/try-runtime",
 	"orml-xtokens/try-runtime",
 	"orml-tokens/try-runtime",
-
 ]
+
 disable-runtime-api = []

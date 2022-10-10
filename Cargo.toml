@@ -2,7 +2,7 @@
 
 members = [
 #	"node/listen",
-#	"node/tisten",
+	"node/tisten",
 #	"runtime/listen",
 	"runtime/tisten",
 	"pallets/currencies",

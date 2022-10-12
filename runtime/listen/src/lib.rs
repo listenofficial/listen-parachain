@@ -100,6 +100,7 @@ pub type BlockId = generic::BlockId<Block>;
 
 /// The SignedExtension to the basic transaction logic.
 pub type SignedExtra = (
+	frame_system::CheckNonZeroSender<Runtime>,
 	frame_system::CheckSpecVersion<Runtime>,
 	frame_system::CheckTxVersion<Runtime>,
 	frame_system::CheckGenesis<Runtime>,
@@ -122,7 +123,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	OnRuntimeUpgrade,
+	(),
 >;
 
 #[sp_version::runtime_version]
@@ -155,7 +156,7 @@ impl WeightToFeePolynomial for WeightToFee {
 		// in Rococo, extrinsic base weight (smallest non-zero weight) is mapped to 1 MILLIUNIT:
 		// in our template, we map to 1/10 of that, or 1/10 MILLIUNIT
 		let p = MILLIUNIT / 10;
-		let q = 100 * Balance::from(ExtrinsicBaseWeight::get());
+		let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
 		smallvec![WeightToFeeCoefficient {
 			degree: 1,
 			negative: false,
@@ -200,7 +201,7 @@ const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(5);
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 
 /// We allow for 0.5 of a second of compute with a 12 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_div(2);
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -216,56 +217,54 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		// System support stuff.
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-		ParachainSystem: cumulus_pallet_parachain_system::{
-			Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned,
-		} = 1,
+		System: frame_system,
+		ParachainSystem: cumulus_pallet_parachain_system,
 		// RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 2,
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 4,
-		Indices: pallet_indices::{Pallet, Call, Storage, Event<T>} = 5,
-		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 6,
-		Utility: pallet_utility::{Pallet, Call, Event} = 7,
+		Timestamp: pallet_timestamp,
+		ParachainInfo: parachain_info,
+		Indices: pallet_indices,
+		Multisig: pallet_multisig,
+		Utility: pallet_utility,
 
 		// Monetary stuff.
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
-		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 12,
+		Balances: pallet_balances,
+		TransactionPayment: pallet_transaction_payment,
+		Identity: pallet_identity,
 
 		// Collator support. The order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
-		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
+		Authorship: pallet_authorship,
+		CollatorSelection: pallet_collator_selection,
+		Session: pallet_session,
+		Aura: pallet_aura,
+		AuraExt: cumulus_pallet_aura_ext,
 
 		// XCM helpers.
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 30,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Storage} = 31,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin, Storage} = 32,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 33,
+		XcmpQueue: cumulus_pallet_xcmp_queue,
+		PolkadotXcm: pallet_xcm,
+		CumulusXcm: cumulus_pallet_xcm,
+		DmpQueue: cumulus_pallet_dmp_queue,
 
 		// local
-		Nft: pallet_nft::{Pallet, Call, Storage, Event<T>} = 40,
-		Room: pallet_room::{Pallet, Storage, Call, Event<T>, Config<T>} = 41,
-		Currencies: pallet_currencies::{Pallet, Event<T>, Call, Storage, Config<T>} = 42,
+		Nft: pallet_nft,
+		Room: pallet_room,
+		Currencies: pallet_currencies,
 
-		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>} =50,
-		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 51,
-		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 52,
-		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 53,
-		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 54,
+		Sudo: pallet_sudo,
+		Council: pallet_collective::<Instance1>,
+		TechnicalCommittee: pallet_collective::<Instance2>,
+		Democracy: pallet_democracy,
+		Scheduler: pallet_scheduler,
 
 		// orml
-		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 60,
-		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 61,
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 62,
-		Tokens: orml_tokens::{Pallet, Config<T>, Storage, Event<T>} = 63,
+		UnknownTokens: orml_unknown_tokens,
+		OrmlXcm: orml_xcm,
+		XTokens: orml_xtokens,
+		Tokens: orml_tokens,
 
 		// listen-tmp
-		Dao: pallet_dao::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>} = 70,
-		RoomTreasury: pallet_treasury::{Pallet, Storage, Call, Event<T>} = 71,
-		OrmlVesting: orml_vesting::{Pallet, Storage, Call, Event<T>, Config<T>} = 72,
+		Dao: pallet_dao::<Instance1>,
+		RoomTreasury: pallet_treasury,
+		OrmlVesting: orml_vesting,
 	}
 );
 
@@ -446,6 +445,7 @@ parameter_types! {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
+	type Event = Event;
 	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
 	// type TransactionByteFee = TransactionByteFee;
 	type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
@@ -882,8 +882,23 @@ impl pallet_utility::Config for Runtime {
 	type WeightInfo = ();
 }
 
-impl_runtime_apis! {
+#[cfg(feature = "runtime-benchmarks")]
+#[macro_use]
+extern crate frame_benchmarking;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benches {
+	define_benchmarks!(
+		[frame_system, SystemBench::<Runtime>]
+		[pallet_balances, Balances]
+		[pallet_session, SessionBench::<Runtime>]
+		[pallet_timestamp, Timestamp]
+		[pallet_collator_selection, CollatorSelection]
+		[cumulus_pallet_xcmp_queue, XcmpQueue]
+	);
+}
+
+impl_runtime_apis! {
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
 		fn slot_duration() -> sp_consensus_aura::SlotDuration {
 			sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
@@ -984,6 +999,23 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentCallApi<Block, Balance, Call>
+		for Runtime
+	{
+		fn query_call_info(
+			call: Call,
+			len: u32,
+		) -> pallet_transaction_payment::RuntimeDispatchInfo<Balance> {
+			TransactionPayment::query_call_info(call, len)
+		}
+		fn query_call_fee_details(
+			call: Call,
+			len: u32,
+		) -> pallet_transaction_payment::FeeDetails<Balance> {
+			TransactionPayment::query_call_fee_details(call, len)
+		}
+	}
+
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
 		fn collect_collation_info(header: &<Block as BlockT>::Header) -> cumulus_primitives_core::CollationInfo {
 			ParachainSystem::collect_collation_info(header)
@@ -993,18 +1025,22 @@ impl_runtime_apis! {
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
 		fn on_runtime_upgrade() -> (Weight, Weight) {
-			// NOTE: intentional unwrap: we don't want to propagate the error backwards, and want to
-			// have a backtrace here. If any of the pre/post migration checks fail, we shall stop
-			// right here and right now.
+			log::info!("try-runtime::on_runtime_upgrade parachain-template.");
 			let weight = Executive::try_runtime_upgrade().unwrap();
 			(weight, RuntimeBlockWeights::get().max_block)
 		}
 
-		fn execute_block_no_check(block: Block) -> Weight {
-			Executive::execute_block_no_check(block)
+		fn execute_block(block: Block, state_root_check: bool, select: frame_try_runtime::TryStateSelect) -> Weight {
+			log::info!(
+				target: "runtime::parachain-template", "try-runtime: executing block #{} ({:?}) / root checks: {:?} / sanity-checks: {:?}",
+				block.header.number,
+				block.header.hash(),
+				state_root_check,
+				select,
+			);
+			Executive::try_execute_block(block, state_root_check, select).expect("try_execute_block failed")
 		}
 	}
-
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
@@ -1012,27 +1048,22 @@ impl_runtime_apis! {
 			Vec<frame_benchmarking::BenchmarkList>,
 			Vec<frame_support::traits::StorageInfo>,
 		) {
-			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+			use frame_benchmarking::{Benchmarking, BenchmarkList};
 			use frame_support::traits::StorageInfoTrait;
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use cumulus_pallet_session_benchmarking::Pallet as SessionBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
-
-			list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
-			list_benchmark!(list, extra, pallet_balances, Balances);
-			list_benchmark!(list, extra, pallet_timestamp, Timestamp);
-			list_benchmark!(list, extra, pallet_collator_selection, CollatorSelection);
+			list_benchmarks!(list, extra);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
-
 			return (list, storage_info)
 		}
 
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch, TrackedStorageKey};
 
 			use frame_system_benchmarking::Pallet as SystemBench;
 			impl frame_system_benchmarking::Config for Runtime {}
@@ -1055,12 +1086,7 @@ impl_runtime_apis! {
 
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
-
-			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_balances, Balances);
-			add_benchmark!(params, batches, pallet_session, SessionBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-			add_benchmark!(params, batches, pallet_collator_selection, CollatorSelection);
+			add_benchmarks!(params, batches);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
@@ -1084,8 +1110,8 @@ impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
 				relay_chain_slot,
 				sp_std::time::Duration::from_secs(6),
 			)
-			.create_inherent_data()
-			.expect("Could not create the timestamp inherent data");
+				.create_inherent_data()
+				.expect("Could not create the timestamp inherent data");
 
 		inherent_data.check_extrinsics(block)
 	}

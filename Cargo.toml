@@ -2,9 +2,9 @@
 
 members = [
 #	"node/listen",
-	"node/tisten",
-#	"runtime/listen",
-	"runtime/tisten",
+#	"node/tisten",
+	"runtime/listen",
+#	"runtime/tisten",
 	"pallets/currencies",
 	"pallets/room",
 	"pallets/nft",

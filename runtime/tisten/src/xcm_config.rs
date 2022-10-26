@@ -4,8 +4,6 @@ use pallet_currencies::currencies_trait::AssetIdMapping;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use sp_runtime::{traits::{Get, ConstU32}, WeakBoundedVec};
 
-type Old_Weight = u64;
-
 pub fn ksm_per_second() -> u128 {
 	let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time());
 	let base_tx_fee = UNIT / 1000;
@@ -371,7 +369,7 @@ impl Convert<AccountId, MultiLocation> for AccountIdToMultiLocation {
 }
 
 parameter_types! {
-	pub const BaseXcmWeight: Old_Weight = 100_000_000;
+	pub const BaseXcmWeight: u64 = 100_000_000;
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
 	pub const MaxAssetsForTransfer: usize = 2;
 }

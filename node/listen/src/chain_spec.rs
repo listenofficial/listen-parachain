@@ -20,6 +20,8 @@ use sp_runtime::{
 	AccountId32, Percent,
 };
 
+const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
+
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec =
 	sc_service::GenericChainSpec<parachain_template_runtime::GenesisConfig, Extensions>;
@@ -260,6 +262,13 @@ fn testnet_genesis(
 				get_account_id_from_seed::<sr25519::Public>("Charlie"),
 			],
 		},
+
+		indices: Default::default(),
+		polkadot_xcm: parachain_template_runtime::PolkadotXcmConfig {
+			safe_xcm_version: Some(SAFE_XCM_VERSION),
+		},
+		transaction_payment: Default::default(),
+
 		currencies: CurrenciesConfig {
 			assets: vec![
 				(

@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-#	"node/listen",
+	"node/listen",
 	"node/tisten",
 	"runtime/listen",
 	"runtime/tisten",

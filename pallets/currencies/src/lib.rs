@@ -265,10 +265,7 @@ pub mod module {
 		) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
-			ensure!(
-				!Self::is_exists_metadata(currency_id),
-				Error::<T>::AssetAlreadyExists
-			);
+			ensure!(!Self::is_exists_metadata(currency_id), Error::<T>::AssetAlreadyExists);
 			T::MultiCurrency::deposit(currency_id, &user, amount)?;
 			ListenAssetsInfo::<T>::insert(
 				currency_id,

@@ -41,9 +41,9 @@ pub enum Subcommand {
 
 #[derive(Debug, clap::Parser)]
 #[clap(
-propagate_version = true,
-args_conflicts_with_subcommands = true,
-subcommand_negates_reqs = true
+	propagate_version = true,
+	args_conflicts_with_subcommands = true,
+	subcommand_negates_reqs = true
 )]
 pub struct Cli {
 	#[clap(subcommand)]
@@ -91,4 +91,3 @@ impl RelayChainCli {
 		Self { base_path, chain_id, base: clap::Parser::parse_from(relay_chain_args) }
 	}
 }
-

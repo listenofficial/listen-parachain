@@ -29,8 +29,8 @@ impl<T: Get<u128>, R: TakeRevenue, M: AssetIdMapping<CurrencyId, MultiLocation>>
 			let units_per_second = T::get();
 			let multiple = M::get_weight_rate_multiple(multi_location.clone())
 				.ok_or(XcmError::AssetNotFound)?;
-			let amount =
-				units_per_second * multiple * (weight as u128) / (WEIGHT_PER_SECOND.ref_time() as u128);
+			let amount = units_per_second * multiple * (weight as u128) /
+				(WEIGHT_PER_SECOND.ref_time() as u128);
 			if amount == 0 {
 				return Ok(payment)
 			}

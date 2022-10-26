@@ -1,8 +1,11 @@
 use super::*;
 use crate::xcm_impls::FixedRateOfAsset;
-use pallet_currencies::currencies_trait::AssetIdMapping;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
-use sp_runtime::{traits::{Get, ConstU32}, WeakBoundedVec};
+use pallet_currencies::currencies_trait::AssetIdMapping;
+use sp_runtime::{
+	traits::{ConstU32, Get},
+	WeakBoundedVec,
+};
 
 pub fn ksm_per_second() -> u128 {
 	let base_weight = Balance::from(ExtrinsicBaseWeight::get().ref_time());
@@ -12,9 +15,7 @@ pub fn ksm_per_second() -> u128 {
 	fee_per_second / 100
 }
 
-
 type KeyBoundedVec = WeakBoundedVec<u8, ConstU32<32>>;
-
 
 // fixme
 parameter_types! {
@@ -79,7 +80,10 @@ fn native_currency_location(id: CurrencyId) -> Option<MultiLocation> {
 	};
 	Some(MultiLocation::new(
 		1,
-		X2(Parachain(ParachainInfo::parachain_id().into()), GeneralKey(KeyBoundedVec::force_from(token_symbol.to_vec(), None))),
+		X2(
+			Parachain(ParachainInfo::parachain_id().into()),
+			GeneralKey(KeyBoundedVec::force_from(token_symbol.to_vec(), None)),
+		),
 	))
 }
 
@@ -97,20 +101,32 @@ impl Convert<CurrencyId, Option<MultiLocation>> for CurrencyIdConvert {
 
 			kico::kico::ASSET_ID => Some(MultiLocation::new(
 				1,
-				X2(Parachain(kico::PARA_ID.into()), GeneralKey(KeyBoundedVec::force_from(kico::kico::TOKEN_SYMBOL.to_vec(), None))),
+				X2(
+					Parachain(kico::PARA_ID.into()),
+					GeneralKey(KeyBoundedVec::force_from(kico::kico::TOKEN_SYMBOL.to_vec(), None)),
+				),
 			)),
 
 			karura::ausd::ASSET_ID => Some(MultiLocation::new(
 				1,
-				X2(Parachain(karura::PARA_ID.into()), GeneralKey(KeyBoundedVec::force_from(karura::ausd::KEY.to_vec(), None))),
+				X2(
+					Parachain(karura::PARA_ID.into()),
+					GeneralKey(KeyBoundedVec::force_from(karura::ausd::KEY.to_vec(), None)),
+				),
 			)),
 			karura::kar::ASSET_ID => Some(MultiLocation::new(
 				1,
-				X2(Parachain(karura::PARA_ID.into()), GeneralKey(KeyBoundedVec::force_from(karura::kar::KEY.to_vec(), None))),
+				X2(
+					Parachain(karura::PARA_ID.into()),
+					GeneralKey(KeyBoundedVec::force_from(karura::kar::KEY.to_vec(), None)),
+				),
 			)),
 			karura::lksm::ASSET_ID => Some(MultiLocation::new(
 				1,
-				X2(Parachain(karura::PARA_ID.into()), GeneralKey(KeyBoundedVec::force_from(karura::lksm::KEY.to_vec(), None))),
+				X2(
+					Parachain(karura::PARA_ID.into()),
+					GeneralKey(KeyBoundedVec::force_from(karura::lksm::KEY.to_vec(), None)),
+				),
 			)),
 
 			_ => None,

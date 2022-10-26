@@ -175,7 +175,7 @@ pub fn run() -> Result<()> {
 					&polkadot_cli,
 					config.tokio_handle.clone(),
 				)
-					.map_err(|err| format!("Relay chain argument error: {}", err))?;
+				.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
 				cmd.run(config, polkadot_config)
 			})
@@ -299,9 +299,9 @@ pub fn run() -> Result<()> {
 					id,
 					hwbench,
 				)
-					.await
-					.map(|r| r.0)
-					.map_err(Into::into)
+				.await
+				.map(|r| r.0)
+				.map_err(Into::into)
 			})
 		},
 	}
@@ -376,8 +376,8 @@ impl CliConfiguration<Self> for RelayChainCli {
 		_logger_hook: F,
 		_config: &sc_service::Configuration,
 	) -> Result<()>
-		where
-			F: FnOnce(&mut sc_cli::LoggerBuilder, &sc_service::Configuration),
+	where
+		F: FnOnce(&mut sc_cli::LoggerBuilder, &sc_service::Configuration),
 	{
 		unreachable!("PolkadotCli is never initialized; qed");
 	}
@@ -443,4 +443,3 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.node_name()
 	}
 }
-

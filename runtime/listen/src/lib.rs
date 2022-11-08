@@ -21,9 +21,8 @@ pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
-		AsEnsureOriginWithArg,
-		tokens::fungible::Balanced, Contains, Currency, EnsureOneOf, EnsureOrigin,
-		EqualPrivilegeOnly, Everything, Nothing, OnKilledAccount, OnNewAccount,
+		tokens::fungible::Balanced, AsEnsureOriginWithArg, Contains, Currency, EnsureOneOf,
+		EnsureOrigin, EqualPrivilegeOnly, Everything, Nothing, OnKilledAccount, OnNewAccount,
 		PalletInfo as PalletInfoT,
 	},
 	weights::{
@@ -32,7 +31,10 @@ use frame_support::{
 	},
 	PalletId,
 };
-use frame_system::{limits::{BlockLength, BlockWeights}, EnsureRoot, RawOrigin, EnsureSigned};
+use frame_system::{
+	limits::{BlockLength, BlockWeights},
+	EnsureRoot, EnsureSigned, RawOrigin,
+};
 pub use listen_primitives::{
 	constants::{currency::*, time::*},
 	AccountId, AccountIndex, Amount, Balance, BlockNumber, CurrencyId, Hash, Header, Index,
@@ -608,7 +610,6 @@ impl pallet_room::Config for Runtime {
 	type SetMultisigOrigin = EnsureListenFoundation;
 }
 
-
 parameter_types! {
 	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
 	pub const DepositBase: Balance = 1 * UNIT;
@@ -956,7 +957,6 @@ impl pallet_uniques::Config for Runtime {
 	type ValueLimit = ValueLimit;
 	type WeightInfo = ();
 }
-
 
 #[cfg(feature = "runtime-benchmarks")]
 #[macro_use]

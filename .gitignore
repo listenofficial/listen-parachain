@@ -6,4 +6,6 @@
 polkadot_argument_parsing
 **/node_modules
 **/chains/
+polkadot-launch/*.log
+polkadot-launch/rococo-local*
 *.iml

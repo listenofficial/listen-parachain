@@ -22,6 +22,7 @@ pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, match_types, parameter_types,
 	traits::{
+		AsEnsureOriginWithArg,
 		tokens::fungible::Balanced, Contains, Currency, EnsureOneOf, EnsureOrigin,
 		EqualPrivilegeOnly, Everything, Nothing, OnKilledAccount, OnNewAccount,
 		PalletInfo as PalletInfoT,
@@ -33,6 +34,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{
+	EnsureSigned,
 	limits::{BlockLength, BlockWeights},
 	EnsureRoot, RawOrigin,
 };
@@ -248,9 +250,14 @@ construct_runtime!(
 		DmpQueue: cumulus_pallet_dmp_queue,
 
 		// local
-		Nft: pallet_nft,
 		Room: pallet_room,
 		Currencies: pallet_currencies,
+
+		// NFT
+		RmrkEquip: pallet_rmrk_equip,
+		RmrkCore: pallet_rmrk_core,
+		RmrkMarket: pallet_rmrk_market,
+		Uniques: pallet_uniques,
 
 		Sudo: pallet_sudo,
 		Council: pallet_collective::<Instance1>,
@@ -605,24 +612,24 @@ impl pallet_room::Config for Runtime {
 	type SetMultisigOrigin = EnsureListenFoundation;
 }
 
-parameter_types! {
-	pub const MaxClassMetadata: u32 = 1024;
-	pub const MaxTokenMetadata: u32 = 1024;
-	pub const MaxTokenAttribute: u32 = 1024;
-
-}
-
-impl pallet_nft::Config for Runtime {
-	type Event = Event;
-	type ClassId = u32;
-	type TokenId = u32;
-	type MultiCurrency = Currencies;
-	type MaxClassMetadata = MaxClassMetadata;
-	type MaxTokenMetadata = MaxTokenMetadata;
-	type MaxTokenAttribute = MaxTokenAttribute;
-	type GetLikeCurrencyId = GetLikeCurrencyId;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
-}
+// parameter_types! {
+// 	pub const MaxClassMetadata: u32 = 1024;
+// 	pub const MaxTokenMetadata: u32 = 1024;
+// 	pub const MaxTokenAttribute: u32 = 1024;
+//
+// }
+//
+// impl pallet_nft::Config for Runtime {
+// 	type Event = Event;
+// 	type ClassId = u32;
+// 	type TokenId = u32;
+// 	type MultiCurrency = Currencies;
+// 	type MaxClassMetadata = MaxClassMetadata;
+// 	type MaxTokenMetadata = MaxTokenMetadata;
+// 	type MaxTokenAttribute = MaxTokenAttribute;
+// 	type GetLikeCurrencyId = GetLikeCurrencyId;
+// 	type GetNativeCurrencyId = GetNativeCurrencyId;
+// }
 
 parameter_types! {
 	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
@@ -809,6 +816,75 @@ impl pallet_identity::Config for Runtime {
 	type ForceOrigin = EnsureRootOrHalfCouncil;
 	type RegistrarOrigin = EnsureRootOrHalfCouncil;
 	type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const MaxRecursions: u32 = 10;
+	pub const ResourceSymbolLimit: u32 = 10;
+	pub const PartsLimit: u32 = 25;
+	pub const MaxPriorities: u32 = 25;
+	pub const CollectionSymbolLimit: u32 = 100;
+	pub const MaxResourcesOnMint: u32 = 100;
+}
+
+impl pallet_rmrk_core::Config for Runtime {
+	type Event = Event;
+	type ProtocolOrigin = frame_system::EnsureRoot<AccountId>;
+	type MaxRecursions = MaxRecursions;
+	type ResourceSymbolLimit = ResourceSymbolLimit;
+	type PartsLimit = PartsLimit;
+	type MaxPriorities = MaxPriorities;
+	type CollectionSymbolLimit = CollectionSymbolLimit;
+	type MaxResourcesOnMint = MaxResourcesOnMint;
+}
+
+parameter_types! {
+	pub const MinimumOfferAmount: Balance = UNIT / 10_000;
+}
+
+impl pallet_rmrk_market::Config for Runtime {
+	type Event = Event;
+	type ProtocolOrigin = frame_system::EnsureRoot<AccountId>;
+	type Currency = Balances;
+	type MinimumOfferAmount = MinimumOfferAmount;
+}
+
+parameter_types! {
+	pub const CollectionDeposit: Balance = 10 * MILLIUNIT;
+	pub const ItemDeposit: Balance = UNIT;
+	pub const KeyLimit: u32 = 32;
+	pub const ValueLimit: u32 = 256;
+	pub const UniquesMetadataDepositBase: Balance = 10 * MILLIUNIT;
+	pub const AttributeDepositBase: Balance = 10 * MILLIUNIT;
+	pub const DepositPerByte: Balance = MILLIUNIT;
+	pub const UniquesStringLimit: u32 = 128;
+	pub const MaxPropertiesPerTheme: u32 = 100;
+	pub const MaxCollectionsEquippablePerPart: u32 = 100;
+}
+
+impl pallet_rmrk_equip::Config for Runtime {
+	type Event = Event;
+	type MaxPropertiesPerTheme = MaxPropertiesPerTheme;
+	type MaxCollectionsEquippablePerPart = MaxCollectionsEquippablePerPart;
+}
+
+impl pallet_uniques::Config for Runtime {
+	type Event = Event;
+	type CollectionId = u32;
+	type ItemId = u32;
+	type Currency = Balances;
+	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type Locker = pallet_rmrk_core::Pallet<Runtime>;
+	type CollectionDeposit = CollectionDeposit;
+	type ItemDeposit = ItemDeposit;
+	type MetadataDepositBase = UniquesMetadataDepositBase;
+	type AttributeDepositBase = AttributeDepositBase;
+	type DepositPerByte = DepositPerByte;
+	type StringLimit = UniquesStringLimit;
+	type KeyLimit = KeyLimit;
+	type ValueLimit = ValueLimit;
+	type WeightInfo = ();
 }
 
 parameter_types! {

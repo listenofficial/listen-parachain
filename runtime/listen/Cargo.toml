@@ -82,9 +82,13 @@ pallet-scheduler = { git = 'https://github.com/paritytech/substrate.git', branch
 pallet-indices = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.29', default-features = false }
 pallet-identity = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.29', default-features = false }
 pallet-utility = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.29', default-features = false }
+pallet-recovery = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.29', default-features = false }
+pallet-uniques = {default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.29" }
 
-
-
+# rmrk-substrate
+pallet-rmrk-core = { git = 'https://github.com/rmrk-team/rmrk-substrate.git', branch = 'polkadot-v0.9.29', default-features = false }
+pallet-rmrk-equip = { git = 'https://github.com/rmrk-team/rmrk-substrate.git', branch = 'polkadot-v0.9.29', default-features = false }
+pallet-rmrk-market = { git = 'https://github.com/rmrk-team/rmrk-substrate.git', branch = 'polkadot-v0.9.29', default-features = false }
 
 
 # Cumulus dependencies
@@ -141,6 +145,7 @@ std = [
 	"pallet-collator-selection/std",
 	"pallet-session/std",
 	"pallet-sudo/std",
+	"pallet-recovery/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
@@ -180,6 +185,10 @@ std = [
 	"pallet-indices/std",
 	"pallet-identity/std",
 	"frame-try-runtime/std",
+	"pallet-rmrk-core/std",
+	"pallet-rmrk-equip/std",
+	"pallet-rmrk-market/std",
+	"pallet-uniques/std",
 ]
 
 runtime-benchmarks = [
@@ -209,6 +218,7 @@ try-runtime = [
 	"pallet-balances/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"pallet-identity/try-runtime",
+	"pallet-recovery/try-runtime",
 
 	"pallet-authorship/try-runtime",
 	"pallet-collator-selection/try-runtime",

@@ -10,8 +10,7 @@ impl Contains<Call> for SystemBaseCallFilter {
 				Call::Room(pallet_room::Call::vote { .. }) |
 				Call::Room(pallet_room::Call::pay_out { .. }) |
 				Call::Room(pallet_room::Call::disband_room { .. }) |
-				Call::RoomTreasury(_) |
-				Call::Nft(_)
+				Call::RoomTreasury(_)
 		)
 	}
 }

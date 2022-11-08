@@ -6,27 +6,39 @@
 			{
 				"name": "alice",
 				"wsPort": 9944,
-				"port": 30444
+				"port": 30333
 			},
 			{
 				"name": "bob",
-				"wsPort": 9955,
-				"port": 30555
+				"wsPort": 9945,
+				"port": 30334
 			}
-		]
+		],
+		"genesis": {
+			"runtime": {
+				"runtime_genesis_config": {
+					"configuration": {
+						"config": {
+							"validation_upgrade_frequency": 10,
+							"validation_upgrade_delay": 10
+						}
+					}
+				}
+			}
+		}
 	},
 	"parachains": [
 		{
-			"bin": "../target/release/parachain-collator",
-			"id": "200",
+			"bin": "../target/tisten",
+			"id": "2118",
+			"chain": "local",
 			"balance": "1000000000000000000000",
 			"nodes": [
 				{
-					"wsPort": 9988,
+					"wsPort": 9946,
 					"name": "alice",
-					"port": 31200,
+					"port": 30335,
 					"flags": [
-						"--force-authoring",
 						"--",
 						"--execution=wasm"
 					]
@@ -35,5 +47,15 @@
 		}
 	],
 	"types": {
-	}
+	},
+	"hrmpChannels": [
+
+		{
+			"sender": 2107,
+			"recipient": 2118,
+			"maxCapacity": 8,
+			"maxMessageSize": 512
+		}
+	],
+	"finalization": false
 }

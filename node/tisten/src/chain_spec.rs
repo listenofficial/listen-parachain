@@ -152,10 +152,10 @@ pub fn local_testnet_config() -> ChainSpec {
 						get_account_id_from_seed::<sr25519::Public>("Alice"),
 						get_collator_keys_from_seed("Alice"),
 					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
-						get_collator_keys_from_seed("Bob"),
-					),
+					// (
+					// 	get_account_id_from_seed::<sr25519::Public>("Bob"),
+					// 	get_collator_keys_from_seed("Bob"),
+					// ),
 				],
 				Some(vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -186,7 +186,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		// Extensions
 		Extensions {
 			relay_chain: "rococo-local".into(), // You MUST set this to the correct network!
-			para_id: 2022u32.into(),
+			para_id: 2118u32.into(),
 		},
 	)
 }

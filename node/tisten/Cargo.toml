@@ -13,7 +13,7 @@ build = "build.rs"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [[bin]]
-name = "tisten-collator"
+name = "tisten"
 path = "src/main.rs"
 
 [dependencies]

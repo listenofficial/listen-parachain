@@ -26,10 +26,10 @@ use std::{io::Write, net::SocketAddr};
 fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	Ok(match id {
 		"dev" => Box::new(chain_spec::development_config()),
-		"test" => Box::new(chain_spec::testnet_config()?),
+		// "test" => Box::new(chain_spec::testnet_config()?),
 		"local" => Box::new(chain_spec::local_testnet_config()),
-		"staging" => Box::new(chain_spec::staging_config()),
-		"" | "main" => Box::new(chain_spec::mainnet_config()?),
+		// "staging" => Box::new(chain_spec::staging_config()),
+		// "" | "main" => Box::new(chain_spec::mainnet_config()?),
 		path => Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))?),
 	})
 }
